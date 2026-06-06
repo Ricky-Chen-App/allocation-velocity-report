@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Environment & secrets — NEVER commit
+.env
+*.env
+!.env.example
+
+# Runtime data (member profiles persisted locally)
+data/member-profiles.json
+
+# OS / editor
+.DS_Store
+*.log
+npm-debug.log*
+.vscode/
+.idea/

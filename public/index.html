@@ -1,0 +1,1961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resource Portal — Linkit360</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink-900:#0a0d12;--ink-800:#141820;--ink-700:#1e2433;--ink-600:#2c3347;
+  --ink-500:#4a5368;--ink-400:#6b7590;--ink-300:#9aa3b8;--ink-200:#c4cad8;
+  --ink-100:#e8ebf2;--ink-50:#f4f6fa;--ink-0:#ffffff;
+  --blue-700:#0f4c8a;--blue-600:#1862b5;--blue-500:#2277d4;--blue-400:#4a94e8;
+  --blue-100:#deeeff;--blue-50:#eef6ff;
+  --green-600:#0d6640;--green-500:#16915c;--green-400:#22b573;--green-100:#d2f4e4;--green-50:#edfaf3;
+  --amber-600:#92540a;--amber-500:#b96d14;--amber-400:#e08c24;--amber-100:#fde9c3;--amber-50:#fff6e3;
+  --red-600:#8b1f20;--red-500:#b52e2e;--red-400:#d94c4c;--red-100:#fbd8d8;--red-50:#fff0f0;
+  --violet-600:#4c2d9c;--violet-500:#6540c4;--violet-400:#8060e0;--violet-100:#e4dcf9;--violet-50:#f2eeff;
+  --teal-600:#0c5c62;--teal-500:#157880;--teal-400:#1e97a0;--teal-100:#ccf0f3;--teal-50:#e8f9fa;
+  --sidebar-w:220px;--header-h:56px;
+  --radius-sm:6px;--radius-md:10px;--radius-lg:14px;--radius-xl:20px;
+  --shadow-xs:0 1px 2px rgba(10,13,18,.05);--shadow-sm:0 2px 8px rgba(10,13,18,.08);
+  --shadow-md:0 4px 16px rgba(10,13,18,.10);--shadow-lg:0 8px 32px rgba(10,13,18,.14);
+  --font-body:'DM Sans',sans-serif;--font-mono:'DM Mono',monospace;
+  --transition:150ms cubic-bezier(.4,0,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px}
+body{font-family:var(--font-body);background:var(--ink-50);color:var(--ink-800);display:flex;height:100vh;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{width:var(--sidebar-w);background:var(--ink-0);border-right:1px solid var(--ink-100);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.sidebar-logo{display:flex;align-items:center;gap:9px;padding:18px 20px 14px;border-bottom:1px solid var(--ink-100);margin-bottom:6px}
+.logo-mark{width:32px;height:32px;background:var(--blue-700);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-mark svg{width:17px;height:17px}
+.logo-text{font-size:13.5px;font-weight:600;color:var(--ink-900);letter-spacing:-.02em;line-height:1.1}
+.logo-sub{font-size:10px;color:var(--ink-400);font-weight:400}
+.nav-section{padding:0 12px 4px}
+.nav-label{font-size:10px;font-weight:600;letter-spacing:.08em;color:var(--ink-300);text-transform:uppercase;padding:12px 8px 6px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--radius-sm);font-size:13px;font-weight:400;color:var(--ink-500);cursor:pointer;transition:background var(--transition),color var(--transition);text-decoration:none;border:none;background:transparent;width:100%;font-family:var(--font-body)}
+.nav-item:hover{background:var(--ink-50);color:var(--ink-800)}
+.nav-item.active{background:var(--blue-50);color:var(--blue-700);font-weight:500}
+.nav-item svg{width:15px;height:15px;flex-shrink:0;opacity:.8}
+.nav-item.active svg{opacity:1}
+.nav-badge{margin-left:auto;font-size:10px;font-weight:600;background:var(--blue-100);color:var(--blue-600);padding:1px 6px;border-radius:20px}
+.nav-badge.red{background:var(--red-100);color:var(--red-600)}
+.nav-badge.amber{background:var(--amber-100);color:var(--amber-600)}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:var(--header-h);background:var(--ink-0);border-bottom:1px solid var(--ink-100);display:flex;align-items:center;padding:0 28px;gap:12px;flex-shrink:0}
+.sync-status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-400)}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--green-400);flex-shrink:0;animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.topbar-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius-sm);font-size:12.5px;font-weight:500;font-family:var(--font-body);cursor:pointer;transition:all var(--transition);border:none;line-height:1}
+.btn svg{width:14px;height:14px}
+.btn-ghost{background:transparent;color:var(--ink-600);border:1px solid var(--ink-200)}
+.btn-ghost:hover{background:var(--ink-50);border-color:var(--ink-300)}
+.btn-primary{background:var(--blue-700);color:white;box-shadow:var(--shadow-xs)}
+.btn-primary:hover{background:var(--blue-600)}
+.avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--blue-400),var(--violet-500));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:white;flex-shrink:0}
+.content{flex:1;overflow-y:auto;padding:0}
+
+/* PAGES */
+.page{display:none}
+.page.active{display:block}
+
+/* CARDS */
+.card{background:var(--ink-0);border:1px solid var(--ink-100);border-radius:var(--radius-lg);box-shadow:var(--shadow-xs);overflow:hidden}
+.card-header{padding:16px 20px 14px;border-bottom:1px solid var(--ink-100);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:13px;font-weight:600;color:var(--ink-900);letter-spacing:-.01em;display:flex;align-items:center;gap:7px}
+.card-title svg{width:15px;height:15px;color:var(--ink-400)}
+.card-body{padding:16px 20px}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:20px 32px}
+.kpi-card{background:var(--ink-0);border:1px solid var(--ink-100);border-radius:var(--radius-lg);padding:18px 20px;box-shadow:var(--shadow-xs);transition:box-shadow var(--transition)}
+.kpi-card:hover{box-shadow:var(--shadow-sm)}
+.kpi-label{font-size:11px;font-weight:500;color:var(--ink-400);letter-spacing:.02em;display:flex;align-items:center;gap:6px}
+.kpi-label svg{width:13px;height:13px}
+.kpi-value{font-size:30px;font-weight:600;letter-spacing:-.04em;color:var(--ink-900);margin-top:8px;line-height:1}
+.kpi-delta{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:500;margin-top:6px;padding:2px 7px;border-radius:20px}
+.kpi-delta.up{background:var(--green-50);color:var(--green-600)}
+.kpi-delta.down{background:var(--red-50);color:var(--red-600)}
+.kpi-delta.warn{background:var(--amber-50);color:var(--amber-600)}
+.kpi-delta.info{background:var(--blue-50);color:var(--blue-600)}
+
+/* SKELETON */
+.skeleton{background:var(--ink-100);border-radius:4px;position:relative;overflow:hidden}
+.skeleton::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.6) 50%,transparent 100%);animation:shimmer 1.4s ease-in-out infinite}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+
+/* GAUGE */
+.gauge-wrap{display:flex;flex-direction:column;align-items:center;padding:16px 0 8px}
+.gauge-footer{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 20px 16px}
+.gauge-stat{background:var(--ink-50);border-radius:var(--radius-sm);padding:10px 12px}
+.gs-label{font-size:10.5px;color:var(--ink-400);font-weight:500}
+.gs-val{font-size:20px;font-weight:600;letter-spacing:-.04em;color:var(--ink-900);margin-top:2px}
+
+/* TEAM BARS */
+.team-bars{display:flex;flex-direction:column;gap:12px}
+.tbar-row{display:flex;flex-direction:column;gap:4px}
+.tbar-meta{display:flex;align-items:center;justify-content:space-between;font-size:12px}
+.tbar-name{font-weight:500;color:var(--ink-800);display:flex;align-items:center;gap:6px}
+.tbar-type{font-size:10px;padding:1px 6px;border-radius:20px;font-weight:500}
+.type-dev{background:var(--blue-50);color:var(--blue-700)}
+.type-qa{background:var(--violet-50);color:var(--violet-600)}
+.type-ba{background:var(--teal-50);color:var(--teal-600)}
+.type-pm{background:var(--amber-50);color:var(--amber-600)}
+.tbar-pct{font-size:12px;font-weight:600}
+.tbar-pct.over{color:var(--red-500)}
+.tbar-pct.warn{color:var(--amber-500)}
+.tbar-pct.ok{color:var(--green-500)}
+.tbar-track{height:7px;background:var(--ink-100);border-radius:20px;overflow:hidden}
+.tbar-fill{height:100%;border-radius:20px;transition:width .6s cubic-bezier(.22,1,.36,1)}
+.fill-ok{background:var(--green-400)}
+.fill-warn{background:var(--amber-400)}
+.fill-over{background:var(--red-400)}
+.fill-blue{background:var(--blue-400)}
+
+/* DEV LIST */
+.dev-list{display:flex;flex-direction:column}
+.dev-row{display:flex;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid var(--ink-50);transition:background var(--transition)}
+.dev-row:hover{background:var(--ink-50)}
+.dev-row:last-child{border-bottom:none}
+.dev-init{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:600;flex-shrink:0}
+.dev-name{font-size:12.5px;font-weight:500;color:var(--ink-800);flex:1}
+.dev-role-tag{font-size:10px;color:var(--ink-400);font-weight:400}
+.mini-bar-wrap{display:flex;align-items:center;gap:8px}
+.mini-bar-track{width:80px;height:5px;background:var(--ink-100);border-radius:20px;overflow:hidden}
+.mini-bar-fill{height:100%;border-radius:20px}
+.mini-pct{font-size:11.5px;font-weight:600;min-width:42px;text-align:right}
+
+/* PAGE HEADER */
+.page-header{padding:28px 32px 0;display:flex;align-items:flex-start;justify-content:space-between}
+.page-title{font-size:22px;font-weight:600;letter-spacing:-.03em;color:var(--ink-900)}
+.page-sub{font-size:12.5px;color:var(--ink-400);margin-top:3px}
+.exec-hero{padding:28px 32px 0}
+.exec-hero h1{font-size:22px;font-weight:600;letter-spacing:-.03em;color:var(--ink-900)}
+.exec-hero p{font-size:13px;color:var(--ink-400);margin-top:3px}
+
+/* DASH GRID */
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 32px 32px}
+
+/* PILL CONTROLS */
+.page-controls{display:flex;align-items:center;gap:8px;margin-top:20px;padding:0 32px}
+.pill-group{display:flex;background:var(--ink-100);border-radius:var(--radius-sm);padding:3px;gap:2px}
+.pill{padding:5px 12px;border-radius:var(--radius-sm);font-size:12px;font-weight:500;cursor:pointer;color:var(--ink-500);transition:all var(--transition);border:none;background:transparent;font-family:var(--font-body)}
+.pill.active{background:var(--ink-0);color:var(--ink-800);box-shadow:var(--shadow-xs)}
+.tpill{padding:5px 11px;border-radius:20px;font-size:11.5px;font-weight:500;cursor:pointer;border:1px solid var(--ink-200);background:var(--ink-0);color:var(--ink-500);transition:all var(--transition);font-family:var(--font-body)}
+.tpill.act{border-color:var(--blue-400);background:var(--blue-50);color:var(--blue-700)}
+
+/* TABLE */
+.table-wrap{margin:16px 32px 32px;background:var(--ink-0);border:1px solid var(--ink-100);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-xs)}
+.formula-banner{background:var(--ink-50);border-bottom:1px solid var(--ink-100);padding:12px 20px;display:flex;align-items:flex-start;gap:10px}
+.formula-banner svg{width:14px;height:14px;color:var(--ink-400);margin-top:2px;flex-shrink:0}
+.formula-text{font-size:11px;color:var(--ink-500);font-family:var(--font-mono);line-height:1.7}
+table{width:100%;border-collapse:collapse}
+thead th{text-align:left;font-size:11px;font-weight:600;color:var(--ink-400);letter-spacing:.04em;text-transform:uppercase;padding:11px 16px;background:var(--ink-50);border-bottom:1px solid var(--ink-100)}
+tbody tr{border-bottom:1px solid var(--ink-50);transition:background var(--transition)}
+tbody tr:hover{background:var(--ink-50)}
+tbody tr:last-child{border-bottom:none}
+tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:middle}
+.td-name{display:flex;align-items:center;gap:9px;font-weight:500;color:var(--ink-900)}
+.util-cell{display:flex;align-items:center;gap:10px}
+.util-bar{width:80px;height:6px;background:var(--ink-100);border-radius:20px;overflow:hidden;flex-shrink:0}
+.util-fill{height:100%;border-radius:20px}
+.util-num{font-size:12px;font-weight:600;min-width:42px}
+.util-num.over{color:var(--red-500)}
+.util-num.warn{color:var(--amber-500)}
+.util-num.ok{color:var(--green-500)}
+.util-num.low{color:var(--ink-400)}
+.project-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px 2px 6px;border-radius:20px;font-size:11px;font-weight:500;margin:2px}
+.pp-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.row-flag{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;padding:2px 6px;border-radius:3px;margin-left:4px;vertical-align:middle}
+.row-flag.over{background:var(--red-50);color:var(--red-600)}
+.row-flag.idle{background:var(--blue-50);color:var(--blue-700)}
+
+/* SYNC TABLE */
+.sync-stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:20px 32px 0}
+.sync-stat{background:var(--ink-0);border:1px solid var(--ink-100);border-radius:var(--radius-md);padding:14px 16px;box-shadow:var(--shadow-xs)}
+.ss-label{font-size:11px;color:var(--ink-400);font-weight:500}
+.ss-val{font-size:24px;font-weight:600;letter-spacing:-.04em;margin-top:4px;color:var(--ink-900)}
+.ss-val.green{color:var(--green-500)}
+.ss-val.red{color:var(--red-500)}
+.ss-val.amber{color:var(--amber-500)}
+.sync-toolbar{padding:12px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--ink-100);flex-wrap:wrap;background:var(--ink-50)}
+.search-input{display:flex;align-items:center;gap:7px;background:var(--ink-0);border:1px solid var(--ink-200);border-radius:var(--radius-sm);padding:6px 10px;flex:1;min-width:180px;max-width:260px}
+.search-input svg{width:13px;height:13px;color:var(--ink-400);flex-shrink:0}
+.search-input input{border:none;outline:none;font-size:12.5px;font-family:var(--font-body);color:var(--ink-800);background:transparent;width:100%}
+.search-input input::placeholder{color:var(--ink-300)}
+.select-filter{padding:6px 10px;border:1px solid var(--ink-200);border-radius:var(--radius-sm);font-size:12.5px;font-family:var(--font-body);color:var(--ink-700);background:var(--ink-0);outline:none;cursor:pointer}
+.sync-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.sync-badge::before{content:'';width:6px;height:6px;border-radius:50%}
+.sync-badge.synced{background:var(--green-50);color:var(--green-600)}
+.sync-badge.synced::before{background:var(--green-400)}
+.sync-badge.unassigned{background:var(--red-50);color:var(--red-600)}
+.sync-badge.unassigned::before{background:var(--red-400)}
+.sync-badge.external{background:var(--amber-50);color:var(--amber-600)}
+.sync-badge.external::before{background:var(--amber-400)}
+.jira-id{font-family:var(--font-mono);font-size:11.5px;background:var(--ink-50);padding:2px 7px;border-radius:4px;color:var(--ink-600)}
+
+/* EXEC AI CARD */
+.exec-ai-card{background:var(--ink-0);border:1px solid var(--ink-100);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-xs);display:flex;flex-direction:column}
+.exec-ai-header{padding:14px 18px 12px;border-bottom:1px solid var(--ink-100);display:flex;align-items:center;gap:9px}
+.exec-ai-body{padding:14px 18px;flex:1;display:flex;flex-direction:column;gap:10px}
+.exec-ai-bullet{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;color:var(--ink-700);line-height:1.55}
+.exec-ai-bullet svg{width:14px;height:14px;flex-shrink:0;margin-top:2px}
+.exec-ai-bullet strong{color:var(--ink-900)}
+.exec-ai-footer{padding:10px 18px;border-top:1px solid var(--ink-100);background:var(--ink-50);display:flex;align-items:center;justify-content:space-between}
+.ai-spark{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--blue-600),var(--violet-500));display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ai-spark svg{width:14px;height:14px;stroke:white}
+.ai-count-badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px}
+.ai-count-badge.has-flags{background:var(--red-50);color:var(--red-600)}
+.ai-count-badge.ok{background:var(--green-50);color:var(--green-600)}
+.ai-count-badge.loading{background:var(--ink-100);color:var(--ink-400)}
+
+/* VELOCITY PAGE */
+.velocity-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;padding:0 32px 32px}
+.forecast-box{background:linear-gradient(135deg,var(--blue-700),var(--violet-600));border-radius:var(--radius-lg);padding:24px;color:white;display:flex;flex-direction:column;gap:8px}
+.forecast-box .f-label{font-size:11px;opacity:.75;font-weight:500;letter-spacing:.04em;text-transform:uppercase}
+.forecast-box .f-days{font-size:48px;font-weight:600;letter-spacing:-.05em;line-height:1}
+.forecast-box .f-date{font-size:13px;opacity:.85;margin-top:4px}
+.forecast-box .f-sub{font-size:11.5px;opacity:.7;margin-top:2px}
+.velocity-card{background:var(--ink-0);border:1px solid var(--ink-100);border-radius:var(--radius-lg);box-shadow:var(--shadow-xs);overflow:hidden}
+.velocity-chart-wrap{padding:16px 20px 8px;position:relative;height:180px}
+.cat-table{width:100%;border-collapse:collapse}
+.cat-table th{font-size:10.5px;font-weight:600;color:var(--ink-400);letter-spacing:.04em;text-transform:uppercase;padding:10px 16px;background:var(--ink-50);border-bottom:1px solid var(--ink-100);text-align:left}
+.cat-table td{padding:10px 16px;font-size:12.5px;border-bottom:1px solid var(--ink-50);color:var(--ink-700)}
+.cat-table tr:last-child td{border-bottom:none}
+
+/* TASK PAGE */
+.task-filters{display:flex;gap:8px;padding:16px 32px 0;flex-wrap:wrap;align-items:center}
+.task-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;padding:16px 32px 32px}
+.task-col{background:var(--ink-0);border:1px solid var(--ink-100);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-xs)}
+.task-col-header{padding:12px 16px;border-bottom:1px solid var(--ink-100);display:flex;align-items:center;justify-content:space-between;background:var(--ink-50)}
+.task-col-title{font-size:12.5px;font-weight:600;color:var(--ink-800)}
+.task-col-count{font-size:11px;font-weight:600;background:var(--ink-100);color:var(--ink-500);padding:2px 8px;border-radius:20px}
+.task-cards{display:flex;flex-direction:column;gap:0}
+.task-card{padding:12px 16px;border-bottom:1px solid var(--ink-50);transition:background var(--transition);cursor:default}
+.task-card:hover{background:var(--ink-50)}
+.task-card:last-child{border-bottom:none}
+.task-key{font-size:11px;font-family:var(--font-mono);color:var(--ink-400);margin-bottom:4px}
+.task-summary{font-size:12.5px;font-weight:500;color:var(--ink-800);line-height:1.4;margin-bottom:6px}
+.task-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.priority-badge{font-size:10px;font-weight:600;padding:2px 6px;border-radius:3px}
+.p-highest,.p-high{background:var(--red-50);color:var(--red-600)}
+.p-medium{background:var(--amber-50);color:var(--amber-600)}
+.p-low,.p-lowest{background:var(--green-50);color:var(--green-600)}
+.assignee-chip{font-size:10.5px;color:var(--ink-400);display:flex;align-items:center;gap:4px}
+.assignee-chip .mini-av{width:16px;height:16px;border-radius:50%;background:var(--blue-100);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:600;color:var(--blue-700)}
+
+/* LOADING OVERLAY */
+.loading-overlay{position:fixed;inset:0;background:rgba(10,13,18,.3);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}
+.loading-overlay.show{opacity:1;pointer-events:all}
+.loading-card{background:var(--ink-0);border-radius:var(--radius-xl);padding:28px 36px;display:flex;flex-direction:column;align-items:center;gap:14px;box-shadow:var(--shadow-lg)}
+.loading-dots{display:flex;gap:6px}
+.loading-dot{width:8px;height:8px;border-radius:50%;background:var(--blue-400);animation:blink 1.2s ease-in-out infinite}
+.loading-dot:nth-child(2){animation-delay:.2s}
+.loading-dot:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,100%{opacity:.3}50%{opacity:1}}
+.loading-text{font-size:13px;font-weight:500;color:var(--ink-600)}
+
+/* ERROR */
+.error-banner{background:var(--red-50);border:1px solid var(--red-100);border-radius:var(--radius-md);padding:12px 16px;margin:16px 32px 0;font-size:12.5px;color:var(--red-600);display:flex;align-items:center;gap:8px}
+.error-banner svg{width:14px;height:14px;flex-shrink:0}
+
+/* EMPTY STATE */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:12px;color:var(--ink-400)}
+.empty-state svg{width:40px;height:40px;opacity:.4}
+.empty-state p{font-size:13px;text-align:center;max-width:280px;line-height:1.6}
+
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+
+/* ——— CAPACITY SECTIONS ——— */
+.cap-sections{padding:16px 32px 32px;display:flex;flex-direction:column;gap:20px}
+.cap-section{background:var(--ink-0);border:1px solid var(--ink-100);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-xs)}
+.cap-section-header{display:flex;align-items:center;gap:12px;padding:14px 20px;cursor:pointer;user-select:none;border-bottom:1px solid transparent;transition:background var(--transition)}
+.cap-section-header:hover{background:var(--ink-50)}
+.cap-section.open .cap-section-header{border-bottom-color:var(--ink-100)}
+.cap-section-title{font-size:13.5px;font-weight:600;color:var(--ink-900);flex:1;display:flex;align-items:center;gap:10px}
+.cap-section-stats{display:flex;gap:16px;align-items:center;font-size:11.5px;color:var(--ink-500)}
+.cap-section-stat{display:flex;align-items:center;gap:4px}
+.cap-section-stat strong{color:var(--ink-800);font-weight:600}
+.cap-chevron{width:16px;height:16px;color:var(--ink-400);transition:transform var(--transition);flex-shrink:0}
+.cap-section.open .cap-chevron{transform:rotate(180deg)}
+.cap-section-body{display:none}
+.cap-section.open .cap-section-body{display:block}
+/* Pagination */
+.paging-bar{display:flex;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid var(--ink-100);background:var(--ink-50)}
+.paging-btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:var(--radius-sm);border:1px solid var(--ink-200);background:var(--ink-0);color:var(--ink-600);cursor:pointer;font-size:12px;transition:all var(--transition);font-family:var(--font-body)}
+.paging-btn:hover:not(:disabled){background:var(--ink-50);border-color:var(--ink-300)}
+.paging-btn:disabled{opacity:.4;cursor:default}
+.paging-btn.active{background:var(--blue-700);border-color:var(--blue-700);color:white}
+.paging-label{font-size:12px;color:var(--ink-500);min-width:80px;text-align:center}
+.perpage-select{padding:4px 8px;border:1px solid var(--ink-200);border-radius:var(--radius-sm);font-size:11.5px;font-family:var(--font-body);color:var(--ink-700);background:var(--ink-0);outline:none;cursor:pointer}
+.cap-search{display:flex;align-items:center;gap:7px;background:var(--ink-0);border:1px solid var(--ink-200);border-radius:var(--radius-sm);padding:5px 10px;max-width:200px;margin-left:auto}
+.cap-search svg{width:12px;height:12px;color:var(--ink-400);flex-shrink:0}
+.cap-search input{border:none;outline:none;font-size:12px;font-family:var(--font-body);color:var(--ink-800);background:transparent;width:100%}
+
+/* ——— TIMELINE ——— */
+.timeline-controls{display:flex;align-items:center;gap:10px;padding:16px 32px 0;flex-wrap:wrap}
+.timeline-wrap{margin:14px 32px 32px;background:var(--ink-0);border:1px solid var(--ink-100);border-radius:var(--radius-lg);overflow:auto;box-shadow:var(--shadow-xs)}
+.tl-header-row{display:flex;position:sticky;top:0;z-index:10;background:var(--ink-0);border-bottom:2px solid var(--ink-100)}
+.tl-person-col{width:220px;min-width:220px;padding:10px 16px;font-size:10.5px;font-weight:600;color:var(--ink-400);letter-spacing:.06em;text-transform:uppercase;border-right:1px solid var(--ink-100);background:var(--ink-50);position:sticky;left:0;z-index:5}
+.tl-dates{display:flex;flex:1}
+.tl-week-label{font-size:10px;font-weight:600;color:var(--ink-500);padding:10px 0 10px 8px;border-right:1px solid var(--ink-100);background:var(--ink-50);white-space:nowrap}
+.tl-today-line{position:absolute;top:0;bottom:0;width:2px;background:var(--blue-400);opacity:.7;z-index:4;pointer-events:none}
+.tl-row{display:flex;border-bottom:1px solid var(--ink-50);min-height:52px;position:relative}
+.tl-row:hover{background:var(--ink-50)}
+.tl-row:last-child{border-bottom:none}
+.tl-person{width:220px;min-width:220px;padding:10px 16px;display:flex;align-items:flex-start;gap:9px;border-right:1px solid var(--ink-100);position:sticky;left:0;background:inherit;z-index:3}
+.tl-person-info{flex:1;min-width:0}
+.tl-person-name{font-size:12px;font-weight:600;color:var(--ink-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-person-meta{font-size:10.5px;color:var(--ink-400);margin-top:1px}
+.tl-bars-area{flex:1;position:relative;overflow:hidden;min-height:52px}
+.tl-bar{position:absolute;height:22px;border-radius:4px;top:15px;font-size:10px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px;display:flex;align-items:center;cursor:default;transition:filter .15s}
+.tl-bar:hover{filter:brightness(.92)}
+.tl-bar-done{background:var(--green-100);color:var(--green-700);border:1px solid var(--green-200)}
+.tl-bar-progress{background:var(--blue-100);color:var(--blue-700);border:1px solid var(--blue-200)}
+.tl-bar-todo{background:var(--ink-100);color:var(--ink-600);border:1px solid var(--ink-200)}
+.tl-bar-overdue{background:var(--red-100);color:var(--red-700);border:1px solid var(--red-200)}
+/* Rescheduled: orange border + diagonal stripe overlay */
+.tl-bar-rescheduled{border-color:var(--amber-400)!important;outline:1px solid var(--amber-300)}
+.tl-bar-rescheduled::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(180,109,20,.15) 4px,rgba(180,109,20,.15) 6px);border-radius:inherit;pointer-events:none}
+.tl-reschedule-dot{position:absolute;top:2px;right:3px;width:6px;height:6px;border-radius:50%;background:var(--amber-400);flex-shrink:0}
+.tl-day-col{height:100%;border-right:1px dashed var(--ink-100);position:absolute;top:0;bottom:0}
+.tl-today-col{border-right:2px solid var(--blue-300)!important;background:rgba(74,148,232,.04)}
+.tl-tooltip{position:fixed;background:var(--ink-900);color:white;padding:8px 12px;border-radius:var(--radius-md);font-size:11.5px;line-height:1.5;z-index:200;pointer-events:none;max-width:260px;box-shadow:var(--shadow-lg)}
+
+/* ——— MEMBERS PAGE ——— */
+.members-toolbar{display:flex;align-items:center;gap:10px;padding:16px 32px 0;flex-wrap:wrap}
+.members-table-wrap{margin:14px 32px 32px;background:var(--ink-0);border:1px solid var(--ink-100);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-xs)}
+.jabatan-select,.level-select{padding:5px 8px;border:1px solid var(--ink-200);border-radius:var(--radius-sm);font-size:12px;font-family:var(--font-body);color:var(--ink-700);background:var(--ink-0);outline:none;cursor:pointer;transition:border-color var(--transition)}
+.jabatan-select:focus,.level-select:focus{border-color:var(--blue-400)}
+.jabatan-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.j-CTO{background:var(--violet-50);color:var(--violet-700)}
+.j-PM{background:var(--amber-50);color:var(--amber-700)}
+.j-BA{background:var(--teal-50);color:var(--teal-700)}
+.j-QA{background:var(--green-50);color:var(--green-700)}
+.j-Dev{background:var(--blue-50);color:var(--blue-700)}
+.save-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:var(--radius-sm);font-size:11.5px;font-weight:500;cursor:pointer;border:1px solid var(--blue-200);background:var(--blue-50);color:var(--blue-700);font-family:var(--font-body);transition:all var(--transition)}
+.save-btn:hover{background:var(--blue-100)}
+.save-btn.saved{background:var(--green-50);border-color:var(--green-200);color:var(--green-700)}
+.bulk-save-bar{background:var(--blue-700);color:white;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;font-size:12.5px}
+.bulk-save-bar button{padding:6px 16px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font-body);border:none;background:white;color:var(--blue-700)}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="1.5">
+        <rect x="2" y="2" width="5" height="5" rx="1"/>
+        <rect x="9" y="2" width="5" height="5" rx="1"/>
+        <rect x="2" y="9" width="5" height="5" rx="1"/>
+        <circle cx="11.5" cy="11.5" r="2.5"/>
+      </svg>
+    </div>
+    <div>
+      <div class="logo-text">Resource Portal</div>
+      <div class="logo-sub">Linkit360 · Jira Live</div>
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Dashboards</div>
+    <button class="nav-item active" onclick="showPage('executive',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+      Executive
+    </button>
+    <button class="nav-item" onclick="showPage('capacity',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 4v4l3 2"/></svg>
+      Developer Capacity
+    </button>
+    <button class="nav-item" onclick="showPage('velocity',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l4-4 3 3 5-6"/><path d="M12 5h3v3"/></svg>
+      Velocity & Forecast
+      <span class="nav-badge" id="nav-forecast-badge" style="display:none"></span>
+    </button>
+    <button class="nav-item" onclick="showPage('tasks',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="11" rx="1.5"/><path d="M1 7h14"/><path d="M5 1v4M11 1v4"/></svg>
+      Task Allocation
+    </button>
+    <button class="nav-item" onclick="showPage('timeline',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="14" height="2" rx="1"/><rect x="1" y="8" width="10" height="2" rx="1"/><rect x="1" y="12" width="12" height="2" rx="1"/></svg>
+      Timeline
+    </button>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Admin</div>
+    <button class="nav-item" onclick="showPage('members',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="5" r="3"/><path d="M1 14c0-3 2-4 5-4s5 1 5 4"/><path d="M12 7l1.5 1.5L16 6"/></svg>
+      Team Members
+    </button>
+    <button class="nav-item" onclick="showPage('jirasync',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1l2 5h5l-4 3 1.5 5L8 11l-4.5 3L5 9 1 6h5z"/></svg>
+      Jira Sync
+      <span class="nav-badge red" id="nav-sync-badge" style="display:none"></span>
+    </button>
+  </div>
+
+  <div style="margin-top:auto;padding:16px 12px;border-top:1px solid var(--ink-100)">
+    <button class="btn btn-ghost" style="width:100%;justify-content:center;" onclick="refreshAll()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8A6 6 0 0114 8M14 8a6 6 0 01-12 0"/><path d="M14 4v4h-4"/></svg>
+      Refresh Data
+    </button>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <header class="topbar">
+    <div class="sync-status">
+      <div class="sync-dot"></div>
+      <span id="sync-label">Connecting to Jira…</span>
+    </div>
+    <div class="topbar-actions">
+      <span style="font-size:12px;color:var(--ink-400)" id="period-label"></span>
+      <div class="avatar">RA</div>
+    </div>
+  </header>
+
+  <div class="content" id="main-content">
+    <!-- Error banner (hidden by default) -->
+    <div class="error-banner" id="error-banner" style="display:none">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3M8 10v.5"/></svg>
+      <span id="error-msg"></span>
+    </div>
+
+    <!-- ======== EXECUTIVE ======== -->
+    <div class="page active" id="page-executive">
+      <div class="exec-hero">
+        <h1>Executive Overview</h1>
+        <p id="exec-subtitle">Loading data from Jira…</p>
+      </div>
+      <div class="kpi-grid" id="kpi-grid">
+        <div class="kpi-card"><div class="kpi-label">Total Members</div><div class="kpi-value skeleton" style="height:36px;width:80px;margin-top:8px"></div></div>
+        <div class="kpi-card"><div class="kpi-label">Active Projects</div><div class="kpi-value skeleton" style="height:36px;width:80px;margin-top:8px"></div></div>
+        <div class="kpi-card"><div class="kpi-label">Avg Utilization</div><div class="kpi-value skeleton" style="height:36px;width:80px;margin-top:8px"></div></div>
+        <div class="kpi-card"><div class="kpi-label">Jira Synced</div><div class="kpi-value skeleton" style="height:36px;width:80px;margin-top:8px"></div></div>
+      </div>
+      <div class="dash-grid" id="exec-dash-grid">
+        <div class="card" style="min-height:280px"><div class="card-body" style="display:flex;align-items:center;justify-content:center;height:100%"><div class="loading-dots"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div></div></div>
+        <div class="card" style="min-height:280px"><div class="card-body" style="display:flex;align-items:center;justify-content:center;height:100%"><div class="loading-dots"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div></div></div>
+        <div class="card" style="min-height:280px"><div class="card-body" style="display:flex;align-items:center;justify-content:center;height:100%"><div class="loading-dots"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div></div></div>
+        <div class="card" style="min-height:280px"><div class="card-body" style="display:flex;align-items:center;justify-content:center;height:100%"><div class="loading-dots"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div></div></div>
+      </div>
+    </div>
+
+    <!-- ======== CAPACITY ======== -->
+    <div class="page" id="page-capacity">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Developer Capacity</div>
+          <div class="page-sub" id="cap-subtitle">Loading…</div>
+        </div>
+        <button class="btn btn-ghost" onclick="exportCapacityCSV()">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v9M4 8l4 4 4-4"/><path d="M2 14h12"/></svg>
+          Export CSV
+        </button>
+      </div>
+      <!-- Formula banner -->
+      <div style="margin:14px 32px 0">
+        <div class="formula-banner" style="border-radius:var(--radius-md);border:1px solid var(--ink-100)">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 7v5M8 5.5v.5"/></svg>
+          <div class="formula-text">
+            weight(task): Small≤2d → 0.5 · Standard 3-5d → 1.0 · Large 6-10d → 2.0 · Epic>10d → 3.0
+            &nbsp;|&nbsp; Utilization% = Σ(weight × active days) ÷ (4 tasks/day × working days) × 100
+          </div>
+        </div>
+      </div>
+      <!-- Group sections rendered by JS -->
+      <div class="cap-sections" id="cap-sections">
+        <div style="padding:40px;text-align:center;color:var(--ink-400)">Loading capacity data…</div>
+      </div>
+    </div>
+
+    <!-- ======== VELOCITY ======== -->
+    <div class="page" id="page-velocity">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Velocity & Forecast</div>
+          <div class="page-sub">Story Points & Time Estimate · Based on Jira sprints</div>
+        </div>
+      </div>
+      <div style="padding:16px 32px 0">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px" id="velocity-kpis">
+          <div class="sync-stat"><div class="ss-label">Total Backlog Issues</div><div class="ss-val skeleton" style="height:28px;width:60px;margin-top:4px"></div></div>
+          <div class="sync-stat"><div class="ss-label">Remaining Story Points</div><div class="ss-val skeleton" style="height:28px;width:60px;margin-top:4px"></div></div>
+          <div class="sync-stat"><div class="ss-label">Remaining Hours (Est.)</div><div class="ss-val skeleton" style="height:28px;width:60px;margin-top:4px"></div></div>
+        </div>
+      </div>
+      <div class="velocity-grid" style="margin-top:16px">
+        <div class="velocity-card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l4-4 3 3 5-6"/></svg>
+              Completion Forecast by Category
+            </div>
+          </div>
+          <div style="padding:12px 0">
+            <table class="cat-table" id="cat-table">
+              <thead><tr><th>Category</th><th>Issues</th><th>Points</th><th>Est. Hours</th><th>Est. Days</th></tr></thead>
+              <tbody id="cat-tbody"><tr><td colspan="5" style="padding:30px;text-align:center;color:var(--ink-400)">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="forecast-box" id="forecast-box">
+            <div class="f-label">Estimated Completion</div>
+            <div class="f-days" id="f-days">—</div>
+            <div class="f-date" id="f-date">Calculating…</div>
+            <div class="f-sub" id="f-sub"></div>
+          </div>
+          <div class="velocity-card">
+            <div class="card-header"><div class="card-title">Sprint Velocity (last 5)</div></div>
+            <div style="padding:16px 20px" id="velocity-sprints">
+              <div style="color:var(--ink-400);font-size:12.5px;text-align:center;padding:20px 0">Loading sprint data…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== TASKS ======== -->
+    <div class="page" id="page-tasks">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Task Allocation</div>
+          <div class="page-sub">Live tasks per developer dari Jira</div>
+        </div>
+      </div>
+      <div class="task-filters">
+        <div class="search-input" style="max-width:240px">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5"/></svg>
+          <input type="text" id="task-search" placeholder="Cari task atau assignee…" oninput="filterTasks()">
+        </div>
+        <select class="select-filter" id="task-status-filter" onchange="filterTasks()">
+          <option value="">Semua Status</option>
+          <option value="To Do">To Do</option>
+          <option value="In Progress">In Progress</option>
+          <option value="In Review">In Review</option>
+          <option value="Done">Done</option>
+        </select>
+        <select class="select-filter" id="task-assignee-filter" onchange="filterTasks()">
+          <option value="">Semua Assignee</option>
+        </select>
+        <select class="select-filter" id="task-project-filter" onchange="filterTasks()">
+          <option value="">Semua Project</option>
+        </select>
+      </div>
+      <div class="task-grid" id="task-columns">
+        <div class="task-col"><div class="task-col-header"><span class="task-col-title">To Do</span></div><div class="task-cards" id="col-todo"><div style="padding:20px;text-align:center;color:var(--ink-400);font-size:12px">Loading…</div></div></div>
+        <div class="task-col"><div class="task-col-header"><span class="task-col-title">In Progress</span></div><div class="task-cards" id="col-inprogress"><div style="padding:20px;text-align:center;color:var(--ink-400);font-size:12px">Loading…</div></div></div>
+        <div class="task-col"><div class="task-col-header"><span class="task-col-title">In Review</span></div><div class="task-cards" id="col-review"><div style="padding:20px;text-align:center;color:var(--ink-400);font-size:12px">Loading…</div></div></div>
+        <div class="task-col"><div class="task-col-header"><span class="task-col-title">Done</span></div><div class="task-cards" id="col-done"><div style="padding:20px;text-align:center;color:var(--ink-400);font-size:12px">Loading…</div></div></div>
+      </div>
+    </div>
+
+    <!-- ======== JIRA SYNC ======== -->
+    <div class="page" id="page-jirasync">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Jira Sync Status</div>
+          <div class="page-sub">Issues 7 hari terakhir · linkit360.atlassian.net</div>
+        </div>
+        <button class="btn btn-primary" onclick="loadSyncData()">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8A6 6 0 0114 8M14 8a6 6 0 01-12 0"/><path d="M14 4v4h-4"/></svg>
+          Sync Now
+        </button>
+      </div>
+      <div class="sync-stats-row" id="sync-stats">
+        <div class="sync-stat"><div class="ss-label">Total Issues</div><div class="ss-val skeleton" style="height:28px;width:60px;margin-top:4px"></div></div>
+        <div class="sync-stat"><div class="ss-label">Assigned to Team</div><div class="ss-val skeleton" style="height:28px;width:60px;margin-top:4px"></div></div>
+        <div class="sync-stat"><div class="ss-label">Unassigned</div><div class="ss-val skeleton" style="height:28px;width:60px;margin-top:4px"></div></div>
+        <div class="sync-stat"><div class="ss-label">External Assignee</div><div class="ss-val skeleton" style="height:28px;width:60px;margin-top:4px"></div></div>
+      </div>
+      <div class="table-wrap" style="margin-top:16px">
+        <div class="sync-toolbar">
+          <div class="search-input">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5"/></svg>
+            <input type="text" id="sync-search" placeholder="Cari issue key atau summary…" oninput="filterSyncTable()">
+          </div>
+          <select class="select-filter" id="sync-status-filter" onchange="filterSyncTable()">
+            <option value="">Semua Sync Status</option>
+            <option value="synced">Synced</option>
+            <option value="unassigned">Unassigned</option>
+            <option value="external">External</option>
+          </select>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Issue Key</th>
+              <th>Summary</th>
+              <th>Project</th>
+              <th>Assignee</th>
+              <th>Status</th>
+              <th>Priority</th>
+              <th>Sync</th>
+              <th>Updated</th>
+            </tr>
+          </thead>
+          <tbody id="sync-tbody">
+            <tr><td colspan="8" style="padding:40px;text-align:center;color:var(--ink-400)">Loading sync data…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ======== TIMELINE ======== -->
+    <div class="page" id="page-timeline">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Timeline</div>
+          <div class="page-sub">Gantt view — task per developer dari Jira</div>
+        </div>
+      </div>
+      <div class="timeline-controls">
+        <select class="select-filter" id="tl-category-filter" onchange="onTlCategoryChange()">
+          <option value="">Semua Kategori</option>
+        </select>
+        <select class="select-filter" id="tl-project-filter" onchange="loadTimelinePage()">
+          <option value="">Semua Project</option>
+        </select>
+        <select class="select-filter" id="tl-group-filter" onchange="loadTimelinePage()">
+          <option value="">Semua Grup</option>
+        </select>
+        <select class="select-filter" id="tl-assignee-filter" onchange="loadTimelinePage()">
+          <option value="">Semua Developer</option>
+        </select>
+        <span style="margin-left:auto;font-size:11.5px;color:var(--ink-400)" id="tl-meta"></span>
+      </div>
+      <!-- Legend -->
+      <div style="display:flex;gap:16px;align-items:center;padding:10px 32px 0;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:24px;height:10px;border-radius:3px;background:var(--blue-100);border:1px solid var(--blue-200);display:inline-block"></span>In Progress</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:24px;height:10px;border-radius:3px;background:var(--green-100);border:1px solid var(--green-200);display:inline-block"></span>Done</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:24px;height:10px;border-radius:3px;background:var(--ink-100);border:1px solid var(--ink-200);display:inline-block"></span>To Do</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:24px;height:10px;border-radius:3px;background:var(--red-100);border:1px solid var(--red-200);display:inline-block"></span>Overdue</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:24px;height:10px;border-radius:3px;background:var(--amber-100);border:2px solid var(--amber-400);display:inline-block;background-image:repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(180,109,20,.2) 3px,rgba(180,109,20,.2) 5px)"></span>Rescheduled</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:2px;height:14px;background:var(--blue-400);display:inline-block;border-radius:2px"></span>Hari ini</div>
+      </div>
+      <div class="timeline-wrap" id="timeline-wrap">
+        <div style="padding:60px;text-align:center;color:var(--ink-400);font-size:13px">Loading timeline…</div>
+      </div>
+    </div>
+
+    <!-- ======== MEMBERS ======== -->
+    <div class="page" id="page-members">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Team Members</div>
+          <div class="page-sub">Atur jabatan &amp; level untuk setiap anggota tim</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-ghost" onclick="exportMembersCSV()">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v9M4 8l4 4 4-4"/><path d="M2 14h12"/></svg>
+            Export CSV
+          </button>
+          <button class="btn btn-primary" id="bulk-save-btn" onclick="saveAllProfiles()" style="display:none">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l4 4 6-7"/></svg>
+            Simpan Semua Perubahan
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats bar -->
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;padding:16px 32px 0" id="jabatan-stats">
+        <div class="sync-stat"><div class="ss-label">CTO</div><div class="ss-val" id="stat-CTO">—</div></div>
+        <div class="sync-stat"><div class="ss-label">PM</div><div class="ss-val" id="stat-PM">—</div></div>
+        <div class="sync-stat"><div class="ss-label">BA</div><div class="ss-val" id="stat-BA">—</div></div>
+        <div class="sync-stat"><div class="ss-label">QA</div><div class="ss-val" id="stat-QA">—</div></div>
+        <div class="sync-stat"><div class="ss-label">Developer</div><div class="ss-val" id="stat-Dev">—</div></div>
+      </div>
+
+      <div class="members-toolbar">
+        <div class="search-input" style="max-width:260px">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5"/></svg>
+          <input type="text" id="members-search" placeholder="Cari nama atau email…" oninput="filterMembersTable()">
+        </div>
+        <select class="select-filter" id="members-group-filter" onchange="filterMembersTable()">
+          <option value="">Semua Grup</option>
+          <option>PMO Team</option>
+          <option>Cehat Sehat Developer</option>
+          <option>Developer</option>
+          <option>Matainja Developer</option>
+          <option>PPOB Developer</option>
+          <option>Waki Developer</option>
+        </select>
+        <select class="select-filter" id="members-jabatan-filter" onchange="filterMembersTable()">
+          <option value="">Semua Jabatan</option>
+          <option>CTO</option><option>PM</option><option>BA</option><option>QA</option><option>Dev</option>
+          <option value="unset">Belum diatur</option>
+        </select>
+        <span style="font-size:11.5px;color:var(--ink-400);margin-left:auto" id="members-count-label"></span>
+      </div>
+
+      <div class="members-table-wrap">
+        <table id="members-table">
+          <thead>
+            <tr>
+              <th style="width:44px">#</th>
+              <th style="width:240px">Nama</th>
+              <th>Grup / Team</th>
+              <th>Email</th>
+              <th>Jabatan</th>
+              <th>Level</th>
+              <th style="width:100px">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="members-tbody">
+            <tr><td colspan="7" style="padding:40px;text-align:center;color:var(--ink-400)">Loading members…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- TOOLTIP (shared) -->
+<div class="tl-tooltip" id="tl-tooltip" style="display:none"></div>
+
+<!-- LOADING OVERLAY -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-card">
+    <div class="ai-spark" style="width:40px;height:40px;border-radius:10px">
+      <svg viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="1.8" width="20" height="20"><path d="M8 2l1 3h3l-2.5 2 1 3L8 8.5 5.5 10l1-3L4 5h3z"/></svg>
+    </div>
+    <div class="loading-dots">
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+    </div>
+    <div class="loading-text" id="loading-text">Memuat data dari Jira…</div>
+  </div>
+</div>
+
+<script>
+// ——— State ———
+const STATE = {
+  projects: null,
+  members: null,
+  capacity: null,
+  forecast: null,
+  velocity: null,
+  sync: null,
+  tasks: null,
+  memberProfiles: {},
+  activeGroupFilter: 'all',
+  allTasks: [],
+  allSyncIssues: []
+};
+
+const GROUP_COLORS = {
+  'PMO Team':               { bg:'var(--amber-50)', color:'var(--amber-700)', border:'var(--amber-200)' },
+  'Cehat Sehat Developer':  { bg:'var(--teal-50)',  color:'var(--teal-700)',  border:'var(--teal-200)'  },
+  'Developer':              { bg:'var(--blue-50)',  color:'var(--blue-700)',  border:'var(--blue-200)'  },
+  'Matainja Developer':     { bg:'var(--violet-50)',color:'var(--violet-700)',border:'var(--violet-200)'},
+  'PPOB Developer':         { bg:'var(--green-50)', color:'var(--green-700)', border:'var(--green-200)' },
+  'Waki Developer':         { bg:'var(--red-50)',   color:'var(--red-700)',   border:'var(--red-200)'   }
+};
+
+const PROJ_PILL_COLORS = [
+  { bg:'var(--blue-50)',   color:'var(--blue-700)',   dot:'var(--blue-400)'   },
+  { bg:'var(--green-50)',  color:'var(--green-700)',  dot:'var(--green-400)'  },
+  { bg:'var(--violet-50)', color:'var(--violet-700)', dot:'var(--violet-400)' },
+  { bg:'var(--amber-50)',  color:'var(--amber-700)',  dot:'var(--amber-400)'  },
+  { bg:'var(--teal-50)',   color:'var(--teal-700)',   dot:'var(--teal-400)'   },
+];
+
+// ——— Navigation ———
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  if (btn) btn.classList.add('active');
+
+  if (id === 'velocity' && !STATE.forecast) loadVelocityPage();
+  if (id === 'tasks' && !STATE.tasks) loadTasksPage();
+  if (id === 'jirasync' && !STATE.sync) loadSyncData();
+  if (id === 'timeline') { populateTlFilters(); if (!TL.data) loadTimelinePage(); }
+  if (id === 'members') loadMembersPage();
+}
+
+// ——— Loading helpers ———
+function showLoading(msg) {
+  document.getElementById('loading-text').textContent = msg || 'Memuat data dari Jira…';
+  document.getElementById('loading-overlay').classList.add('show');
+}
+function hideLoading() {
+  document.getElementById('loading-overlay').classList.remove('show');
+}
+function showError(msg) {
+  const b = document.getElementById('error-banner');
+  document.getElementById('error-msg').textContent = msg;
+  b.style.display = 'flex';
+  setTimeout(() => b.style.display = 'none', 8000);
+}
+
+// ——— API calls ———
+async function api(path) {
+  const r = await fetch(path);
+  if (!r.ok) throw new Error(`API error ${r.status}`);
+  return r.json();
+}
+
+// ——— INIT ———
+async function init() {
+  showLoading('Memuat projects & members dari Jira…');
+  try {
+    const [projects, members] = await Promise.all([
+      api('/api/projects'),
+      api('/api/members')
+    ]);
+    STATE.projects = projects;
+    STATE.members = members;
+
+    document.getElementById('sync-label').textContent = `Terhubung ke Jira · ${new Date().toLocaleTimeString('id-ID')}`;
+    updatePeriodLabel();
+    hideLoading();
+
+    // Load capacity (may take a while — don't block UI)
+    loadCapacity();
+  } catch(e) {
+    showError('Gagal terhubung ke Jira: ' + e.message);
+    document.getElementById('sync-label').textContent = 'Gagal terhubung ke Jira';
+    document.querySelector('.sync-dot').style.background = 'var(--red-400)';
+    hideLoading();
+  }
+}
+
+function updatePeriodLabel() {
+  const now = new Date();
+  const label = now.toLocaleString('id-ID', { month: 'long', year: 'numeric' });
+  document.getElementById('period-label').textContent = label;
+  document.getElementById('exec-subtitle').textContent =
+    `${label} · Resource allocation & velocity dari Jira`;
+}
+
+// ——— CAPACITY ———
+async function loadCapacity() {
+  showLoading('Menghitung utilization developer…');
+  try {
+    const cap = await api('/api/capacity');
+    STATE.capacity = cap;
+    renderExecutivePage(cap);
+    renderCapacityTable(cap);
+
+    const now = new Date();
+    const sub = `${now.toLocaleString('id-ID',{month:'long',year:'numeric'})} · ${cap.period?.workingDays || 22} hari kerja · ${STATE.members?.length || 0} member dari 6 grup`;
+    document.getElementById('cap-subtitle').textContent = sub;
+  } catch(e) {
+    showError('Gagal load capacity: ' + e.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+// ——— EXECUTIVE PAGE ———
+function renderExecutivePage(cap) {
+  const s = cap.summary;
+  const projects = STATE.projects?.projects || [];
+  const members = STATE.members || [];
+
+  // KPI cards
+  document.getElementById('kpi-grid').innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-label">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="5" r="3"/><path d="M1 14c0-3 2-4 5-4s5 1 5 4"/><path d="M12 7l1.5 1.5L16 6"/></svg>
+        Total Members
+      </div>
+      <div class="kpi-value">${members.length}</div>
+      <div class="kpi-delta info">6 grup aktif</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="14" height="10" rx="1"/><path d="M5 4V3a2 2 0 014 0v1"/></svg>
+        Active Projects
+      </div>
+      <div class="kpi-value">${projects.length}</div>
+      <div class="kpi-delta info">5 kategori</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 4v4l3 2"/></svg>
+        Avg Utilization
+      </div>
+      <div class="kpi-value">${s.avgUtilization}%</div>
+      <div class="kpi-delta ${s.avgUtilization > 100 ? 'down' : s.avgUtilization > 80 ? 'warn' : 'up'}">
+        ${s.avgUtilization > 100 ? 'Tim overloaded' : s.avgUtilization > 80 ? 'Mendekati kapasitas' : 'Normal'}
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1l2 5h5l-4 3 1.5 5L8 11l-4.5 3L5 9 1 6h5z"/></svg>
+        Overloaded
+      </div>
+      <div class="kpi-value">${s.overloaded}</div>
+      <div class="kpi-delta ${s.overloaded > 0 ? 'down' : 'up'}">${s.idle} underutilized</div>
+    </div>
+  `;
+
+  // Gauge
+  const util = Math.min(s.avgUtilization, 200);
+  const pct = Math.min(util / 100, 1);
+  const arcLen = 226;
+  const fillLen = pct * arcLen;
+  const gaugeColor = s.avgUtilization > 100 ? '#d94c4c' : s.avgUtilization > 80 ? '#e08c24' : '#22b573';
+
+  // Group utilization
+  const groupStats = {};
+  for (const dev of cap.developers) {
+    const g = dev.group;
+    if (!groupStats[g]) groupStats[g] = { total: 0, count: 0 };
+    groupStats[g].total += dev.utilization;
+    groupStats[g].count++;
+  }
+
+  const groupBars = Object.entries(groupStats).map(([g, st]) => {
+    const avg = Math.round(st.total / st.count);
+    const fillClass = avg > 100 ? 'fill-over' : avg > 80 ? 'fill-warn' : 'fill-ok';
+    const pctClass = avg > 100 ? 'over' : avg > 80 ? 'warn' : 'ok';
+    const gc = GROUP_COLORS[g] || { bg:'var(--blue-50)',color:'var(--blue-700)' };
+    return `
+      <div class="tbar-row">
+        <div class="tbar-meta">
+          <div class="tbar-name"><span class="tbar-type" style="background:${gc.bg};color:${gc.color}">${g.replace(' Developer','').replace(' Team','')}</span>${g}</div>
+          <div class="tbar-pct ${pctClass}">${avg}%</div>
+        </div>
+        <div class="tbar-track"><div class="tbar-fill ${fillClass}" style="width:${Math.min(avg,100)}%"></div></div>
+      </div>`;
+  }).join('');
+
+  // Overloaded devs
+  const overloaded = cap.developers.filter(d => d.utilization > 100).slice(0, 5);
+  const overloadRows = overloaded.length ? overloaded.map(d => {
+    const initials = d.displayName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const pct = d.utilization;
+    const fillW = Math.min(100, (pct / Math.max(...overloaded.map(x=>x.utilization))) * 100);
+    return `
+      <div class="dev-row">
+        <div class="dev-init" style="background:var(--red-100);color:var(--red-700)">${initials}</div>
+        <div style="flex:1">
+          <div class="dev-name">${d.displayName} <span class="dev-role-tag">· ${d.group}</span></div>
+        </div>
+        <div class="mini-bar-wrap">
+          <div class="mini-bar-track"><div class="mini-bar-fill fill-over" style="width:${fillW}%"></div></div>
+          <div class="mini-pct" style="color:var(--red-500)">${pct}%</div>
+        </div>
+      </div>`;
+  }).join('') : `<div class="empty-state" style="padding:30px"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l4 4 6-7"/></svg><p>Tidak ada developer yang overloaded</p></div>`;
+
+  // AI bullets
+  const idleDevs = cap.developers.filter(d => d.utilization < 30);
+  const aiBullets = [
+    s.overloaded > 0 ? `<div class="exec-ai-bullet"><svg viewBox="0 0 16 16" fill="none" stroke="var(--red-500)" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v4M8 11v.5"/></svg><span><strong>${s.overloaded} developer overloaded</strong> bulan ini. ${overloaded[0]?.displayName || ''} paling tinggi di ${overloaded[0]?.utilization || 0}%.</span></div>` : '',
+    idleDevs.length > 0 ? `<div class="exec-ai-bullet"><svg viewBox="0 0 16 16" fill="none" stroke="var(--blue-500)" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v4M8 11v.5"/></svg><span><strong>${idleDevs.length} developer underutilized</strong> (&lt;30%) — kapasitas dapat dioptimalkan untuk menyerap overflow dari tim yang overloaded.</span></div>` : '',
+    `<div class="exec-ai-bullet"><svg viewBox="0 0 16 16" fill="none" stroke="var(--green-500)" stroke-width="1.5"><path d="M3 8l4 4 6-7"/></svg><span><strong>Total ${projects.length} project aktif</strong> dari 5 kategori (VAS, Product, Project, Platform Internal, QA). ${s.healthy} developer dalam kondisi sehat (70–100%).</span></div>`,
+    `<div class="exec-ai-bullet"><svg viewBox="0 0 16 16" fill="none" stroke="var(--amber-500)" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v4M8 11v.5"/></svg><span>Rata-rata utilization tim <strong>${s.avgUtilization}%</strong>. ${s.avgUtilization > 100 ? 'Perlu redistribusi task segera.' : s.avgUtilization > 85 ? 'Mendekati batas kapasitas, pantau terus.' : 'Kapasitas masih dalam batas normal.'}</span></div>`
+  ].filter(Boolean).join('');
+
+  const flagCount = s.overloaded + (idleDevs.length > 0 ? 1 : 0);
+
+  document.getElementById('exec-dash-grid').innerHTML = `
+    <!-- Gauge -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="8" cy="12" r="1.5"/></svg>
+          Team Utilization
+        </div>
+        <span style="font-size:11px;color:var(--ink-400)">${new Date().toLocaleString('id-ID',{month:'long',year:'numeric'})}</span>
+      </div>
+      <div class="gauge-wrap">
+        <svg width="180" height="110" viewBox="0 0 180 110" style="overflow:visible">
+          <path d="M18 100 A72 72 0 0 1 162 100" fill="none" stroke="#e8ebf2" stroke-width="14" stroke-linecap="round"/>
+          <path d="M18 100 A72 72 0 0 1 162 100" fill="none" stroke="${gaugeColor}" stroke-width="14" stroke-linecap="round" stroke-dasharray="${arcLen} ${arcLen}" stroke-dashoffset="${arcLen - fillLen}"/>
+          <line x1="162" y1="100" x2="162" y2="86" stroke="#9aa3b8" stroke-width="1.5" stroke-dasharray="3 2"/>
+          <text x="162" y="82" text-anchor="middle" font-size="9" fill="#9aa3b8">100%</text>
+          <text x="90" y="88" font-family="DM Sans,sans-serif" font-weight="600" font-size="32" fill="#0a0d12" letter-spacing="-2" text-anchor="middle">${s.avgUtilization}%</text>
+          <text x="90" y="104" font-family="DM Sans,sans-serif" font-size="11" fill="#6b7590" text-anchor="middle">Rata-rata Tim</text>
+        </svg>
+      </div>
+      <div class="gauge-footer">
+        <div class="gauge-stat"><div class="gs-label">Overloaded</div><div class="gs-val" style="color:var(--red-500)">${s.overloaded}</div></div>
+        <div class="gauge-stat"><div class="gs-label">Sehat (70–100%)</div><div class="gs-val" style="color:var(--green-500)">${s.healthy}</div></div>
+        <div class="gauge-stat"><div class="gs-label">Underutilized</div><div class="gs-val" style="color:var(--amber-500)">${s.idle}</div></div>
+        <div class="gauge-stat"><div class="gs-label">High (80–100%)</div><div class="gs-val" style="color:var(--blue-500)">${s.high}</div></div>
+      </div>
+    </div>
+
+    <!-- Team bars -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="10" width="3" height="5"/><rect x="6.5" y="6" width="3" height="9"/><rect x="12" y="2" width="3" height="13"/></svg>
+          Utilization by Group
+        </div>
+      </div>
+      <div class="card-body"><div class="team-bars">${groupBars}</div></div>
+    </div>
+
+    <!-- Overloaded list -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v8M4 6l4-4 4 4"/><path d="M2 14h12"/></svg>
+          Critical Overloads
+        </div>
+        <span class="sync-badge ${s.overloaded > 0 ? 'unassigned' : 'synced'}">${s.overloaded} members</span>
+      </div>
+      <div class="dev-list">${overloadRows}</div>
+    </div>
+
+    <!-- AI Summary -->
+    <div class="exec-ai-card">
+      <div class="exec-ai-header">
+        <div class="ai-spark" style="width:26px;height:26px;border-radius:7px">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="1.8"><path d="M8 2l1 3h3l-2.5 2 1 3L8 8.5 5.5 10l1-3L4 5h3z"/></svg>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--ink-900)">AI Summary</div>
+          <div style="font-size:11px;color:var(--ink-400)">Generated from Jira data · ${new Date().toLocaleTimeString('id-ID')}</div>
+        </div>
+        <span class="ai-count-badge ${flagCount > 0 ? 'has-flags' : 'ok'}">${flagCount > 0 ? flagCount + ' flags' : 'All OK'}</span>
+      </div>
+      <div class="exec-ai-body">${aiBullets}</div>
+      <div class="exec-ai-footer">
+        <span style="font-size:11px;color:var(--ink-400)">Updated ${new Date().toLocaleTimeString('id-ID')}</span>
+        <button style="font-size:12px;font-weight:500;color:var(--blue-700);cursor:pointer;background:none;border:none;font-family:var(--font-body);display:flex;align-items:center;gap:4px" onclick="showPage('capacity',document.querySelectorAll('.nav-item')[1])">
+          Lihat detail per developer
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+// ——— CAPACITY — SECTIONS PER GROUP WITH PAGING ———
+const GROUPS_ORDER = ['PMO Team','Cehat Sehat Developer','Developer','Matainja Developer','PPOB Developer','Waki Developer'];
+
+// paging state per group: { page, perPage, query }
+const CAP_PAGING = {};
+
+function renderCapacityTable(cap) {
+  const container = document.getElementById('cap-sections');
+  container.innerHTML = '';
+
+  GROUPS_ORDER.forEach(group => {
+    const members = cap.developers.filter(d => d.groups.includes(group));
+    if (!members.length) return;
+
+    // Init paging state for group
+    if (!CAP_PAGING[group]) CAP_PAGING[group] = { page: 0, perPage: 10, query: '' };
+
+    const gc   = GROUP_COLORS[group] || { bg:'var(--blue-50)', color:'var(--blue-700)', border:'var(--blue-200)' };
+    const avgU = Math.round(members.reduce((s,d) => s + d.utilization, 0) / members.length);
+    const over = members.filter(d => d.utilization > 100).length;
+    const idle = members.filter(d => d.utilization < 30).length;
+
+    const statusDot = avgU > 100
+      ? `<span style="width:8px;height:8px;border-radius:50%;background:var(--red-400);display:inline-block"></span>`
+      : avgU > 80
+        ? `<span style="width:8px;height:8px;border-radius:50%;background:var(--amber-400);display:inline-block"></span>`
+        : `<span style="width:8px;height:8px;border-radius:50%;background:var(--green-400);display:inline-block"></span>`;
+
+    const sec = document.createElement('div');
+    sec.className = 'cap-section open';
+    sec.id = `cap-sec-${group.replace(/\s+/g,'-')}`;
+    sec.innerHTML = `
+      <div class="cap-section-header" onclick="toggleCapSection('${group}')">
+        <div class="cap-section-title">
+          ${statusDot}
+          <span style="background:${gc.bg};color:${gc.color};padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid ${gc.border}">${group}</span>
+          <span style="font-size:13px;color:var(--ink-600);font-weight:400">${members.length} anggota</span>
+        </div>
+        <div class="cap-section-stats">
+          <div class="cap-section-stat">Avg <strong>${avgU}%</strong></div>
+          ${over ? `<div class="cap-section-stat" style="color:var(--red-500)">⚠ <strong>${over}</strong> overload</div>` : ''}
+          ${idle ? `<div class="cap-section-stat" style="color:var(--ink-400)">↓ <strong>${idle}</strong> idle</div>` : ''}
+        </div>
+        <svg class="cap-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6l4 4 4-4"/></svg>
+      </div>
+      <div class="cap-section-body" id="cap-body-${group.replace(/\s+/g,'-')}">
+        <div style="display:flex;align-items:center;padding:8px 16px;border-bottom:1px solid var(--ink-100);background:var(--ink-50);gap:10px">
+          <div class="cap-search">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5"/></svg>
+            <input type="text" placeholder="Cari nama…" oninput="onCapSearch('${group}',this.value)" id="cap-search-${group.replace(/\s+/g,'-')}">
+          </div>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:var(--ink-400)">Tampilkan:</span>
+            <select class="perpage-select" onchange="setCapPerPage('${group}',this.value)" id="pp-${group.replace(/\s+/g,'-')}">
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="all">Semua</option>
+            </select>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:36px">#</th>
+              <th style="width:220px">Developer</th>
+              <th>Utilization</th>
+              <th>Available</th>
+              <th>Overload</th>
+              <th>Tasks</th>
+              <th>Project Allocation</th>
+            </tr>
+          </thead>
+          <tbody id="cap-tbody-${group.replace(/\s+/g,'-')}"></tbody>
+        </table>
+        <div class="paging-bar" id="cap-paging-${group.replace(/\s+/g,'-')}"></div>
+      </div>`;
+    container.appendChild(sec);
+
+    renderCapGroupRows(group, members);
+  });
+}
+
+function toggleCapSection(group) {
+  const id  = group.replace(/\s+/g, '-');
+  const sec = document.getElementById(`cap-sec-${id}`);
+  sec.classList.toggle('open');
+}
+
+function onCapSearch(group, query) {
+  CAP_PAGING[group].query = query.toLowerCase();
+  CAP_PAGING[group].page  = 0;
+  const members = STATE.capacity.developers.filter(d => d.groups.includes(group));
+  renderCapGroupRows(group, members);
+}
+
+function setCapPerPage(group, val) {
+  CAP_PAGING[group].perPage = val === 'all' ? 9999 : parseInt(val);
+  CAP_PAGING[group].page    = 0;
+  const members = STATE.capacity.developers.filter(d => d.groups.includes(group));
+  renderCapGroupRows(group, members);
+}
+
+function capGoPage(group, page) {
+  CAP_PAGING[group].page = page;
+  const members = STATE.capacity.developers.filter(d => d.groups.includes(group));
+  renderCapGroupRows(group, members);
+}
+
+function renderCapGroupRows(group, allMembers) {
+  const id      = group.replace(/\s+/g, '-');
+  const paging  = CAP_PAGING[group];
+  const gc      = GROUP_COLORS[group] || { bg:'var(--blue-50)', color:'var(--blue-700)' };
+
+  // Apply search filter
+  const query   = paging.query || '';
+  const filtered = query
+    ? allMembers.filter(d => d.displayName.toLowerCase().includes(query))
+    : allMembers;
+
+  const perPage  = paging.perPage;
+  const totalPg  = perPage >= 9999 ? 1 : Math.ceil(filtered.length / perPage);
+  const page     = Math.min(paging.page, Math.max(0, totalPg - 1));
+  CAP_PAGING[group].page = page;
+
+  const slice = perPage >= 9999
+    ? filtered
+    : filtered.slice(page * perPage, page * perPage + perPage);
+
+  const globalOffset = page * (perPage >= 9999 ? 0 : perPage);
+
+  // Render rows
+  document.getElementById(`cap-tbody-${id}`).innerHTML = slice.length
+    ? slice.map((d, i) => {
+        const initials  = d.displayName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+        const util      = d.utilization;
+        const fillClass = util > 100 ? 'fill-over' : util > 80 ? 'fill-warn' : 'fill-ok';
+        const numClass  = util > 100 ? 'over'      : util > 80 ? 'warn'      : util >= 30 ? 'ok' : 'low';
+        const rowBg     = util > 100 ? 'background:var(--red-50)' : '';
+        const flag      = util > 100
+          ? `<span class="row-flag over">Overload</span>`
+          : util < 30 ? `<span class="row-flag idle">Idle</span>` : '';
+        const projPills = d.projectAllocations.map((p, pi) => {
+          const c = PROJ_PILL_COLORS[pi % PROJ_PILL_COLORS.length];
+          return `<span class="project-pill" style="background:${c.bg};color:${c.color}"><span class="pp-dot" style="background:${c.dot}"></span>${p.key} ${p.pct}%</span>`;
+        }).join('');
+
+        return `<tr style="${rowBg}">
+          <td style="color:var(--ink-400);font-size:11px">${globalOffset + i + 1}</td>
+          <td><div class="td-name">
+            <div class="dev-init" style="background:${gc.bg};color:${gc.color}">${initials}</div>
+            ${d.displayName}${flag}
+          </div></td>
+          <td>
+            <div class="util-cell">
+              <div class="util-bar"><div class="util-fill ${fillClass}" style="width:${Math.min(util,100)}%"></div></div>
+              <span class="util-num ${numClass}">${util}%</span>
+            </div>
+          </td>
+          <td style="color:${util<30?'var(--ink-400)':'var(--green-500)'};font-weight:600;font-size:12.5px">${d.available}%</td>
+          <td style="color:var(--red-500);font-weight:600;font-size:12.5px">${d.overload>0?'+'+d.overload+'%':'—'}</td>
+          <td style="font-weight:500">${d.taskCount} <span style="color:var(--ink-400);font-weight:400;font-size:11px">(${d.activeTaskCount} aktif)</span></td>
+          <td>${projPills||'<span style="color:var(--ink-400);font-size:12px">—</span>'}</td>
+        </tr>`;
+      }).join('')
+    : `<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--ink-400)">Tidak ada hasil</td></tr>`;
+
+  // Render pagination
+  const pagingEl = document.getElementById(`cap-paging-${id}`);
+  if (totalPg <= 1 && !query) { pagingEl.style.display = 'none'; return; }
+  pagingEl.style.display = 'flex';
+
+  // Build page numbers (show max 5 around current)
+  let pageNums = '';
+  const showPages = 5;
+  let startPg = Math.max(0, page - 2);
+  let endPg   = Math.min(totalPg - 1, startPg + showPages - 1);
+  if (endPg - startPg < showPages - 1) startPg = Math.max(0, endPg - showPages + 1);
+
+  if (startPg > 0)   pageNums += `<button class="paging-btn" onclick="capGoPage('${group}',0)">1</button>${startPg>1?'<span style="color:var(--ink-400);padding:0 2px">…</span>':''}`;
+  for (let p = startPg; p <= endPg; p++) {
+    pageNums += `<button class="paging-btn${p===page?' active':''}" onclick="capGoPage('${group}',${p})">${p+1}</button>`;
+  }
+  if (endPg < totalPg - 1) pageNums += `${endPg<totalPg-2?'<span style="color:var(--ink-400);padding:0 2px">…</span>':''}<button class="paging-btn" onclick="capGoPage('${group}',${totalPg-1})">${totalPg}</button>`;
+
+  const showingFrom = perPage >= 9999 ? 1 : page * perPage + 1;
+  const showingTo   = perPage >= 9999 ? filtered.length : Math.min((page + 1) * perPage, filtered.length);
+
+  pagingEl.innerHTML = `
+    <button class="paging-btn" onclick="capGoPage('${group}',${page-1})" ${page===0?'disabled':''}>
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 4l-4 4 4 4"/></svg>
+    </button>
+    ${pageNums}
+    <button class="paging-btn" onclick="capGoPage('${group}',${page+1})" ${page>=totalPg-1?'disabled':''}>
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4l4 4-4 4"/></svg>
+    </button>
+    <span class="paging-label">${showingFrom}–${showingTo} dari ${filtered.length}</span>
+  `;
+}
+
+// ——— VELOCITY PAGE ———
+async function loadVelocityPage() {
+  showLoading('Menghitung forecast penyelesaian backlog…');
+  try {
+    const [forecast, velocity] = await Promise.all([
+      api('/api/forecast'),
+      api('/api/velocity').catch(() => [])
+    ]);
+    STATE.forecast = forecast;
+    STATE.velocity = velocity;
+
+    // KPIs
+    document.getElementById('velocity-kpis').innerHTML = `
+      <div class="sync-stat">
+        <div class="ss-label">Total Backlog Issues</div>
+        <div class="ss-val">${forecast.totalBacklog}</div>
+      </div>
+      <div class="sync-stat">
+        <div class="ss-label">Remaining Story Points</div>
+        <div class="ss-val ${forecast.totalPoints > 0 ? '' : 'amber'}">${forecast.totalPoints > 0 ? forecast.totalPoints : 'N/A'}</div>
+      </div>
+      <div class="sync-stat">
+        <div class="ss-label">Remaining Hours (Est.)</div>
+        <div class="ss-val">${forecast.totalHours > 0 ? forecast.totalHours + 'h' : '—'}</div>
+      </div>
+    `;
+
+    // Forecast box
+    document.getElementById('f-days').textContent = `${forecast.daysToComplete} hari`;
+    document.getElementById('f-date').textContent = `Estimasi selesai: ${formatDate(forecast.completionDate)}`;
+    const metricLabel = forecast.velocityMetric === 'story_points' ? `${forecast.totalPoints} story points` : forecast.velocityMetric === 'time_estimate' ? `${forecast.totalHours}h estimated` : `${forecast.totalBacklog} issues · ${forecast.issuesPerDay} issues/hari`;
+    document.getElementById('f-sub').textContent = `≈ ${forecast.completionMonths} bulan · ${metricLabel}`;
+    document.getElementById('nav-forecast-badge').textContent = `${forecast.completionMonths}mo`;
+    document.getElementById('nav-forecast-badge').style.display = '';
+
+    // Category table
+    document.getElementById('cat-tbody').innerHTML = forecast.byCategory.length
+      ? forecast.byCategory.map(c => `
+        <tr>
+          <td><strong>${c.category}</strong></td>
+          <td>${c.count}</td>
+          <td>${c.points || '—'}</td>
+          <td>${c.hours > 0 ? c.hours + 'h' : '—'}</td>
+          <td style="font-weight:600;color:var(--blue-700)">${c.estimatedDays} hari</td>
+        </tr>`).join('')
+      : `<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--ink-400)">Tidak ada backlog</td></tr>`;
+
+    // Sprint velocity bars
+    const boards = velocity || [];
+    if (boards.length && boards[0].sprints?.length) {
+      const sprints = boards[0].sprints.slice(-5);
+      const maxPts = Math.max(...sprints.map(s => s.completedPoints), 1);
+      document.getElementById('velocity-sprints').innerHTML = `
+        <div style="font-size:11px;color:var(--ink-400);margin-bottom:10px">Avg velocity: <strong style="color:var(--ink-800)">${boards[0].avgVelocityPoints} pts/sprint</strong></div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${sprints.map(s => `
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+                <span style="color:var(--ink-600)">${s.sprintName?.slice(-20) || 'Sprint'}</span>
+                <span style="font-weight:600;color:var(--blue-700)">${s.completedPoints} pts</span>
+              </div>
+              <div class="tbar-track"><div class="tbar-fill fill-blue" style="width:${Math.round((s.completedPoints/maxPts)*100)}%"></div></div>
+            </div>`).join('')}
+        </div>
+      `;
+    } else {
+      document.getElementById('velocity-sprints').innerHTML = `<div style="color:var(--ink-400);font-size:12.5px;text-align:center;padding:20px 0">Data sprint tidak tersedia — project mungkin tidak menggunakan Jira Agile board</div>`;
+    }
+  } catch(e) {
+    showError('Gagal load velocity: ' + e.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+// ——— TASKS PAGE ———
+async function loadTasksPage() {
+  showLoading('Memuat task allocation dari Jira…');
+  try {
+    const data = await api('/api/tasks');
+    STATE.tasks = data;
+    STATE.allTasks = data.issues || [];
+
+    // Populate filters
+    const assignees = [...new Set(STATE.allTasks.map(t => t.assignee).filter(Boolean))].sort();
+    const projects = [...new Set(STATE.allTasks.map(t => t.project).filter(Boolean))].sort();
+
+    document.getElementById('task-assignee-filter').innerHTML =
+      `<option value="">Semua Assignee</option>` +
+      assignees.map(a => `<option value="${a}">${a}</option>`).join('');
+
+    document.getElementById('task-project-filter').innerHTML =
+      `<option value="">Semua Project</option>` +
+      projects.map(p => `<option value="${p}">${p}</option>`).join('');
+
+    renderTaskColumns(STATE.allTasks);
+  } catch(e) {
+    showError('Gagal load tasks: ' + e.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+function filterTasks() {
+  const q = document.getElementById('task-search').value.toLowerCase();
+  const status = document.getElementById('task-status-filter').value;
+  const assignee = document.getElementById('task-assignee-filter').value;
+  const project = document.getElementById('task-project-filter').value;
+
+  const filtered = STATE.allTasks.filter(t => {
+    if (q && !t.summary?.toLowerCase().includes(q) && !t.assignee?.toLowerCase().includes(q) && !t.key?.toLowerCase().includes(q)) return false;
+    if (status && t.status !== status) return false;
+    if (assignee && t.assignee !== assignee) return false;
+    if (project && t.project !== project) return false;
+    return true;
+  });
+  renderTaskColumns(filtered);
+}
+
+function renderTaskColumns(tasks) {
+  const cols = {
+    todo: tasks.filter(t => ['To Do','Open','Backlog','New'].includes(t.status)),
+    inprogress: tasks.filter(t => ['In Progress','In Development','Coding'].includes(t.status)),
+    review: tasks.filter(t => ['In Review','Code Review','Testing','QA'].includes(t.status)),
+    done: tasks.filter(t => ['Done','Closed','Resolved','Completed'].includes(t.status))
+  };
+
+  Object.entries(cols).forEach(([key, items]) => {
+    const col = document.getElementById('col-' + key);
+    const header = col.closest('.task-col').querySelector('.task-col-header');
+    header.querySelector('.task-col-count')?.remove();
+    const badge = document.createElement('span');
+    badge.className = 'task-col-count';
+    badge.textContent = items.length;
+    header.appendChild(badge);
+
+    col.innerHTML = items.length ? items.slice(0, 30).map(t => {
+      const initials = t.assignee?.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() || '?';
+      const pClass = `p-${(t.priority || 'medium').toLowerCase()}`;
+      return `
+        <div class="task-card">
+          <div class="task-key">${t.key}</div>
+          <div class="task-summary">${t.summary || 'Untitled'}</div>
+          <div class="task-meta">
+            <span class="priority-badge ${pClass}">${t.priority || 'Medium'}</span>
+            ${t.storyPoints ? `<span style="font-size:10px;color:var(--ink-400)">${t.storyPoints}pt</span>` : ''}
+            <span class="assignee-chip"><span class="mini-av">${initials}</span>${t.assignee || 'Unassigned'}</span>
+          </div>
+        </div>`;
+    }).join('') : `<div style="padding:24px;text-align:center;color:var(--ink-300);font-size:12px">Tidak ada task</div>`;
+  });
+}
+
+// ——— SYNC PAGE ———
+async function loadSyncData() {
+  showLoading('Mengecek sync status Jira…');
+  try {
+    const data = await api('/api/sync-status');
+    STATE.sync = data;
+    STATE.allSyncIssues = data.issues || [];
+
+    document.getElementById('sync-stats').innerHTML = `
+      <div class="sync-stat"><div class="ss-label">Total Issues (7 hari)</div><div class="ss-val">${data.total}</div></div>
+      <div class="sync-stat"><div class="ss-label">Assigned to Team</div><div class="ss-val green">${data.synced}</div></div>
+      <div class="sync-stat"><div class="ss-label">Unassigned</div><div class="ss-val ${data.unassigned > 0 ? 'red' : ''}">${data.unassigned}</div></div>
+      <div class="sync-stat"><div class="ss-label">External Assignee</div><div class="ss-val ${data.external > 0 ? 'amber' : ''}">${data.external}</div></div>
+    `;
+
+    const badge = document.getElementById('nav-sync-badge');
+    if (data.unassigned > 0) {
+      badge.textContent = data.unassigned;
+      badge.style.display = '';
+    }
+
+    renderSyncTable(STATE.allSyncIssues);
+    document.getElementById('sync-label').textContent = `Jira synced · ${new Date().toLocaleTimeString('id-ID')}`;
+  } catch(e) {
+    showError('Gagal load sync: ' + e.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+function filterSyncTable() {
+  const q = document.getElementById('sync-search').value.toLowerCase();
+  const s = document.getElementById('sync-status-filter').value;
+  const filtered = STATE.allSyncIssues.filter(i => {
+    if (q && !i.key?.toLowerCase().includes(q) && !i.summary?.toLowerCase().includes(q) && !i.assignee?.toLowerCase().includes(q)) return false;
+    if (s && i.syncStatus !== s) return false;
+    return true;
+  });
+  renderSyncTable(filtered);
+}
+
+function renderSyncTable(issues) {
+  document.getElementById('sync-tbody').innerHTML = issues.length
+    ? issues.map(i => `
+      <tr>
+        <td><span class="jira-id">${i.key}</span></td>
+        <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.summary}</td>
+        <td style="font-size:12px;color:var(--ink-500)">${i.project || '—'}</td>
+        <td style="font-size:12px">${i.assignee || '<span style="color:var(--ink-400)">Unassigned</span>'}</td>
+        <td><span style="font-size:11.5px;font-weight:500;color:var(--ink-600)">${i.status || '—'}</span></td>
+        <td><span class="priority-badge p-${(i.priority||'medium').toLowerCase()}">${i.priority || 'Medium'}</span></td>
+        <td><span class="sync-badge ${i.syncStatus}">${i.syncStatus === 'synced' ? 'Synced' : i.syncStatus === 'unassigned' ? 'Unassigned' : 'External'}</span></td>
+        <td style="font-size:11px;color:var(--ink-400)">${formatDate(i.updated?.slice(0,10))}</td>
+      </tr>`).join('')
+    : `<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--ink-400)">Tidak ada data</td></tr>`;
+}
+
+// ——— EXPORT ———
+function exportCapacityCSV() {
+  if (!STATE.capacity) return alert('Data belum tersedia');
+  const devs = STATE.capacity.developers;
+  const rows = [['Name','Group','Utilization%','Available%','Overload%','Tasks','Active Tasks']];
+  devs.forEach(d => rows.push([d.displayName, d.group, d.utilization, d.available, d.overload, d.taskCount, d.activeTaskCount]));
+  const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `capacity_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// ——— Populate timeline filter dropdowns ———
+function populateTlFilters() {
+  const members    = STATE.members || [];
+  const projects   = STATE.projects?.projects || [];
+  // categories is [{id, name}] from API
+  const catNames = [...new Set((STATE.projects?.categories || []).map(c => c.name || c).filter(Boolean))];
+  const groups   = [...new Set(members.flatMap(m => m.groups || []))].sort();
+
+  // Category dropdown
+  const catSel = document.getElementById('tl-category-filter');
+  const prevCat = catSel.value;
+  catSel.innerHTML = `<option value="">Semua Kategori</option>` +
+    catNames.map(c => `<option value="${c}" ${c===prevCat?'selected':''}>${c}</option>`).join('');
+
+  // Project dropdown (filtered by selected category)
+  const curCat = catSel.value;
+  const filteredProj = curCat
+    ? projects.filter(p => (p.category || p.projectCategory?.name) === curCat)
+    : projects;
+  const projSel = document.getElementById('tl-project-filter');
+  const prevProj = projSel.value;
+  projSel.innerHTML = `<option value="">Semua Project</option>` +
+    filteredProj.map(p => `<option value="${p.key}" ${p.key===prevProj?'selected':''}>[${p.key}] ${p.name}</option>`).join('');
+
+  // Group dropdown
+  const grpSel = document.getElementById('tl-group-filter');
+  const prevGrp = grpSel.value;
+  grpSel.innerHTML = `<option value="">Semua Grup</option>` +
+    groups.map(g => `<option value="${g}" ${g===prevGrp?'selected':''}>${g}</option>`).join('');
+
+  // Assignee dropdown
+  const asSel = document.getElementById('tl-assignee-filter');
+  const prevAs = asSel.value;
+  asSel.innerHTML = `<option value="">Semua Developer</option>` +
+    members.map(m => `<option value="${m.accountId}" ${m.accountId===prevAs?'selected':''}>${m.displayName}</option>`).join('');
+}
+
+function onTlCategoryChange() {
+  // Re-populate project dropdown based on selected category
+  const projects = STATE.projects?.projects || [];
+  const curCat   = document.getElementById('tl-category-filter').value;
+  const filtered = curCat
+    ? projects.filter(p => (p.category || p.projectCategory?.name) === curCat)
+    : projects;
+
+  const projSel  = document.getElementById('tl-project-filter');
+  projSel.innerHTML = `<option value="">Semua Project</option>` +
+    filtered.map(p => `<option value="${p.key}">[${p.key}] ${p.name}</option>`).join('');
+
+  loadTimelinePage();
+}
+
+// ======== TIMELINE ========
+let TL = { data: null };
+
+async function loadTimelinePage() {
+  if (!STATE.members?.length) return;
+
+  const category   = document.getElementById('tl-category-filter')?.value || '';
+  const projectKey = document.getElementById('tl-project-filter')?.value  || '';
+  const groupFilter= document.getElementById('tl-group-filter')?.value    || '';
+  const assigneeId = document.getElementById('tl-assignee-filter')?.value || '';
+
+  TL.groupFilter = groupFilter;
+
+  showLoading('Memuat timeline dari Jira…');
+  try {
+    const params = new URLSearchParams();
+    if (category)    params.set('category',    category);
+    if (projectKey)  params.set('projectKey',  projectKey);
+    if (groupFilter) params.set('group',        groupFilter);
+    if (assigneeId)  params.set('assigneeId',  assigneeId);
+
+    const data = await api(`/api/timeline?${params.toString()}`);
+    TL.data = data;
+    document.getElementById('tl-meta').textContent =
+      `${data.totalIssues} issues · ${data.items?.length || 0} developer`;
+    renderTimeline(data);
+  } catch(e) {
+    showError('Gagal load timeline: ' + e.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+function renderTimeline(data) {
+  const wrap  = document.getElementById('timeline-wrap');
+  const items = data.items || [];
+
+  if (!items.length) {
+    wrap.innerHTML = `<div style="padding:60px;text-align:center;color:var(--ink-400);font-size:13px">Tidak ada task dalam rentang waktu ini</div>`;
+    return;
+  }
+
+  const { start, end } = data.dateRange;
+  const startD = new Date(start);
+  const endD   = new Date(end);
+  const totalDays = Math.ceil((endD - startD) / 86400000) + 1;
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  const DAY_W = 28; // px per day
+  const PERSON_W = 220;
+
+  // Build week headers
+  const weeks = [];
+  const cur = new Date(startD);
+  while (cur <= endD) {
+    const wStart = new Date(cur);
+    const wEnd = new Date(cur); wEnd.setDate(wEnd.getDate() + 6);
+    weeks.push({
+      label: cur.toLocaleDateString('id-ID', { day:'numeric', month:'short' }),
+      days: Math.min(7, Math.ceil((endD - cur) / 86400000) + 1)
+    });
+    cur.setDate(cur.getDate() + 7);
+  }
+
+  const headerCols = weeks.map(w =>
+    `<div class="tl-week-label" style="width:${w.days * DAY_W}px;min-width:${w.days * DAY_W}px">${w.label}</div>`
+  ).join('');
+
+  // Today marker position
+  const todayOffset = Math.max(0, Math.ceil((today - startD) / 86400000));
+  const todayPx = todayOffset * DAY_W;
+  const showToday = todayOffset >= 0 && todayOffset <= totalDays;
+
+  const profiles = STATE.memberProfiles || {};
+
+  const rows = items.map(person => {
+    const initials = person.displayName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    const gc = GROUP_COLORS[person.group] || { bg: 'var(--blue-50)', color: 'var(--blue-700)' };
+    const profile = profiles[person.accountId] || {};
+    const jabLabel = profile.jabatan
+      ? `<span class="jabatan-badge j-${profile.jabatan}" style="font-size:9.5px;padding:1px 6px">${profile.jabatan}</span>`
+      : '';
+    const levelLabel = profile.level
+      ? `<span style="font-size:9.5px;color:var(--ink-400)">${profile.level}</span>`
+      : '';
+
+    // Sort tasks: In Progress first, then by barStart
+    const statusOrder = s => ['In Progress','In Development','Coding'].includes(s) ? 0 : s === 'To Do' ? 1 : 2;
+    const sorted = [...person.tasks].sort((a, b) => statusOrder(a.status) - statusOrder(b.status) || a.barStart.localeCompare(b.barStart));
+
+    // Stack tasks into lanes to avoid overlap
+    const lanes = [];
+    const bars = sorted.map(task => {
+      const s = new Date(task.barStart); s.setHours(0,0,0,0);
+      const e = new Date(task.barEnd);   e.setHours(0,0,0,0);
+      const left  = Math.max(0, Math.ceil((s - startD) / 86400000)) * DAY_W;
+      const width = Math.max(DAY_W, (Math.ceil((e - s) / 86400000) + 1) * DAY_W);
+
+      // Find a lane with no overlap
+      let lane = 0;
+      while (lanes[lane] !== undefined && lanes[lane] > left) lane++;
+      lanes[lane] = left + width;
+
+      const isOverdue = !task.isDone && e < today;
+      let cls = task.isDone ? 'tl-bar-done'
+              : isOverdue   ? 'tl-bar-overdue'
+              : ['In Progress','In Development','Coding'].includes(task.status) ? 'tl-bar-progress'
+              : 'tl-bar-todo';
+      if (task.isRescheduled) cls += ' tl-bar-rescheduled';
+
+      const topOffset = 8 + lane * 26;
+
+      // Build tooltip data attrs (escaped)
+      const esc  = v => (v||'').replace(/'/g,'`').replace(/"/g,'&quot;');
+      const rescheduledAttr = task.isRescheduled
+        ? `data-orig-start="${task.origStart||''}" data-new-start="${task.newStart||''}" data-orig-due="${task.origDue||''}" data-new-due="${task.newDue||''}" data-rescheduled="1"`
+        : '';
+
+      const reschedDot = task.isRescheduled
+        ? `<span class="tl-reschedule-dot" title="Rescheduled"></span>`
+        : '';
+
+      return `<div class="tl-bar ${cls}"
+        style="left:${left}px;width:${Math.min(width, totalDays * DAY_W - left)}px;top:${topOffset}px;position:absolute"
+        data-key="${esc(task.key)}"
+        data-summary="${esc(task.summary)}"
+        data-status="${esc(task.status)}"
+        data-project="${esc(task.project)}"
+        data-bar-start="${task.barStart}"
+        data-bar-end="${task.barEnd}"
+        ${rescheduledAttr}
+        onmouseenter="showTlTooltipFromEl(event,this)"
+        onmouseleave="hideTlTooltip()"
+      >${reschedDot}${task.key}</div>`;
+    });
+
+    const rowH = Math.max(52, (lanes.length || 1) * 26 + 16);
+    const barsArea = `<div class="tl-bars-area" style="min-height:${rowH}px">
+      ${showToday ? `<div class="tl-today-col" style="left:${todayPx}px;width:${DAY_W}px;position:absolute;top:0;bottom:0;background:rgba(74,148,232,.06);border-left:2px solid var(--blue-300)"></div>` : ''}
+      ${bars.join('')}
+    </div>`;
+
+    return `<div class="tl-row" style="min-height:${rowH}px">
+      <div class="tl-person" style="min-height:${rowH}px">
+        <div class="dev-init" style="background:${gc.bg};color:${gc.color};flex-shrink:0">${initials}</div>
+        <div class="tl-person-info">
+          <div class="tl-person-name">${person.displayName}</div>
+          <div class="tl-person-meta" style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+            ${jabLabel}${levelLabel}
+          </div>
+          <div class="tl-person-meta">${person.tasks.length} tasks</div>
+        </div>
+      </div>
+      ${barsArea}
+    </div>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <div style="min-width:${PERSON_W + totalDays * DAY_W}px">
+      <div class="tl-header-row">
+        <div class="tl-person-col">Developer</div>
+        <div class="tl-dates">${headerCols}</div>
+      </div>
+      ${rows}
+    </div>`;
+}
+
+function showTlTooltipFromEl(e, el) {
+  const d = el.dataset;
+  const t = document.getElementById('tl-tooltip');
+  t.style.display = 'block';
+
+  let dateHtml = `<span style="opacity:.6;font-size:10.5px">📅 ${d.barStart} → ${d.barEnd}</span>`;
+
+  if (d.rescheduled === '1') {
+    const startLine = d.newStart
+      ? `<div style="margin-top:5px;padding:4px 6px;background:rgba(224,140,36,.18);border-radius:4px;font-size:10.5px">
+           🔄 <strong>New Start Date:</strong> ${d.newStart}
+           ${d.origStart && d.origStart !== d.newStart ? `<span style="opacity:.6;text-decoration:line-through;margin-left:4px">${d.origStart}</span>` : ''}
+         </div>`
+      : '';
+    const dueLine = d.newDue
+      ? `<div style="margin-top:3px;padding:4px 6px;background:rgba(224,140,36,.18);border-radius:4px;font-size:10.5px">
+           🔄 <strong>New Due Date:</strong> ${d.newDue}
+           ${d.origDue && d.origDue !== d.newDue ? `<span style="opacity:.6;text-decoration:line-through;margin-left:4px">${d.origDue}</span>` : ''}
+         </div>`
+      : '';
+    dateHtml = `<span style="opacity:.6;font-size:10.5px">📅 ${d.barStart} → ${d.barEnd}</span>${startLine}${dueLine}`;
+  }
+
+  t.innerHTML = `
+    <div style="font-weight:600;margin-bottom:3px">${d.key}</div>
+    <div style="opacity:.9;font-size:11px;margin-bottom:4px;line-height:1.4">${d.summary}</div>
+    <div style="opacity:.7;font-size:10.5px;margin-bottom:4px">${d.project} · ${d.status}</div>
+    ${dateHtml}`;
+  moveTlTooltip(e);
+}
+
+function moveTlTooltip(e) {
+  const t = document.getElementById('tl-tooltip');
+  t.style.left = (e.clientX + 14) + 'px';
+  t.style.top  = (e.clientY - 10) + 'px';
+}
+
+function hideTlTooltip() {
+  document.getElementById('tl-tooltip').style.display = 'none';
+}
+
+document.addEventListener('mousemove', e => {
+  if (document.getElementById('tl-tooltip').style.display !== 'none') moveTlTooltip(e);
+});
+
+// ======== MEMBERS ========
+let membersData = { all: [], profiles: {}, jabatanLevels: {}, dirty: {} };
+
+async function loadMembersPage() {
+  if (!STATE.members?.length) return;
+  showLoading('Memuat data anggota tim…');
+  try {
+    const res = await api('/api/member-profiles');
+    membersData.profiles    = res.profiles || {};
+    membersData.jabatanLevels = res.jabatanLevels || {};
+    membersData.all = STATE.members.map(m => ({
+      ...m,
+      ...(membersData.profiles[m.accountId] || {})
+    }));
+    STATE.memberProfiles = membersData.profiles;
+    updateJabatanStats();
+    renderMembersTable(membersData.all);
+  } catch(e) {
+    showError('Gagal load members: ' + e.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+function updateJabatanStats() {
+  const counts = { CTO:0, PM:0, BA:0, QA:0, Dev:0 };
+  for (const m of membersData.all) {
+    if (m.jabatan && counts[m.jabatan] !== undefined) counts[m.jabatan]++;
+  }
+  Object.entries(counts).forEach(([j, c]) => {
+    const el = document.getElementById('stat-' + j);
+    if (el) el.textContent = c || '—';
+  });
+}
+
+function renderMembersTable(members) {
+  document.getElementById('members-count-label').textContent = `${members.length} anggota ditampilkan`;
+  const JABATAN_LIST = ['CTO','PM','BA','QA','Dev'];
+
+  document.getElementById('members-tbody').innerHTML = members.map((m, i) => {
+    const gc = GROUP_COLORS[m.groups?.[0]] || { bg:'var(--blue-50)', color:'var(--blue-700)' };
+    const initials = m.displayName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const jabatan  = m.jabatan || '';
+    const level    = m.level   || '';
+    const levels   = jabatan ? (membersData.jabatanLevels[jabatan] || []) : [];
+
+    const jabBadge = jabatan
+      ? `<span class="jabatan-badge j-${jabatan}">${jabatan}</span>`
+      : `<span style="font-size:11px;color:var(--ink-300)">Belum diatur</span>`;
+
+    return `<tr id="mrow-${m.accountId}">
+      <td style="color:var(--ink-400);font-size:12px">${i+1}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="dev-init" style="background:${gc.bg};color:${gc.color}">${initials}</div>
+          <div>
+            <div style="font-size:12.5px;font-weight:600;color:var(--ink-900)">${m.displayName}</div>
+            ${jabatan ? `<div style="font-size:10.5px;color:var(--ink-400)">${level}</div>` : ''}
+          </div>
+        </div>
+      </td>
+      <td>
+        <span class="tbar-type" style="background:${gc.bg};color:${gc.color};padding:2px 8px;border-radius:20px;font-size:11px">
+          ${(m.groups?.[0] || '').replace(' Developer','').replace(' Team','')}
+        </span>
+      </td>
+      <td style="font-size:11.5px;color:var(--ink-500)">${m.emailAddress || '—'}</td>
+      <td>
+        <select class="jabatan-select" data-id="${m.accountId}" onchange="onJabatanChange(this)">
+          <option value="">— Pilih —</option>
+          ${JABATAN_LIST.map(j => `<option value="${j}" ${j===jabatan?'selected':''}>${j}</option>`).join('')}
+        </select>
+      </td>
+      <td>
+        <select class="level-select" id="lvl-${m.accountId}" onchange="onLevelChange('${m.accountId}',this.value)">
+          ${levels.length
+            ? levels.map(l => `<option ${l===level?'selected':''}>${l}</option>`).join('')
+            : `<option value="">— Pilih jabatan dulu —</option>`}
+        </select>
+      </td>
+      <td>
+        <button class="save-btn" id="sbtn-${m.accountId}" onclick="saveSingleProfile('${m.accountId}')">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l4 4 6-7"/></svg>
+          Simpan
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function onJabatanChange(sel) {
+  const accountId = sel.dataset.id;
+  const jabatan   = sel.value;
+  const levels    = membersData.jabatanLevels[jabatan] || [];
+  const lvlSel    = document.getElementById('lvl-' + accountId);
+  lvlSel.innerHTML = levels.map((l,i) => `<option ${i===0?'selected':''}>${l}</option>`).join('');
+
+  // Mark dirty
+  membersData.dirty[accountId] = true;
+  document.getElementById('bulk-save-btn').style.display = '';
+  onLevelChange(accountId, levels[0] || '');
+}
+
+function onLevelChange(accountId, level) {
+  membersData.dirty[accountId] = true;
+  document.getElementById('bulk-save-btn').style.display = '';
+  // Update in-memory
+  const m = membersData.all.find(x => x.accountId === accountId);
+  if (m) {
+    const jabSel = document.querySelector(`.jabatan-select[data-id="${accountId}"]`);
+    m.jabatan = jabSel?.value || m.jabatan;
+    m.level   = level;
+  }
+}
+
+async function saveSingleProfile(accountId) {
+  const jabSel = document.querySelector(`.jabatan-select[data-id="${accountId}"]`);
+  const lvlSel = document.getElementById('lvl-' + accountId);
+  const btn    = document.getElementById('sbtn-' + accountId);
+  const m      = membersData.all.find(x => x.accountId === accountId);
+  if (!jabSel?.value) return alert('Pilih jabatan terlebih dahulu');
+
+  btn.textContent = 'Menyimpan…'; btn.disabled = true;
+  try {
+    await fetch(`/api/member-profiles/${accountId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify({ jabatan: jabSel.value, level: lvlSel.value, displayName: m?.displayName })
+    });
+    membersData.profiles[accountId] = { jabatan: jabSel.value, level: lvlSel.value };
+    STATE.memberProfiles = membersData.profiles;
+    delete membersData.dirty[accountId];
+    btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l4 4 6-7"/></svg> Tersimpan`;
+    btn.classList.add('saved');
+    setTimeout(() => { btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l4 4 6-7"/></svg> Simpan`; btn.classList.remove('saved'); btn.disabled = false; }, 2000);
+    updateJabatanStats();
+    // Update the name row subtitle
+    const row = document.getElementById('mrow-' + accountId);
+    if (row) {
+      const sub = row.querySelector('.dev-init + div > div:last-child');
+      if (sub) sub.textContent = lvlSel.value;
+    }
+  } catch(e) {
+    alert('Gagal simpan: ' + e.message);
+    btn.textContent = 'Simpan'; btn.disabled = false;
+  }
+}
+
+async function saveAllProfiles() {
+  const dirtyIds = Object.keys(membersData.dirty);
+  if (!dirtyIds.length) return;
+  showLoading('Menyimpan semua perubahan…');
+  try {
+    const updates = dirtyIds.map(id => {
+      const jabSel = document.querySelector(`.jabatan-select[data-id="${id}"]`);
+      const lvlSel = document.getElementById('lvl-' + id);
+      const m      = membersData.all.find(x => x.accountId === id);
+      return { accountId: id, displayName: m?.displayName, jabatan: jabSel?.value, level: lvlSel?.value };
+    }).filter(u => u.jabatan);
+    await fetch('/api/member-profiles/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify({ updates })
+    });
+    for (const u of updates) {
+      membersData.profiles[u.accountId] = { jabatan: u.jabatan, level: u.level };
+    }
+    STATE.memberProfiles = membersData.profiles;
+    membersData.dirty = {};
+    document.getElementById('bulk-save-btn').style.display = 'none';
+    updateJabatanStats();
+    showError('✓ Semua perubahan berhasil disimpan');
+  } catch(e) {
+    showError('Gagal simpan bulk: ' + e.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+function filterMembersTable() {
+  const q       = document.getElementById('members-search').value.toLowerCase();
+  const grp     = document.getElementById('members-group-filter').value;
+  const jabatan = document.getElementById('members-jabatan-filter').value;
+
+  const filtered = membersData.all.filter(m => {
+    if (q && !m.displayName?.toLowerCase().includes(q) && !m.emailAddress?.toLowerCase().includes(q)) return false;
+    if (grp && !m.groups?.includes(grp)) return false;
+    if (jabatan === 'unset' && m.jabatan) return false;
+    if (jabatan && jabatan !== 'unset' && m.jabatan !== jabatan) return false;
+    return true;
+  });
+  renderMembersTable(filtered);
+}
+
+function exportMembersCSV() {
+  const rows = [['Nama','Email','Grup','Jabatan','Level']];
+  membersData.all.forEach(m => rows.push([m.displayName, m.emailAddress || '', m.groups?.[0] || '', m.jabatan || '', m.level || '']));
+  const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `team_members_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// ——— REFRESH ———
+async function refreshAll() {
+  STATE.projects = null; STATE.members = null;
+  STATE.capacity = null; STATE.forecast = null;
+  STATE.velocity = null; STATE.sync = null; STATE.tasks = null;
+  await init();
+}
+
+// ——— HELPERS ———
+function formatDate(str) {
+  if (!str) return '—';
+  const d = new Date(str);
+  return d.toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' });
+}
+
+// ——— AUTO REFRESH every 5 min ———
+setInterval(refreshAll, 5 * 60 * 1000);
+
+// ——— START ———
+init();
+</script>
+</body>
+</html>
