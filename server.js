@@ -8,13 +8,34 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-const JIRA_BASE = process.env.JIRA_DOMAIN.replace(/\/$/, '');
-const AUTH = Buffer.from(`${process.env.JIRA_EMAIL}:${process.env.JIRA_TOKEN}`).toString('base64');
+// Running on Vercel (or any serverless) — read-only FS, no persistent process
+const IS_SERVERLESS = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+
+// Fail fast with a clear message if Jira env vars are missing (common deploy mistake)
+const MISSING_ENV = ['JIRA_DOMAIN', 'JIRA_EMAIL', 'JIRA_TOKEN'].filter(k => !process.env[k]);
+if (MISSING_ENV.length) {
+  console.error(`✗ Missing required environment variables: ${MISSING_ENV.join(', ')}`);
+}
+
+const JIRA_BASE = (process.env.JIRA_DOMAIN || '').replace(/\/$/, '');
+const AUTH = Buffer.from(`${process.env.JIRA_EMAIL || ''}:${process.env.JIRA_TOKEN || ''}`).toString('base64');
 const HEADERS = {
   'Authorization': `Basic ${AUTH}`,
   'Accept': 'application/json',
   'Content-Type': 'application/json'
 };
+
+// Guard: every API route returns a clear 500 if env vars are missing,
+// instead of crashing the whole serverless function.
+app.use('/api', (req, res, next) => {
+  if (MISSING_ENV.length) {
+    return res.status(500).json({
+      error: `Server belum dikonfigurasi: environment variable hilang (${MISSING_ENV.join(', ')}). ` +
+             `Set di Vercel → Project Settings → Environment Variables.`
+    });
+  }
+  next();
+});
 
 // Target project categories
 const TARGET_CATEGORIES = ['VAS', 'Product', 'Project', 'Platform Internal', 'QA'];
@@ -30,7 +51,7 @@ const TARGET_GROUPS = [
 ];
 
 // Simple in-memory cache
-const cache = { projects: null, members: null, capacity: null, ts: {} };
+const cache = { projects: null, members: null, capacity: null, forecast: null, ts: {} };
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
 function isFresh(key) {
@@ -46,36 +67,61 @@ async function jiraGet(path) {
   return res.json();
 }
 
+// ——— Shared cache loaders (work in both server & serverless) ———
+// These populate the cache directly via Jira API, replacing localhost self-fetch
+// which does not work on serverless platforms.
+async function ensureProjects() {
+  if (isFresh('projects') && cache.projects) return cache.projects;
+  const cats = await jiraGet('/rest/api/3/projectCategory');
+  const targetCatIds = cats
+    .filter(c => TARGET_CATEGORIES.some(t => c.name.toLowerCase().includes(t.toLowerCase())))
+    .map(c => ({ id: c.id, name: c.name }));
+  const allProjects = await jiraGet('/rest/api/3/project?expand=projectKeys,description&maxResults=500');
+  const filtered = allProjects.filter(p => p.projectCategory && targetCatIds.some(c => c.id === p.projectCategory.id));
+  cache.projects = {
+    categories: targetCatIds,
+    projects: filtered.map(p => ({
+      id: p.id, key: p.key, name: p.name,
+      category: p.projectCategory?.name || 'Uncategorized',
+      avatarUrl: p.avatarUrls?.['24x24']
+    }))
+  };
+  cache.ts['projects'] = Date.now();
+  return cache.projects;
+}
+
+async function ensureMembers() {
+  if (isFresh('members') && cache.members) return cache.members;
+  const membersMap = {};
+  for (const group of TARGET_GROUPS) {
+    try {
+      const encoded = encodeURIComponent(group);
+      let startAt = 0;
+      while (true) {
+        const data = await jiraGet(`/rest/api/3/group/member?groupname=${encoded}&startAt=${startAt}&maxResults=50`);
+        for (const u of data.values || []) {
+          if (!membersMap[u.accountId]) {
+            membersMap[u.accountId] = {
+              accountId: u.accountId, displayName: u.displayName,
+              emailAddress: u.emailAddress, avatarUrl: u.avatarUrls?.['24x24'], groups: []
+            };
+          }
+          membersMap[u.accountId].groups.push(group);
+        }
+        if (data.isLast || !data.values?.length) break;
+        startAt += 50;
+      }
+    } catch (e) { console.warn(`Group "${group}" error:`, e.message); }
+  }
+  cache.members = Object.values(membersMap);
+  cache.ts['members'] = Date.now();
+  return cache.members;
+}
+
 // ——— GET /api/projects ———
 app.get('/api/projects', async (req, res) => {
   try {
-    if (isFresh('projects') && cache.projects) return res.json(cache.projects);
-
-    // Get all project categories
-    const cats = await jiraGet('/rest/api/3/projectCategory');
-    const targetCatIds = cats
-      .filter(c => TARGET_CATEGORIES.some(t => c.name.toLowerCase().includes(t.toLowerCase())))
-      .map(c => ({ id: c.id, name: c.name }));
-
-    // Get all projects and filter by category
-    const allProjects = await jiraGet('/rest/api/3/project?expand=projectKeys,description&maxResults=500');
-    const filtered = allProjects.filter(p =>
-      p.projectCategory && targetCatIds.some(c => c.id === p.projectCategory.id)
-    );
-
-    const result = {
-      categories: targetCatIds,
-      projects: filtered.map(p => ({
-        id: p.id,
-        key: p.key,
-        name: p.name,
-        category: p.projectCategory?.name || 'Uncategorized',
-        avatarUrl: p.avatarUrls?.['24x24']
-      }))
-    };
-
-    cache.projects = result;
-    cache.ts['projects'] = Date.now();
+    const result = await ensureProjects();
     res.json(result);
   } catch (e) {
     console.error('projects error:', e.message);
@@ -86,39 +132,7 @@ app.get('/api/projects', async (req, res) => {
 // ——— GET /api/members ———
 app.get('/api/members', async (req, res) => {
   try {
-    if (isFresh('members') && cache.members) return res.json(cache.members);
-
-    const membersMap = {};
-
-    for (const group of TARGET_GROUPS) {
-      try {
-        const encoded = encodeURIComponent(group);
-        let startAt = 0;
-        while (true) {
-          const data = await jiraGet(`/rest/api/3/group/member?groupname=${encoded}&startAt=${startAt}&maxResults=50`);
-          for (const u of data.values || []) {
-            if (!membersMap[u.accountId]) {
-              membersMap[u.accountId] = {
-                accountId: u.accountId,
-                displayName: u.displayName,
-                emailAddress: u.emailAddress,
-                avatarUrl: u.avatarUrls?.['24x24'],
-                groups: []
-              };
-            }
-            membersMap[u.accountId].groups.push(group);
-          }
-          if (data.isLast || !data.values?.length) break;
-          startAt += 50;
-        }
-      } catch (e) {
-        console.warn(`Group "${group}" error:`, e.message);
-      }
-    }
-
-    const result = Object.values(membersMap);
-    cache.members = result;
-    cache.ts['members'] = Date.now();
+    const result = await ensureMembers();
     res.json(result);
   } catch (e) {
     console.error('members error:', e.message);
@@ -126,24 +140,21 @@ app.get('/api/members', async (req, res) => {
   }
 });
 
-// ——— GET /api/capacity ———
-// Calculates utilization per developer for current month
-app.get('/api/capacity', async (req, res) => {
-  try {
-    // Return cached capacity if fresh
-    if (isFresh('capacity') && cache.capacity) return res.json(cache.capacity);
+// ——— Capacity computation (shared by endpoint + warmup) ———
+async function computeCapacity() {
+  if (isFresh('capacity') && cache.capacity) return cache.capacity;
 
-    // Ensure projects + members cache
-    if (!isFresh('projects') || !cache.projects) await fetch(`http://localhost:${PORT}/api/projects`).then(r => r.json()).catch(() => {});
-    if (!isFresh('members') || !cache.members) await fetch(`http://localhost:${PORT}/api/members`).then(r => r.json()).catch(() => {});
+  // Ensure projects + members cache (direct loaders — serverless-safe)
+  await Promise.all([ensureProjects(), ensureMembers()]);
 
-    const members = cache.members || [];
-    const projects = cache.projects?.projects || [];
+  const members = cache.members || [];
+  const projects = cache.projects?.projects || [];
 
-    if (!members.length || !projects.length) {
-      return res.json({ developers: [], period: getCurrentPeriod() });
-    }
+  if (!members.length || !projects.length) {
+    return { developers: [], period: getCurrentPeriod() };
+  }
 
+  {
     const projectKeys = projects.map(p => p.key);
     const memberIds = members.map(m => m.accountId);
 
@@ -241,6 +252,15 @@ app.get('/api/capacity', async (req, res) => {
     cache.capacity = result;
     cache.ts['capacity'] = Date.now();
 
+    return result;
+  }
+}
+
+// ——— GET /api/capacity ———
+// Calculates utilization per developer for current month
+app.get('/api/capacity', async (req, res) => {
+  try {
+    const result = await computeCapacity();
     res.json(result);
   } catch (e) {
     console.error('capacity error:', e.message);
@@ -326,48 +346,32 @@ app.get('/api/velocity', async (req, res) => {
   }
 });
 
-// ——— GET /api/forecast ———
-app.get('/api/forecast', async (req, res) => {
-  try {
-    // Auto-warm cache if needed
-    if (!isFresh('projects') || !cache.projects) {
-      const cats = await jiraGet('/rest/api/3/projectCategory');
-      const targetCatIds = cats.filter(c => TARGET_CATEGORIES.some(t => c.name.toLowerCase().includes(t.toLowerCase()))).map(c => ({ id: c.id, name: c.name }));
-      const allProjects = await jiraGet('/rest/api/3/project?expand=projectKeys,description&maxResults=500');
-      const filtered = allProjects.filter(p => p.projectCategory && targetCatIds.some(c => c.id === p.projectCategory.id));
-      cache.projects = { categories: targetCatIds, projects: filtered.map(p => ({ id: p.id, key: p.key, name: p.name, category: p.projectCategory?.name || 'Uncategorized', avatarUrl: p.avatarUrls?.['24x24'] })) };
-      cache.ts['projects'] = Date.now();
-    }
-    if (!isFresh('members') || !cache.members) {
-      const membersMap = {};
-      for (const group of TARGET_GROUPS) {
-        try {
-          const encoded = encodeURIComponent(group);
-          const data = await jiraGet(`/rest/api/3/group/member?groupname=${encoded}&startAt=0&maxResults=50`);
-          for (const u of data.values || []) {
-            if (!membersMap[u.accountId]) membersMap[u.accountId] = { accountId: u.accountId, displayName: u.displayName, groups: [] };
-            membersMap[u.accountId].groups.push(group);
-          }
-        } catch(e) {}
-      }
-      cache.members = Object.values(membersMap);
-      cache.ts['members'] = Date.now();
-    }
-    const projects = cache.projects?.projects || [];
-    if (!projects.length) return res.json({ totalBacklog: 0, totalPoints: 0, totalHours: 0, daysToComplete: 0, completionMonths: 0, completionDate: new Date().toISOString().split('T')[0], byCategory: [] });
+// ——— Forecast computation (shared by endpoint + warmup) ———
+async function computeForecast() {
+  if (isFresh('forecast') && cache.forecast) return cache.forecast;
 
-    const projectKeys = projects.map(p => p.key);
-    const jql = `project in (${projectKeys.slice(0, 50).map(k => `"${k}"`).join(',')}) AND status not in (Done, Closed, Resolved) ORDER BY priority DESC`;
+  // Auto-warm cache if needed (direct loaders — serverless-safe)
+  await Promise.all([ensureProjects(), ensureMembers()]);
+  const projects = cache.projects?.projects || [];
+  if (!projects.length) {
+    return { totalBacklog: 0, totalPoints: 0, totalHours: 0, daysToComplete: 0, completionMonths: 0, completionDate: new Date().toISOString().split('T')[0], byCategory: [] };
+  }
 
-    let backlog = [];
-    let startAt = 0;
-    while (true) {
-      const data = await jiraGet(`/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&startAt=${startAt}&maxResults=100&fields=summary,status,priority,customfield_10016,timeoriginalestimate,project,assignee,issuetype`);
-      backlog = backlog.concat(data.issues || []);
-      if (backlog.length >= data.total || !data.issues?.length) break;
-      startAt += 100;
-      if (startAt > 5000) break;
-    }
+  const projectKeys = projects.map(p => p.key);
+  const jql = `project in (${projectKeys.slice(0, 50).map(k => `"${k}"`).join(',')}) AND status not in (Done, Closed, Resolved) ORDER BY priority DESC`;
+  const fields = 'summary,status,priority,customfield_10016,timeoriginalestimate,project,assignee,issuetype';
+  const fetchPage = (s) => jiraGet(`/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&startAt=${s}&maxResults=100&fields=${fields}`);
+
+  // Fetch first page to learn total, then fetch remaining pages IN PARALLEL
+  const first = await fetchPage(0);
+  let backlog = first.issues || [];
+  const total = Math.min(first.total || backlog.length, 5000);
+  const pageStarts = [];
+  for (let s = 100; s < total; s += 100) pageStarts.push(s);
+  if (pageStarts.length) {
+    const rest = await Promise.all(pageStarts.map(s => fetchPage(s).catch(() => ({ issues: [] }))));
+    for (const r of rest) backlog = backlog.concat(r.issues || []);
+  }
 
     // Group by project category
     const projectCategoryMap = {};
@@ -414,7 +418,7 @@ app.get('/api/forecast', async (req, res) => {
     const completionMonths = (daysToComplete / 22).toFixed(1);
     const usedMetric = totalPoints > 0 ? 'story_points' : totalHours > 0 ? 'time_estimate' : 'issue_count';
 
-    res.json({
+    const result = {
       totalBacklog: backlog.length,
       totalPoints,
       totalHours: Math.round(totalHours),
@@ -437,7 +441,17 @@ app.get('/api/forecast', async (req, res) => {
           estimatedDays: catDays
         };
       })
-    });
+    };
+
+    cache.forecast = result;
+    cache.ts['forecast'] = Date.now();
+    return result;
+}
+
+app.get('/api/forecast', async (req, res) => {
+  try {
+    const result = await computeForecast();
+    res.json(result);
   } catch (e) {
     console.error('forecast error:', e.message);
     res.status(500).json({ error: e.message });
@@ -563,15 +577,35 @@ app.get('/api/boards', async (req, res) => {
 });
 
 // ——— MEMBER PROFILES (jabatan + level) ———
-const PROFILES_PATH = path.join(__dirname, 'data', 'member-profiles.json');
+// On serverless the project FS is read-only; use /tmp (ephemeral — resets on
+// cold start). The repo's data/ copy is used as a read-only seed if present.
+const SEED_PROFILES_PATH = path.join(__dirname, 'data', 'member-profiles.json');
+const PROFILES_PATH = IS_SERVERLESS
+  ? path.join('/tmp', 'member-profiles.json')
+  : SEED_PROFILES_PATH;
+
+// In-memory copy so writes survive within a warm serverless instance
+let profilesMem = null;
 
 function readProfiles() {
-  try { return JSON.parse(fs.readFileSync(PROFILES_PATH, 'utf8')); }
-  catch { return {}; }
+  if (profilesMem) return profilesMem;
+  for (const p of [PROFILES_PATH, SEED_PROFILES_PATH]) {
+    try { profilesMem = JSON.parse(fs.readFileSync(p, 'utf8')); return profilesMem; }
+    catch { /* try next */ }
+  }
+  profilesMem = {};
+  return profilesMem;
 }
 
 function writeProfiles(data) {
-  fs.writeFileSync(PROFILES_PATH, JSON.stringify(data, null, 2), 'utf8');
+  profilesMem = data;
+  try {
+    fs.mkdirSync(path.dirname(PROFILES_PATH), { recursive: true });
+    fs.writeFileSync(PROFILES_PATH, JSON.stringify(data, null, 2), 'utf8');
+  } catch (e) {
+    // Read-only FS on serverless — kept in memory only; logged, not fatal
+    console.warn('writeProfiles: could not persist to disk:', e.message);
+  }
 }
 
 const JABATAN_LEVELS = {
@@ -838,55 +872,44 @@ function buildSummary(developers) {
   return { total, overloaded: overloaded.length, healthy: healthy.length, high: high.length, idle: idle.length, avgUtilization: avgUtil };
 }
 
-// ——— Startup cache warmup ———
+// ——— Startup cache warmup (only for persistent server, not serverless) ———
 async function warmupCache() {
   try {
     console.log('   Warming up cache: projects…');
-    const cats = await jiraGet('/rest/api/3/projectCategory');
-    const targetCatIds = cats.filter(c => TARGET_CATEGORIES.some(t => c.name.toLowerCase().includes(t.toLowerCase()))).map(c => ({ id: c.id, name: c.name }));
-    const allProjects = await jiraGet('/rest/api/3/project?expand=projectKeys,description&maxResults=500');
-    const filtered = allProjects.filter(p => p.projectCategory && targetCatIds.some(c => c.id === p.projectCategory.id));
-    cache.projects = { categories: targetCatIds, projects: filtered.map(p => ({ id: p.id, key: p.key, name: p.name, category: p.projectCategory?.name || 'Uncategorized', avatarUrl: p.avatarUrls?.['24x24'] })) };
-    cache.ts['projects'] = Date.now();
-    console.log(`   ✓ ${filtered.length} projects loaded`);
+    await ensureProjects();
+    console.log(`   ✓ ${cache.projects.projects.length} projects loaded`);
 
     console.log('   Warming up cache: members…');
-    const membersMap = {};
-    for (const group of TARGET_GROUPS) {
-      try {
-        const encoded = encodeURIComponent(group);
-        let startAt = 0;
-        while (true) {
-          const data = await jiraGet(`/rest/api/3/group/member?groupname=${encoded}&startAt=${startAt}&maxResults=50`);
-          for (const u of data.values || []) {
-            if (!membersMap[u.accountId]) membersMap[u.accountId] = { accountId: u.accountId, displayName: u.displayName, emailAddress: u.emailAddress, avatarUrl: u.avatarUrls?.['24x24'], groups: [] };
-            membersMap[u.accountId].groups.push(group);
-          }
-          if (data.isLast || !data.values?.length) break;
-          startAt += 50;
-        }
-      } catch(e) { console.warn(`   ! Group "${group}": ${e.message}`); }
-    }
-    cache.members = Object.values(membersMap);
-    cache.ts['members'] = Date.now();
+    await ensureMembers();
     console.log(`   ✓ ${cache.members.length} members loaded`);
 
-    // Pre-warm capacity in background (don't await — takes ~15s)
-    console.log('   Warming up cache: capacity… (background)');
-    fetch(`http://localhost:${PORT}/api/capacity`).then(() => {
-      console.log('   ✓ Capacity cache ready');
-    }).catch(e => console.warn('   ! Capacity warmup failed:', e.message));
+    // Pre-warm capacity + forecast directly (no self-fetch)
+    console.log('   Warming up cache: capacity + forecast… (background)');
+    computeCapacity().then(() => console.log('   ✓ Capacity cache ready'))
+      .catch(e => console.warn('   ! Capacity warmup failed:', e.message));
+    computeForecast().then(() => console.log('   ✓ Forecast cache ready'))
+      .catch(e => console.warn('   ! Forecast warmup failed:', e.message));
 
   } catch(e) {
     console.error('   ✗ Cache warmup failed:', e.message);
   }
 }
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, async () => {
-  console.log(`\n🚀 Resource Allocation & Velocity Dashboard`);
-  console.log(`   Running at: http://localhost:${PORT}`);
-  console.log(`   Jira: ${JIRA_BASE}`);
-  console.log(`   Email: ${process.env.JIRA_EMAIL}`);
-  await warmupCache();
-});
+// On serverless (Vercel) we export the app as the request handler.
+// Locally we start a persistent server and warm the cache.
+if (IS_SERVERLESS) {
+  module.exports = app;
+} else {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, async () => {
+    console.log(`\n🚀 Resource Allocation & Velocity Dashboard`);
+    console.log(`   Running at: http://localhost:${PORT}`);
+    console.log(`   Jira: ${JIRA_BASE}`);
+    console.log(`   Email: ${process.env.JIRA_EMAIL}`);
+    if (MISSING_ENV.length) {
+      console.error(`   ⚠ Tidak bisa warmup — env hilang: ${MISSING_ENV.join(', ')}`);
+    } else {
+      await warmupCache();
+    }
+  });
+}
