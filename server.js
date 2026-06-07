@@ -1,7 +1,8 @@
-require('dotenv').config();
+const path = require('path');
+// Load .env relative to this file so it works no matter the cwd
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const fetch = require('node-fetch');
-const path = require('path');
 const fs = require('fs');
 
 const app = express();
@@ -768,6 +769,23 @@ app.get('/api/timeline', async (req, res) => {
 
         if (clampedEnd < startDate || clampedStart > endDate) continue;
 
+        // ——— Dual-bar dates: ORIGINAL schedule vs NEW (rescheduled) target ———
+        const clamp = d => new Date(Math.max(startDate.getTime(), Math.min(d.getTime(), endDate.getTime())));
+        const iso   = d => d.toISOString().split('T')[0];
+        // Original bar always uses pre-reschedule dates
+        const origStartEff = origStartDate || createdDate;
+        const origEndEff   = origDueDate || endDate2 || resolvedDate || (() => { const x = new Date(origStartEff); x.setDate(x.getDate() + Math.min(daysEst, 10)); return x; })();
+        const origBarStart = iso(clamp(origStartEff));
+        const origBarEnd   = iso(clamp(origEndEff));
+        // New bar only when rescheduled
+        let newBarStart = null, newBarEnd = null;
+        if (isRescheduled) {
+          const ns = newStartDate || origStartEff;
+          const ne = newDueDate   || origEndEff;
+          newBarStart = iso(clamp(ns));
+          newBarEnd   = iso(clamp(ne));
+        }
+
         byAssignee[aid].tasks.push({
           key:          issue.key,
           summary:      f.summary,
@@ -776,6 +794,7 @@ app.get('/api/timeline', async (req, res) => {
           isRescheduled,
           hasNewStart,
           hasNewDue,
+          created:      f.created ? iso(new Date(f.created)) : null,
           // raw date values for tooltip
           origStart:    origStartDate?.toISOString().split('T')[0] || null,
           newStart:     newStartDate?.toISOString().split('T')[0]  || null,
@@ -785,7 +804,9 @@ app.get('/api/timeline', async (req, res) => {
           project:    f.project?.name,
           projectKey: f.project?.key,
           barStart:   clampedStart.toISOString().split('T')[0],
-          barEnd:     clampedEnd.toISOString().split('T')[0]
+          barEnd:     clampedEnd.toISOString().split('T')[0],
+          // dual-bar coordinates
+          origBarStart, origBarEnd, newBarStart, newBarEnd
         });
       }
     }

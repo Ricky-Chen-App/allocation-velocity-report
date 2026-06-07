@@ -19,6 +19,13 @@
   --red-600:#8b1f20;--red-500:#b52e2e;--red-400:#d94c4c;--red-100:#fbd8d8;--red-50:#fff0f0;
   --violet-600:#4c2d9c;--violet-500:#6540c4;--violet-400:#8060e0;--violet-100:#e4dcf9;--violet-50:#f2eeff;
   --teal-600:#0c5c62;--teal-500:#157880;--teal-400:#1e97a0;--teal-100:#ccf0f3;--teal-50:#e8f9fa;
+  /* —— Semantic status tokens (single source of truth for status colors) —— */
+  --status-overload-bg:var(--red-50);   --status-overload-text:var(--red-600);   --status-overload-bar:var(--red-400);
+  --status-warning-bg:var(--amber-50);  --status-warning-text:var(--amber-600);  --status-warning-bar:var(--amber-400);
+  --status-healthy-bg:var(--green-50);  --status-healthy-text:var(--green-600);  --status-healthy-bar:var(--green-400);
+  --status-idle-bg:var(--ink-50);       --status-idle-text:var(--ink-500);       --status-idle-bar:var(--ink-300);
+  --status-external-bg:var(--amber-50); --status-external-text:var(--amber-600); --status-external-bar:var(--amber-400);
+  --status-synced-bg:var(--green-50);   --status-synced-text:var(--green-600);   --status-synced-bar:var(--green-400);
   --sidebar-w:220px;--header-h:56px;
   --radius-sm:6px;--radius-md:10px;--radius-lg:14px;--radius-xl:20px;
   --shadow-xs:0 1px 2px rgba(10,13,18,.05);--shadow-sm:0 2px 8px rgba(10,13,18,.08);
@@ -39,11 +46,11 @@ body{font-family:var(--font-body);background:var(--ink-50);color:var(--ink-800);
 .logo-sub{font-size:10px;color:var(--ink-400);font-weight:400}
 .nav-section{padding:0 12px 4px}
 .nav-label{font-size:10px;font-weight:600;letter-spacing:.08em;color:var(--ink-300);text-transform:uppercase;padding:12px 8px 6px}
-.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--radius-sm);font-size:13px;font-weight:400;color:var(--ink-500);cursor:pointer;transition:background var(--transition),color var(--transition);text-decoration:none;border:none;background:transparent;width:100%;font-family:var(--font-body)}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px 8px 9px;border-radius:var(--radius-sm);font-size:13px;font-weight:400;color:var(--ink-500);cursor:pointer;transition:background 150ms ease,color 150ms ease,border-color 150ms ease;text-decoration:none;border:none;border-left:3px solid transparent;background:transparent;width:100%;font-family:var(--font-body)}
 .nav-item:hover{background:var(--ink-50);color:var(--ink-800)}
-.nav-item.active{background:var(--blue-50);color:var(--blue-700);font-weight:500}
-.nav-item svg{width:15px;height:15px;flex-shrink:0;opacity:.8}
-.nav-item.active svg{opacity:1}
+.nav-item.active{background:var(--blue-100);color:var(--blue-700);font-weight:600;border-left:3px solid var(--blue-600)}
+.nav-item svg{width:15px;height:15px;flex-shrink:0;opacity:.7}
+.nav-item.active svg{opacity:1;stroke-width:1.8}
 .nav-badge{margin-left:auto;font-size:10px;font-weight:600;background:var(--blue-100);color:var(--blue-600);padding:1px 6px;border-radius:20px}
 .nav-badge.red{background:var(--red-100);color:var(--red-600)}
 .nav-badge.amber{background:var(--amber-100);color:var(--amber-600)}
@@ -116,9 +123,10 @@ body{font-family:var(--font-body);background:var(--ink-50);color:var(--ink-800);
 .tbar-pct.ok{color:var(--green-500)}
 .tbar-track{height:7px;background:var(--ink-100);border-radius:20px;overflow:hidden}
 .tbar-fill{height:100%;border-radius:20px;transition:width .6s cubic-bezier(.22,1,.36,1)}
-.fill-ok{background:var(--green-400)}
-.fill-warn{background:var(--amber-400)}
-.fill-over{background:var(--red-400)}
+.fill-ok{background:var(--status-healthy-bar)}
+.fill-warn{background:var(--status-warning-bar)}
+.fill-over{background:var(--status-overload-bar)}
+.fill-idle{background:var(--status-idle-bar)}
 .fill-blue{background:var(--blue-400)}
 
 /* DEV LIST */
@@ -269,9 +277,36 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .error-banner svg{width:14px;height:14px;flex-shrink:0}
 
 /* EMPTY STATE */
-.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:12px;color:var(--ink-400)}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 20px;gap:8px;color:var(--ink-400)}
 .empty-state svg{width:40px;height:40px;opacity:.4}
 .empty-state p{font-size:13px;text-align:center;max-width:280px;line-height:1.6}
+.empty-state .es-icon{font-size:40px;line-height:1;margin-bottom:4px;opacity:.9}
+.empty-state .es-title{font-size:15px;font-weight:600;color:var(--ink-700);text-align:center}
+.empty-state .es-desc{font-size:13px;color:var(--ink-400);text-align:center;max-width:320px;line-height:1.6}
+.empty-state .es-action{margin-top:8px;display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:var(--radius-sm);font-size:12.5px;font-weight:500;font-family:var(--font-body);cursor:pointer;border:1px solid var(--blue-200);background:var(--blue-50);color:var(--blue-700);text-decoration:none;transition:all var(--transition)}
+.empty-state .es-action:hover{background:var(--blue-100)}
+
+/* HELP ICON + TOOLTIP (CSS-only hover hint) */
+.help-icon{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;border:1px solid var(--ink-300);color:var(--ink-400);font-size:9px;font-weight:700;font-style:normal;cursor:help;position:relative;vertical-align:middle;margin-left:4px;line-height:1;flex-shrink:0}
+.help-icon:hover{border-color:var(--blue-400);color:var(--blue-600)}
+.help-icon[data-hint]:hover::after{content:attr(data-hint);position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);background:var(--ink-900);color:#fff;padding:7px 10px;border-radius:var(--radius-sm);font-size:11px;font-weight:400;line-height:1.5;white-space:normal;width:max-content;max-width:260px;text-align:left;text-transform:none;letter-spacing:0;z-index:60;box-shadow:var(--shadow-md);pointer-events:none}
+.help-icon[data-hint]:hover::before{content:'';position:absolute;bottom:calc(100% + 2px);left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--ink-900);z-index:60}
+
+/* KANBAN: show-more button for long columns */
+.col-more{width:100%;padding:10px 16px;border:none;border-top:1px solid var(--ink-100);background:var(--ink-50);color:var(--blue-700);font-size:12px;font-weight:500;font-family:var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:background var(--transition)}
+.col-more:hover{background:var(--blue-50)}
+.col-more svg{width:12px;height:12px}
+
+/* Task breakdown badge (capacity Tasks column) */
+.task-breakdown-idle{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;background:var(--status-idle-bg);color:var(--status-idle-text)}
+
+/* Responsive pagination — keep controls visible & wrapping on small screens */
+@media(max-width:720px){
+  .paging-bar{flex-wrap:wrap;gap:6px;padding:10px 12px}
+  .paging-label{min-width:auto;width:100%;text-align:center;order:99}
+  .cap-sections{padding:14px 16px 24px}
+  .cap-section-stats{display:none}
+}
 
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
 
@@ -347,12 +382,98 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .save-btn.saved{background:var(--green-50);border-color:var(--green-200);color:var(--green-700)}
 .bulk-save-bar{background:var(--blue-700);color:white;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;font-size:12.5px}
 .bulk-save-bar button{padding:6px 16px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font-body);border:none;background:white;color:var(--blue-700)}
+
+/* ——— TIMELINE STATUS PILLS (v2) ——— */
+.status-pills{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:14px 32px 0}
+.status-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1.5px solid;transition:all var(--transition);font-family:var(--font-body);user-select:none}
+.status-pill:hover{filter:brightness(.96)}
+.status-pill .sp-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.status-pill .sp-count{border-radius:20px;padding:0 6px;font-size:10px;font-weight:700;line-height:1.6}
+.status-pill.sp-zero{opacity:.45}
+/* Dual-bar (rescheduled) */
+.tl-bar-new{position:absolute;height:16px;border-radius:4px;background:transparent;border:2px dashed var(--red-400);color:var(--red-500);font-size:9px;font-weight:600;display:flex;align-items:center;padding:0 5px;white-space:nowrap;overflow:hidden;cursor:default}
+.tl-bar-new.slip-orange{border-color:var(--amber-400);color:var(--amber-600)}
+.tl-bar-new svg{width:8px;height:8px;margin-right:3px;flex-shrink:0}
+.tl-new-badge{background:var(--green-100);color:var(--green-700);font-size:8px;font-weight:700;padding:0 4px;border-radius:3px;text-transform:uppercase;letter-spacing:.04em;margin-left:4px}
+
+/* ——— ALERT BANNERS (Executive / Jira Sync) ——— */
+.alert-banner{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-radius:var(--radius-md);border:1px solid;margin:16px 32px 0}
+.alert-banner svg.ab-icon{width:16px;height:16px;margin-top:1px;flex-shrink:0}
+.alert-banner.crit{background:var(--red-50);border-color:var(--red-100)}
+.alert-banner.crit .ab-title{color:var(--red-600)} .alert-banner.crit .ab-sub{color:var(--red-500)} .alert-banner.crit svg.ab-icon{stroke:var(--red-500)}
+.alert-banner.warn{background:var(--amber-50);border-color:var(--amber-100)}
+.alert-banner.warn .ab-title{color:var(--amber-700)} .alert-banner.warn .ab-sub{color:var(--amber-600)} .alert-banner.warn svg.ab-icon{stroke:var(--amber-500)}
+.ab-body{flex:1;min-width:0}
+.ab-title{font-size:13px;font-weight:600}
+.ab-sub{font-size:11.5px;margin-top:2px;line-height:1.5}
+.ab-link{font-size:11.5px;text-decoration:underline;white-space:nowrap;flex-shrink:0;margin-left:8px;cursor:pointer;background:none;border:none;font-family:var(--font-body)}
+.alert-banner.crit .ab-link{color:var(--red-600)} .alert-banner.warn .ab-link{color:var(--amber-700)}
+
+/* ——— ACTION ITEMS panel (Executive) ——— */
+.action-item{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:var(--radius-md);border:1px solid var(--ink-100);cursor:pointer;transition:background var(--transition);text-decoration:none;margin-bottom:8px}
+.action-item:hover{background:var(--ink-50)}
+.action-item:last-child{margin-bottom:0}
+.ai-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;flex-shrink:0}
+.ai-badge.kritis{background:var(--red-50);color:var(--red-600)}
+.ai-badge.penting{background:var(--amber-50);color:var(--amber-600)}
+.ai-badge.info{background:var(--blue-50);color:var(--blue-600)}
+.ai-text{font-size:12px;color:var(--ink-700);flex:1;line-height:1.4}
+.ai-chev{width:12px;height:12px;color:var(--ink-300);flex-shrink:0}
+
+/* ——— SYNC LEGEND ——— */
+.sync-legend{display:flex;flex-wrap:wrap;align-items:center;gap:16px;padding:12px 16px;background:var(--ink-50);border:1px solid var(--ink-100);border-radius:var(--radius-md);font-size:11.5px;margin:16px 32px 0}
+.sync-legend .sl-item{display:flex;align-items:center;gap:7px;color:var(--ink-500)}
+.sync-legend .sl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sync-legend strong{color:var(--ink-800);font-weight:600}
+
+/* ——— WORKLOAD (Team Members) ——— */
+.workload-cell{display:flex;align-items:center;gap:8px}
+.workload-track{width:70px;height:6px;background:var(--ink-100);border-radius:20px;overflow:hidden;flex-shrink:0}
+.workload-fill{height:100%;border-radius:20px}
+.workload-num{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;min-width:38px}
+.wl-badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.wl-badge.idle{background:var(--status-idle-bg);color:var(--status-idle-text);border:1px solid var(--ink-200)}
+.wl-badge.over{background:var(--status-overload-bg);color:var(--status-overload-text);border:1px solid var(--red-100)}
+.wl-badge.normal{background:var(--status-healthy-bg);color:var(--status-healthy-text);border:1px solid var(--green-100)}
+.wl-badge.low{background:var(--status-warning-bg);color:var(--status-warning-text);border:1px solid var(--amber-100)}
+
+/* ——— MOBILE TOPBAR + HAMBURGER ——— */
+.mobile-topbar{display:none;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--ink-100);background:var(--ink-0);position:sticky;top:0;z-index:30}
+.hamburger{background:none;border:none;cursor:pointer;padding:4px;color:var(--ink-700);display:flex}
+.hamburger svg{width:22px;height:22px}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(10,13,18,.35);z-index:40}
+.sidebar-overlay.show{display:block}
+
+/* ——— RESPONSIVE ——— */
+@media(max-width:860px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr);gap:12px;padding:16px}
+  .dash-grid{grid-template-columns:1fr;padding:0 16px 24px}
+  .velocity-grid{grid-template-columns:1fr;padding:0 16px 24px}
+  .sync-stats-row{grid-template-columns:repeat(2,1fr);padding:16px 16px 0}
+  #jabatan-stats{grid-template-columns:repeat(3,1fr)!important}
+  .exec-hero,.page-header{padding-left:16px;padding-right:16px}
+  .status-pills,.sync-legend,.alert-banner,.timeline-controls{padding-left:16px;padding-right:16px}
+  .alert-banner,.sync-legend{margin-left:16px;margin-right:16px}
+  .table-wrap,.members-table-wrap,.timeline-wrap{margin-left:16px;margin-right:16px;overflow-x:auto}
+  table{min-width:640px}
+  .members-table-wrap table{min-width:880px}
+  .task-grid{grid-template-columns:1fr;padding:16px}
+}
+@media(max-width:760px){
+  .sidebar{position:fixed;left:0;top:0;height:100%;z-index:50;transform:translateX(-100%);transition:transform .25s ease;width:240px;box-shadow:var(--shadow-lg)}
+  .sidebar.open{transform:translateX(0)}
+  .mobile-topbar{display:flex}
+  .topbar{display:none}
+}
 </style>
 </head>
 <body>
 
+<!-- MOBILE SIDEBAR OVERLAY -->
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar(false)"></div>
+
 <!-- SIDEBAR -->
-<aside class="sidebar">
+<aside class="sidebar" id="sidebar">
   <div class="sidebar-logo">
     <div class="logo-mark">
       <svg viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="1.5">
@@ -416,6 +537,14 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 
 <!-- MAIN -->
 <div class="main">
+  <!-- MOBILE TOPBAR (hamburger) -->
+  <div class="mobile-topbar">
+    <button class="hamburger" onclick="toggleSidebar(true)" aria-label="Menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <span style="font-weight:600;font-size:14px;color:var(--ink-900);flex:1">Resource Portal</span>
+    <div class="avatar" style="width:28px;height:28px;font-size:10px">RA</div>
+  </div>
   <header class="topbar">
     <div class="sync-status">
       <div class="sync-dot"></div>
@@ -440,6 +569,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
         <h1>Executive Overview</h1>
         <p id="exec-subtitle">Loading data from Jira…</p>
       </div>
+      <div id="exec-alert"></div>
       <div class="kpi-grid" id="kpi-grid">
         <div class="kpi-card"><div class="kpi-label">Total Members</div><div class="kpi-value skeleton" style="height:36px;width:80px;margin-top:8px"></div></div>
         <div class="kpi-card"><div class="kpi-label">Active Projects</div><div class="kpi-value skeleton" style="height:36px;width:80px;margin-top:8px"></div></div>
@@ -496,6 +626,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
           <div class="sync-stat"><div class="ss-label">Remaining Story Points</div><div class="ss-val skeleton" style="height:28px;width:60px;margin-top:4px"></div></div>
           <div class="sync-stat"><div class="ss-label">Remaining Hours (Est.)</div><div class="ss-val skeleton" style="height:28px;width:60px;margin-top:4px"></div></div>
         </div>
+        <div id="velocity-sp-banner" style="display:none;margin-top:14px;background:var(--ink-0);border:1px solid var(--ink-100);border-radius:var(--radius-lg);box-shadow:var(--shadow-xs)"></div>
       </div>
       <div class="velocity-grid" style="margin-top:16px">
         <div class="velocity-card">
@@ -507,7 +638,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
           </div>
           <div style="padding:12px 0">
             <table class="cat-table" id="cat-table">
-              <thead><tr><th>Category</th><th>Issues</th><th>Points</th><th>Est. Hours</th><th>Est. Days</th></tr></thead>
+              <thead><tr><th>Category</th><th>Issues</th><th>Points<i class="help-icon" data-hint="Story points belum diset di Jira. Kolom ini terisi otomatis setelah story points dikonfigurasi per issue di Jira Board → Backlog.">i</i></th><th>Est. Hours<i class="help-icon" data-hint="Time estimate (original estimate) belum diisi di Jira. Kolom ini terisi otomatis setelah estimasi waktu dikonfigurasi per issue.">i</i></th><th>Est. Days</th></tr></thead>
               <tbody id="cat-tbody"><tr><td colspan="5" style="padding:30px;text-align:center;color:var(--ink-400)">Loading…</td></tr></tbody>
             </table>
           </div>
@@ -573,9 +704,17 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
         </div>
         <button class="btn btn-primary" onclick="loadSyncData()">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8A6 6 0 0114 8M14 8a6 6 0 01-12 0"/><path d="M14 4v4h-4"/></svg>
-          Sync Now
+          Sinkronkan Sekarang
         </button>
       </div>
+      <!-- 2a. Legend (selalu tampil) -->
+      <div class="sync-legend">
+        <div class="sl-item"><span class="sl-dot" style="background:var(--green-500)"></span><span><strong>Synced</strong> — assignee anggota tim terdaftar</span></div>
+        <div class="sl-item"><span class="sl-dot" style="background:var(--amber-500)"></span><span><strong>External</strong> — assignee tidak ada di Team Members, utilisasi <strong>tidak</strong> terhitung</span></div>
+        <div class="sl-item"><span class="sl-dot" style="background:var(--ink-400)"></span><span><strong>Unassigned</strong> — belum ada assignee di Jira</span></div>
+      </div>
+      <!-- 2b. Warning banner (External) -->
+      <div id="sync-ext-banner"></div>
       <div class="sync-stats-row" id="sync-stats">
         <div class="sync-stat"><div class="ss-label">Total Issues</div><div class="ss-val skeleton" style="height:28px;width:60px;margin-top:4px"></div></div>
         <div class="sync-stat"><div class="ss-label">Assigned to Team</div><div class="ss-val skeleton" style="height:28px;width:60px;margin-top:4px"></div></div>
@@ -604,7 +743,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
               <th>Assignee</th>
               <th>Status</th>
               <th>Priority</th>
-              <th>Sync</th>
+              <th>Sync<i class="help-icon" data-hint="Synced = assignee terdaftar di tim. External = assignee tidak ada di team list dan utilisasinya tidak dihitung. Unassigned = belum ada assignee di Jira.">i</i></th>
               <th>Updated</th>
             </tr>
           </thead>
@@ -638,15 +777,10 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
         </select>
         <span style="margin-left:auto;font-size:11.5px;color:var(--ink-400)" id="tl-meta"></span>
       </div>
-      <!-- Legend -->
-      <div style="display:flex;gap:16px;align-items:center;padding:10px 32px 0;flex-wrap:wrap">
-        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:24px;height:10px;border-radius:3px;background:var(--blue-100);border:1px solid var(--blue-200);display:inline-block"></span>In Progress</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:24px;height:10px;border-radius:3px;background:var(--green-100);border:1px solid var(--green-200);display:inline-block"></span>Done</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:24px;height:10px;border-radius:3px;background:var(--ink-100);border:1px solid var(--ink-200);display:inline-block"></span>To Do</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:24px;height:10px;border-radius:3px;background:var(--red-100);border:1px solid var(--red-200);display:inline-block"></span>Overdue</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:24px;height:10px;border-radius:3px;background:var(--amber-100);border:2px solid var(--amber-400);display:inline-block;background-image:repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(180,109,20,.2) 3px,rgba(180,109,20,.2) 5px)"></span>Rescheduled</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:2px;height:14px;background:var(--blue-400);display:inline-block;border-radius:2px"></span>Hari ini</div>
-      </div>
+      <!-- Status filter pills (primary filter) -->
+      <div class="status-pills" id="tl-status-pills"></div>
+      <!-- Legend (rendered by JS) -->
+      <div style="display:flex;gap:16px;align-items:center;padding:10px 32px 0;flex-wrap:wrap" id="tl-legend"></div>
       <div class="timeline-wrap" id="timeline-wrap">
         <div style="padding:60px;text-align:center;color:var(--ink-400);font-size:13px">Loading timeline…</div>
       </div>
@@ -671,13 +805,14 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
         </div>
       </div>
 
-      <!-- Stats bar -->
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;padding:16px 32px 0" id="jabatan-stats">
+      <!-- Stats bar — reactive, updates live as jabatan dipilih (tanpa perlu Save) -->
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;padding:16px 32px 0" id="jabatan-stats">
         <div class="sync-stat"><div class="ss-label">CTO</div><div class="ss-val" id="stat-CTO">—</div></div>
         <div class="sync-stat"><div class="ss-label">PM</div><div class="ss-val" id="stat-PM">—</div></div>
         <div class="sync-stat"><div class="ss-label">BA</div><div class="ss-val" id="stat-BA">—</div></div>
         <div class="sync-stat"><div class="ss-label">QA</div><div class="ss-val" id="stat-QA">—</div></div>
         <div class="sync-stat"><div class="ss-label">Developer</div><div class="ss-val" id="stat-Dev">—</div></div>
+        <div class="sync-stat" style="background:var(--ink-50)"><div class="ss-label" style="color:var(--ink-400)">Belum diatur</div><div class="ss-val" id="stat-unset" style="color:var(--ink-400)">—</div></div>
       </div>
 
       <div class="members-toolbar">
@@ -699,6 +834,13 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
           <option>CTO</option><option>PM</option><option>BA</option><option>QA</option><option>Dev</option>
           <option value="unset">Belum diatur</option>
         </select>
+        <select class="select-filter" id="members-workload-filter" onchange="filterMembersTable()">
+          <option value="">Semua Workload</option>
+          <option value="overloaded">Overloaded (&gt;100%)</option>
+          <option value="normal">Normal (70–100%)</option>
+          <option value="low">Rendah (30–70%)</option>
+          <option value="idle">Tidak aktif (&lt;30%)</option>
+        </select>
         <span style="font-size:11.5px;color:var(--ink-400);margin-left:auto" id="members-count-label"></span>
       </div>
 
@@ -712,11 +854,13 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
               <th>Email</th>
               <th>Jabatan</th>
               <th>Level</th>
+              <th style="width:130px">Workload ↓</th>
+              <th style="width:110px">Status</th>
               <th style="width:100px">Aksi</th>
             </tr>
           </thead>
           <tbody id="members-tbody">
-            <tr><td colspan="7" style="padding:40px;text-align:center;color:var(--ink-400)">Loading members…</td></tr>
+            <tr><td colspan="9" style="padding:40px;text-align:center;color:var(--ink-400)">Loading members…</td></tr>
           </tbody>
         </table>
       </div>
@@ -744,6 +888,17 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 </div>
 
 <script>
+/*
+ * ——— KONVENSI BAHASA (bilingual, konsisten) ———
+ * Keputusan: istilah TEKNIS Jira/Agile tetap Bahasa Inggris karena sudah jadi
+ * istilah baku tim; LABEL AKSI & teks UI memakai Bahasa Indonesia.
+ *   • Tetap EN  : To Do, In Progress, In Review, Done, Idle, Sync, Story Points,
+ *                 Velocity, Forecast, Backlog, Export CSV (nama fitur/format).
+ *   • Jadi ID   : "Sync Now" → "Sinkronkan Sekarang", "Overload" → "Kelebihan beban",
+ *                 "Simpan", "Cari…", "Lihat N lainnya", "Tidak ada data", dll.
+ * Jangan campur setengah-setengah — ikuti pembagian di atas saat menambah label baru.
+ */
+
 // ——— State ———
 const STATE = {
   projects: null,
@@ -776,6 +931,50 @@ const PROJ_PILL_COLORS = [
   { bg:'var(--teal-50)',   color:'var(--teal-700)',   dot:'var(--teal-400)'   },
 ];
 
+// ——— Semantic status colors (mirror of CSS --status-* tokens) ———
+// Single source of truth for status hues used across all pages.
+const STATUS_COLORS = {
+  overload: { bg:'var(--status-overload-bg)', text:'var(--status-overload-text)', bar:'var(--status-overload-bar)' },
+  warning:  { bg:'var(--status-warning-bg)',  text:'var(--status-warning-text)',  bar:'var(--status-warning-bar)'  },
+  healthy:  { bg:'var(--status-healthy-bg)',  text:'var(--status-healthy-text)',  bar:'var(--status-healthy-bar)'  },
+  idle:     { bg:'var(--status-idle-bg)',     text:'var(--status-idle-text)',     bar:'var(--status-idle-bar)'     },
+  external: { bg:'var(--status-external-bg)', text:'var(--status-external-text)', bar:'var(--status-external-bar)' },
+  synced:   { bg:'var(--status-synced-bg)',   text:'var(--status-synced-text)',   bar:'var(--status-synced-bar)'   },
+};
+
+// Map a utilization % to a semantic status key. >100 overload, 80–100 warning,
+// 30–80 healthy, <30 idle. Used everywhere so the logic stays consistent.
+function utilStatus(util) {
+  if (util > 100) return 'overload';
+  if (util > 80)  return 'warning';
+  if (util >= 30) return 'healthy';
+  return 'idle';
+}
+// CSS class helpers tied to the same thresholds.
+function utilFillClass(util) { return ({overload:'fill-over',warning:'fill-warn',healthy:'fill-ok',idle:'fill-idle'})[utilStatus(util)]; }
+function utilNumClass(util)  { return ({overload:'over',     warning:'warn',     healthy:'ok',      idle:'low'})[utilStatus(util)]; }
+
+// ——— Reusable empty state (icon + title + description + optional action) ———
+// opts: { icon, title, description, action:{label, href, onClick} }
+function emptyState(opts) {
+  const { icon = '📭', title = '', description = '', action = null } = opts || {};
+  let actionHtml = '';
+  if (action && action.label) {
+    if (action.href) {
+      actionHtml = `<a class="es-action" href="${action.href}" target="_blank" rel="noopener">${action.label}
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3h7v7M13 3L6 10"/><path d="M11 9v4H3V5h4"/></svg></a>`;
+    } else if (action.onClick) {
+      actionHtml = `<button class="es-action" onclick="${action.onClick}">${action.label}</button>`;
+    }
+  }
+  return `<div class="empty-state">
+    <div class="es-icon">${icon}</div>
+    <div class="es-title">${title}</div>
+    <div class="es-desc">${description}</div>
+    ${actionHtml}
+  </div>`;
+}
+
 // ——— Navigation ———
 function showPage(id, btn) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -788,6 +987,17 @@ function showPage(id, btn) {
   if (id === 'jirasync' && !STATE.sync) loadSyncData();
   if (id === 'timeline') { populateTlFilters(); if (!TL.data) loadTimelinePage(); }
   if (id === 'members') loadMembersPage();
+
+  toggleSidebar(false); // close mobile drawer after navigating
+}
+
+// Mobile sidebar drawer toggle
+function toggleSidebar(open) {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sidebar-overlay');
+  if (!sb) return;
+  if (open) { sb.classList.add('open'); ov.classList.add('show'); }
+  else      { sb.classList.remove('open'); ov.classList.remove('show'); }
 }
 
 // ——— Loading helpers ———
@@ -869,8 +1079,21 @@ function renderExecutivePage(cap) {
   const s = cap.summary;
   const projects = STATE.projects?.projects || [];
   const members = STATE.members || [];
+  const crit = s.avgUtilization > 100;
 
-  // KPI cards
+  // 1a. Status banner — only when team is critical (avg > 100%)
+  document.getElementById('exec-alert').innerHTML = crit ? `
+    <div class="alert-banner crit">
+      <svg class="ab-icon" viewBox="0 0 16 16" fill="none" stroke-width="1.6"><circle cx="8" cy="8" r="6"/><path d="M8 5v4M8 11v.5"/></svg>
+      <div class="ab-body">
+        <div class="ab-title">Tim dalam kondisi kritis — utilisasi rata-rata ${s.avgUtilization}%</div>
+        <div class="ab-sub">${s.overloaded} developer kelebihan beban · ${s.idle} underutilized dan bisa menyerap overflow</div>
+      </div>
+      <button class="ab-link" onclick="showPage('capacity',document.querySelectorAll('.nav-item')[1])">Lihat Developer →</button>
+    </div>` : '';
+
+  // KPI cards (1b. conditional colour on Avg Utilization & Overloaded)
+  const critCard = crit ? 'background:var(--red-50);border-color:var(--red-100)' : '';
   document.getElementById('kpi-grid').innerHTML = `
     <div class="kpi-card">
       <div class="kpi-label">
@@ -888,22 +1111,22 @@ function renderExecutivePage(cap) {
       <div class="kpi-value">${projects.length}</div>
       <div class="kpi-delta info">5 kategori</div>
     </div>
-    <div class="kpi-card">
+    <div class="kpi-card" style="${critCard}">
       <div class="kpi-label">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 4v4l3 2"/></svg>
         Avg Utilization
       </div>
-      <div class="kpi-value">${s.avgUtilization}%</div>
+      <div class="kpi-value" style="${crit ? 'color:var(--red-600)' : ''}">${s.avgUtilization}%</div>
       <div class="kpi-delta ${s.avgUtilization > 100 ? 'down' : s.avgUtilization > 80 ? 'warn' : 'up'}">
         ${s.avgUtilization > 100 ? 'Tim overloaded' : s.avgUtilization > 80 ? 'Mendekati kapasitas' : 'Normal'}
       </div>
     </div>
-    <div class="kpi-card">
+    <div class="kpi-card" style="${s.overloaded > 0 ? critCard : ''}">
       <div class="kpi-label">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1l2 5h5l-4 3 1.5 5L8 11l-4.5 3L5 9 1 6h5z"/></svg>
         Overloaded
       </div>
-      <div class="kpi-value">${s.overloaded}</div>
+      <div class="kpi-value" style="${s.overloaded > 0 ? 'color:var(--red-600)' : ''}">${s.overloaded}</div>
       <div class="kpi-delta ${s.overloaded > 0 ? 'down' : 'up'}">${s.idle} underutilized</div>
     </div>
   `;
@@ -925,15 +1148,33 @@ function renderExecutivePage(cap) {
   }
 
   const groupBars = Object.entries(groupStats).map(([g, st]) => {
-    const avg = Math.round(st.total / st.count);
-    const fillClass = avg > 100 ? 'fill-over' : avg > 80 ? 'fill-warn' : 'fill-ok';
-    const pctClass = avg > 100 ? 'over' : avg > 80 ? 'warn' : 'ok';
+    const avg = st.count ? Math.round(st.total / st.count) : 0;
     const gc = GROUP_COLORS[g] || { bg:'var(--blue-50)',color:'var(--blue-700)' };
+
+    // Status: red only >100. 0% → grey (idle) with explanation. No members → "Tidak ada data".
+    const noData = st.count === 0;
+    const status = noData ? 'idle' : utilStatus(avg);
+    const fillClass = utilFillClass(noData ? 0 : avg);   // grey for idle/no-data
+    const pctClass  = utilNumClass(noData ? 0 : avg);
+
+    // Right-side label + hover hint
+    let rightLabel, hint = '';
+    if (noData) {
+      rightLabel = `<span style="color:var(--ink-400);font-weight:500">Tidak ada data</span>`;
+      hint = 'Grup ini belum memiliki anggota dengan issue di periode ini.';
+    } else if (avg === 0) {
+      rightLabel = `<span class="tbar-pct" style="color:var(--ink-400)">0%</span>`;
+      hint = 'Grup ini belum memiliki issue aktif di periode ini.';
+    } else {
+      rightLabel = `<span class="tbar-pct ${pctClass}">${avg}%</span>`;
+    }
+    const hintIcon = hint ? `<i class="help-icon" data-hint="${hint}">i</i>` : '';
+
     return `
       <div class="tbar-row">
         <div class="tbar-meta">
-          <div class="tbar-name"><span class="tbar-type" style="background:${gc.bg};color:${gc.color}">${g.replace(' Developer','').replace(' Team','')}</span>${g}</div>
-          <div class="tbar-pct ${pctClass}">${avg}%</div>
+          <div class="tbar-name"><span class="tbar-type" style="background:${gc.bg};color:${gc.color}">${g.replace(' Developer','').replace(' Team','')}</span>${g}${hintIcon}</div>
+          ${rightLabel}
         </div>
         <div class="tbar-track"><div class="tbar-fill ${fillClass}" style="width:${Math.min(avg,100)}%"></div></div>
       </div>`;
@@ -968,6 +1209,28 @@ function renderExecutivePage(cap) {
   ].filter(Boolean).join('');
 
   const flagCount = s.overloaded + (idleDevs.length > 0 ? 1 : 0);
+
+  // 1c. Action items ("Yang perlu dilakukan") — computed from available data
+  const actionItems = [];
+  cap.developers.filter(d => d.utilization > 100)
+    .sort((a,b) => b.utilization - a.utilization).slice(0,2)
+    .forEach(m => actionItems.push({ priority:'kritis', text:`${m.displayName} ${m.utilization}% — redistribusi task segera`, nav:1 }));
+  const extCount = STATE.sync?.external || 0;
+  if (extCount > 10) actionItems.push({ priority:'penting', text:`${extCount} issue External di Jira belum terpantau`, nav:6 });
+  const noRole = members.length - Object.values(STATE.memberProfiles || {}).filter(p => p.jabatan).length;
+  if (Object.keys(STATE.memberProfiles || {}).length && noRole > 5)
+    actionItems.push({ priority:'penting', text:`${noRole} anggota belum diatur jabatan`, nav:5 });
+  if (idleDevs.length > 0) actionItems.push({ priority:'info', text:`${idleDevs.length} developer idle bisa serap overflow`, nav:1 });
+
+  const navIdx = { 1:1, 5:5, 6:6 };
+  const actionItemsHtml = actionItems.length
+    ? actionItems.map(it => `
+        <div class="action-item" onclick="showPage('${it.nav===5?'members':it.nav===6?'jirasync':'capacity'}',document.querySelectorAll('.nav-item')[${it.nav}])">
+          <span class="ai-badge ${it.priority}">${it.priority==='kritis'?'Kritis':it.priority==='penting'?'Penting':'Info'}</span>
+          <span class="ai-text">${it.text}</span>
+          <svg class="ai-chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4l4 4-4 4"/></svg>
+        </div>`).join('')
+    : `<div class="empty-state" style="padding:24px"><div class="es-icon">✅</div><div class="es-desc">Tidak ada tindakan mendesak. Tim dalam kondisi baik.</div></div>`;
 
   document.getElementById('exec-dash-grid').innerHTML = `
     <!-- Gauge -->
@@ -1006,6 +1269,18 @@ function renderExecutivePage(cap) {
         </div>
       </div>
       <div class="card-body"><div class="team-bars">${groupBars}</div></div>
+    </div>
+
+    <!-- Action items: Yang perlu dilakukan -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l3 3 7-7"/><path d="M2 13h12"/></svg>
+          Yang perlu dilakukan
+        </div>
+        <span class="ai-count-badge ${flagCount > 0 ? 'has-flags' : 'ok'}">${actionItems.length} item</span>
+      </div>
+      <div class="card-body">${actionItemsHtml}</div>
     </div>
 
     <!-- Overloaded list -->
@@ -1110,10 +1385,10 @@ function renderCapacityTable(cap) {
             <tr>
               <th style="width:36px">#</th>
               <th style="width:220px">Developer</th>
-              <th>Utilization</th>
+              <th>Utilization<i class="help-icon" data-hint="Utilization% = Σ(weight × active days) ÷ (4 tasks/hari × hari kerja) × 100. Weight: Small≤2d=0.5, Standard 3-5d=1.0, Large 6-10d=2.0, Epic>10d=3.0">i</i></th>
               <th>Available</th>
-              <th>Overload</th>
-              <th>Tasks</th>
+              <th>Kelebihan beban</th>
+              <th>Tasks<i class="help-icon" data-hint="Tasks aktif = belum Done dalam periode ini. Jika ada task tapi 0 aktif, beban periode ini = 0.">i</i></th>
               <th>Project Allocation</th>
             </tr>
           </thead>
@@ -1180,16 +1455,31 @@ function renderCapGroupRows(group, allMembers) {
     ? slice.map((d, i) => {
         const initials  = d.displayName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
         const util      = d.utilization;
-        const fillClass = util > 100 ? 'fill-over' : util > 80 ? 'fill-warn' : 'fill-ok';
-        const numClass  = util > 100 ? 'over'      : util > 80 ? 'warn'      : util >= 30 ? 'ok' : 'low';
-        const rowBg     = util > 100 ? 'background:var(--red-50)' : '';
+        const fillClass = utilFillClass(util);
+        const numClass  = utilNumClass(util);
+        const rowBg     = util > 100 ? 'background:var(--status-overload-bg)' : '';
         const flag      = util > 100
-          ? `<span class="row-flag over">Overload</span>`
+          ? `<span class="row-flag over">Kelebihan beban</span>`
           : util < 30 ? `<span class="row-flag idle">Idle</span>` : '';
         const projPills = d.projectAllocations.map((p, pi) => {
           const c = PROJ_PILL_COLORS[pi % PROJ_PILL_COLORS.length];
           return `<span class="project-pill" style="background:${c.bg};color:${c.color}"><span class="pp-dot" style="background:${c.dot}"></span>${p.key} ${p.pct}%</span>`;
         }).join('');
+
+        // Task breakdown: "X aktif / Y total". Idle = ada task tapi 0 aktif → badge abu.
+        let tasksCell;
+        if (d.activeTaskCount > 0) {
+          tasksCell = `<span style="color:var(--status-healthy-text);font-weight:600">${d.activeTaskCount} aktif</span>
+            <span style="color:var(--ink-400);font-weight:400;font-size:11px"> / ${d.taskCount} total</span>`;
+        } else if (d.taskCount > 0) {
+          tasksCell = `<span class="task-breakdown-idle" title="Tasks ada tapi tidak ada yang aktif dalam periode ini.">Idle · ${d.taskCount} total</span>`;
+        } else {
+          tasksCell = `<span style="color:var(--ink-300)">—</span>`;
+        }
+
+        // Tooltip when 0% util but tasks exist
+        const utilTitle = (util === 0 && d.taskCount > 0)
+          ? ` title="Tasks ada tapi tidak ada yang aktif dalam periode ini."` : '';
 
         return `<tr style="${rowBg}">
           <td style="color:var(--ink-400);font-size:11px">${globalOffset + i + 1}</td>
@@ -1198,14 +1488,14 @@ function renderCapGroupRows(group, allMembers) {
             ${d.displayName}${flag}
           </div></td>
           <td>
-            <div class="util-cell">
+            <div class="util-cell"${utilTitle}>
               <div class="util-bar"><div class="util-fill ${fillClass}" style="width:${Math.min(util,100)}%"></div></div>
               <span class="util-num ${numClass}">${util}%</span>
             </div>
           </td>
-          <td style="color:${util<30?'var(--ink-400)':'var(--green-500)'};font-weight:600;font-size:12.5px">${d.available}%</td>
-          <td style="color:var(--red-500);font-weight:600;font-size:12.5px">${d.overload>0?'+'+d.overload+'%':'—'}</td>
-          <td style="font-weight:500">${d.taskCount} <span style="color:var(--ink-400);font-weight:400;font-size:11px">(${d.activeTaskCount} aktif)</span></td>
+          <td style="color:${util<30?'var(--ink-400)':'var(--status-healthy-text)'};font-weight:600;font-size:12.5px">${d.available}%</td>
+          <td style="color:var(--status-overload-text);font-weight:600;font-size:12.5px">${d.overload>0?'+'+d.overload+'%':'—'}</td>
+          <td style="font-weight:500">${tasksCell}</td>
           <td>${projPills||'<span style="color:var(--ink-400);font-size:12px">—</span>'}</td>
         </tr>`;
       }).join('')
@@ -1279,17 +1569,31 @@ async function loadVelocityPage() {
     document.getElementById('nav-forecast-badge').textContent = `${forecast.completionMonths}mo`;
     document.getElementById('nav-forecast-badge').style.display = '';
 
-    // Category table
+    // Category table — keep structure even when Points/Hours empty (Task 10).
     document.getElementById('cat-tbody').innerHTML = forecast.byCategory.length
       ? forecast.byCategory.map(c => `
         <tr>
           <td><strong>${c.category}</strong></td>
           <td>${c.count}</td>
-          <td>${c.points || '—'}</td>
-          <td>${c.hours > 0 ? c.hours + 'h' : '—'}</td>
+          <td>${c.points || '<span style="color:var(--ink-300)">—</span>'}</td>
+          <td>${c.hours > 0 ? c.hours + 'h' : '<span style="color:var(--ink-300)">—</span>'}</td>
           <td style="font-weight:600;color:var(--blue-700)">${c.estimatedDays} hari</td>
         </tr>`).join('')
-      : `<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--ink-400)">Tidak ada backlog</td></tr>`;
+      : `<tr><td colspan="5">${emptyState({icon:'📊',title:'Tidak ada backlog',description:'Tidak ada issue aktif untuk diforecast.'})}</td></tr>`;
+
+    // Guidance banner when story points are not configured in Jira (Task 2).
+    const banner = document.getElementById('velocity-sp-banner');
+    if (forecast.totalPoints > 0) {
+      banner.style.display = 'none';
+    } else {
+      banner.style.display = 'block';
+      banner.innerHTML = emptyState({
+        icon: '🎯',
+        title: 'Story points belum dikonfigurasi',
+        description: 'Buka Jira Board → Backlog → set story points per issue agar forecast berbasis velocity bisa dihitung. Saat ini forecast memakai jumlah issue sebagai estimasi.',
+        action: { label: 'Buka Jira', href: 'https://linkit360.atlassian.net' }
+      });
+    }
 
     // Sprint velocity bars
     const boards = velocity || [];
@@ -1310,7 +1614,11 @@ async function loadVelocityPage() {
         </div>
       `;
     } else {
-      document.getElementById('velocity-sprints').innerHTML = `<div style="color:var(--ink-400);font-size:12.5px;text-align:center;padding:20px 0">Data sprint tidak tersedia — project mungkin tidak menggunakan Jira Agile board</div>`;
+      document.getElementById('velocity-sprints').innerHTML = emptyState({
+        icon: '🏃',
+        title: 'Data sprint tidak tersedia',
+        description: 'Project ini mungkin tidak menggunakan Jira Agile board, atau belum ada sprint yang selesai.'
+      });
     }
   } catch(e) {
     showError('Gagal load velocity: ' + e.message);
@@ -1347,7 +1655,12 @@ async function loadTasksPage() {
   }
 }
 
+// Done column collapse state — reset whenever filters change.
+const DONE_COLLAPSED_LIMIT = 8;
+let doneExpanded = false;
+
 function filterTasks() {
+  doneExpanded = false; // reset expand on any filter change
   const q = document.getElementById('task-search').value.toLowerCase();
   const status = document.getElementById('task-status-filter').value;
   const assignee = document.getElementById('task-assignee-filter').value;
@@ -1363,7 +1676,28 @@ function filterTasks() {
   renderTaskColumns(filtered);
 }
 
+function taskCardHtml(t) {
+  const initials = t.assignee?.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() || '?';
+  const pClass = `p-${(t.priority || 'medium').toLowerCase()}`;
+  return `
+    <div class="task-card">
+      <div class="task-key">${t.key}</div>
+      <div class="task-summary">${t.summary || 'Untitled'}</div>
+      <div class="task-meta">
+        <span class="priority-badge ${pClass}">${t.priority || 'Medium'}</span>
+        ${t.storyPoints ? `<span style="font-size:10px;color:var(--ink-400)">${t.storyPoints}pt</span>` : ''}
+        <span class="assignee-chip"><span class="mini-av">${initials}</span>${t.assignee || 'Unassigned'}</span>
+      </div>
+    </div>`;
+}
+
+function toggleDoneExpand() {
+  doneExpanded = !doneExpanded;
+  renderTaskColumns(STATE._lastTaskRender || STATE.allTasks);
+}
+
 function renderTaskColumns(tasks) {
+  STATE._lastTaskRender = tasks; // remember for toggleDoneExpand re-render
   const cols = {
     todo: tasks.filter(t => ['To Do','Open','Backlog','New'].includes(t.status)),
     inprogress: tasks.filter(t => ['In Progress','In Development','Coding'].includes(t.status)),
@@ -1380,20 +1714,29 @@ function renderTaskColumns(tasks) {
     badge.textContent = items.length;
     header.appendChild(badge);
 
-    col.innerHTML = items.length ? items.slice(0, 30).map(t => {
-      const initials = t.assignee?.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() || '?';
-      const pClass = `p-${(t.priority || 'medium').toLowerCase()}`;
-      return `
-        <div class="task-card">
-          <div class="task-key">${t.key}</div>
-          <div class="task-summary">${t.summary || 'Untitled'}</div>
-          <div class="task-meta">
-            <span class="priority-badge ${pClass}">${t.priority || 'Medium'}</span>
-            ${t.storyPoints ? `<span style="font-size:10px;color:var(--ink-400)">${t.storyPoints}pt</span>` : ''}
-            <span class="assignee-chip"><span class="mini-av">${initials}</span>${t.assignee || 'Unassigned'}</span>
-          </div>
-        </div>`;
-    }).join('') : `<div style="padding:24px;text-align:center;color:var(--ink-300);font-size:12px">Tidak ada task</div>`;
+    if (!items.length) {
+      col.innerHTML = emptyState({ icon:'📋', title:'Tidak ada task', description:'Tidak ada task dengan filter ini.' });
+      return;
+    }
+
+    // Done column: collapse to first N with a "show more" toggle.
+    if (key === 'done' && items.length > DONE_COLLAPSED_LIMIT && !doneExpanded) {
+      const shown  = items.slice(0, DONE_COLLAPSED_LIMIT);
+      const hidden = items.length - DONE_COLLAPSED_LIMIT;
+      col.innerHTML = shown.map(taskCardHtml).join('') +
+        `<button class="col-more" onclick="toggleDoneExpand()">
+          Lihat ${hidden} task lainnya
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6l4 4 4-4"/></svg>
+        </button>`;
+    } else {
+      const list = (key === 'done' ? items : items.slice(0, 30)).map(taskCardHtml).join('');
+      const collapseBtn = (key === 'done' && doneExpanded && items.length > DONE_COLLAPSED_LIMIT)
+        ? `<button class="col-more" onclick="toggleDoneExpand()">
+             Sembunyikan
+             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 10l4-4 4 4"/></svg>
+           </button>` : '';
+      col.innerHTML = list + collapseBtn;
+    }
   });
 }
 
@@ -1405,12 +1748,30 @@ async function loadSyncData() {
     STATE.sync = data;
     STATE.allSyncIssues = data.issues || [];
 
+    const extPct = data.total ? Math.round(data.external / data.total * 100) : 0;
+    const extCardStyle = (data.external > 0 && extPct > 30) ? 'background:var(--amber-50);border-color:var(--amber-100)' : '';
     document.getElementById('sync-stats').innerHTML = `
       <div class="sync-stat"><div class="ss-label">Total Issues (7 hari)</div><div class="ss-val">${data.total}</div></div>
       <div class="sync-stat"><div class="ss-label">Assigned to Team</div><div class="ss-val green">${data.synced}</div></div>
       <div class="sync-stat"><div class="ss-label">Unassigned</div><div class="ss-val ${data.unassigned > 0 ? 'red' : ''}">${data.unassigned}</div></div>
-      <div class="sync-stat"><div class="ss-label">External Assignee</div><div class="ss-val ${data.external > 0 ? 'amber' : ''}">${data.external}</div></div>
+      <div class="sync-stat" style="${extCardStyle}">
+        <div class="ss-label"><span style="width:6px;height:6px;border-radius:50%;background:var(--amber-500);display:inline-block;margin-right:4px"></span>External Assignee</div>
+        <div class="ss-val ${data.external > 0 ? 'amber' : ''}">${data.external}</div>
+        <div style="font-size:11px;color:var(--ink-400);margin-top:2px">${extPct}% dari total</div>
+      </div>
     `;
+
+    // 2b. External warning banner
+    const extBanner = document.getElementById('sync-ext-banner');
+    extBanner.innerHTML = data.external > 0 ? `
+      <div class="alert-banner warn">
+        <svg class="ab-icon" viewBox="0 0 16 16" fill="none" stroke-width="1.6"><path d="M8 2l6 11H2z"/><path d="M8 7v3M8 11.5v.3"/></svg>
+        <div class="ab-body">
+          <div class="ab-title">${data.external} issue dengan assignee External (${extPct}% dari total)</div>
+          <div class="ab-sub">Orang-orang ini tidak terpantau di Resource Portal — utilisasi mereka tidak dihitung. Tambahkan ke Team Members atau re-assign ke anggota terdaftar.</div>
+        </div>
+        <button class="ab-link" onclick="showPage('members',document.querySelectorAll('.nav-item')[5])">Kelola Team Members →</button>
+      </div>` : '';
 
     const badge = document.getElementById('nav-sync-badge');
     if (data.unassigned > 0) {
@@ -1520,7 +1881,128 @@ function onTlCategoryChange() {
 }
 
 // ======== TIMELINE ========
-let TL = { data: null };
+let TL = { data: null, statusFilter: 'all' };
+
+// Map raw Jira status → display bucket. Tambah alias di sini bila nama Jira beda.
+const JIRA_STATUS_MAP = {
+  'in progress':'In Progress','in development':'In Progress','coding':'In Progress','in review':'In Progress','code review':'In Progress',
+  'done':'Done','closed':'Done','resolved':'Done','completed':'Done',
+  'to do':'To Do','open':'To Do','backlog':'To Do','new':'To Do',
+  'delay':'Delay','delayed':'Delay',
+  'on hold':'On Hold','hold':'On Hold','blocked':'On Hold','pending':'On Hold',
+  'waiting telco':'Waiting telco','waiting for telco':'Waiting telco'
+};
+function displayStatus(raw) {
+  const k = (raw || '').toLowerCase().trim();
+  if (JIRA_STATUS_MAP[k]) return JIRA_STATUS_MAP[k];
+  // Fallback: substring matching for custom/variant Jira names (e.g. "Done Production")
+  if (k.includes('done') || k.includes('closed') || k.includes('resolved') || k.includes('complete') || k.includes('production')) return 'Done';
+  if (k.includes('progress') || k.includes('develop') || k.includes('coding') || k.includes('review')) return 'In Progress';
+  if (k.includes('telco')) return 'Waiting telco';
+  if (k.includes('hold') || k.includes('block') || k.includes('pending')) return 'On Hold';
+  if (k.includes('delay')) return 'Delay';
+  if (k.includes('backlog') || k.includes('open') || k.includes('to do') || k.includes('todo') || k.includes('new')) return 'To Do';
+  return 'To Do';
+}
+// Display status → bar colour (hex; matches reference Gantt)
+const STATUS_BAR_STYLE = {
+  'Done':          { bg:'var(--green-400)', text:'#fff', border:'var(--green-500)' },
+  'In Progress':   { bg:'var(--blue-400)',  text:'#fff', border:'var(--blue-500)'  },
+  'To Do':         { bg:'var(--ink-200)',   text:'var(--ink-700)', border:'var(--ink-300)' },
+  'Delay':         { bg:'var(--red-400)',   text:'#fff', border:'var(--red-500)'   },
+  'On Hold':       { bg:'var(--violet-400)',text:'#fff', border:'var(--violet-500)'},
+  'Waiting telco': { bg:'var(--amber-400)', text:'#fff', border:'var(--amber-500)' },
+};
+// Status filter pills
+const TL_STATUS_PILLS = [
+  { key:'all',         label:'All',          dot:null,                 cls:'all'  },
+  { key:'active',      label:'Active',       dot:'var(--amber-400)',   cls:'amber'},
+  { key:'done',        label:'Done',         dot:'var(--green-400)',   cls:'green'},
+  { key:'inprogress',  label:'In Progress',  dot:'var(--blue-400)',    cls:'blue' },
+  { key:'todo',        label:'To Do',        dot:'var(--ink-300)',     cls:'gray' },
+  { key:'delay',       label:'Delay',        dot:'var(--red-400)',     cls:'red'  },
+  { key:'onhold',      label:'On Hold',      dot:'var(--violet-400)',  cls:'violet'},
+  { key:'waitingtelco',label:'Waiting telco',dot:'var(--amber-500)',   cls:'orange'},
+];
+const TL_PILL_STYLE = {
+  all:    { base:'background:var(--blue-700);color:#fff;border-color:var(--blue-700)',         active:'background:var(--blue-800,#0f4c8a)' },
+  amber:  { base:'background:var(--amber-50);color:var(--amber-700);border-color:var(--amber-200)', active:'background:var(--amber-100);border-color:var(--amber-400)' },
+  green:  { base:'background:var(--green-50);color:var(--green-700);border-color:var(--green-200)', active:'background:var(--green-100);border-color:var(--green-400)' },
+  blue:   { base:'background:var(--blue-50);color:var(--blue-700);border-color:var(--blue-200)',    active:'background:var(--blue-100);border-color:var(--blue-400)' },
+  gray:   { base:'background:var(--ink-100);color:var(--ink-600);border-color:var(--ink-200)',      active:'background:var(--ink-200);border-color:var(--ink-300)' },
+  red:    { base:'background:var(--red-50);color:var(--red-700);border-color:var(--red-200)',       active:'background:var(--red-100);border-color:var(--red-400)' },
+  violet: { base:'background:var(--violet-50);color:var(--violet-700);border-color:var(--violet-200)',active:'background:var(--violet-100);border-color:var(--violet-400)' },
+  orange: { base:'background:var(--amber-50);color:var(--amber-700);border-color:var(--amber-200)',  active:'background:var(--amber-100);border-color:var(--amber-400)' },
+};
+
+function tlStatusCounts(items) {
+  const all = items.flatMap(p => p.tasks);
+  const ds = t => displayStatus(t.status);
+  return {
+    all: all.length,
+    active: all.filter(t => ['In Progress','To Do'].includes(ds(t))).length,
+    done: all.filter(t => ds(t) === 'Done').length,
+    inprogress: all.filter(t => ds(t) === 'In Progress').length,
+    todo: all.filter(t => ds(t) === 'To Do').length,
+    delay: all.filter(t => ds(t) === 'Delay').length,
+    onhold: all.filter(t => ds(t) === 'On Hold').length,
+    waitingtelco: all.filter(t => ds(t) === 'Waiting telco').length,
+  };
+}
+
+function taskMatchesStatusFilter(t) {
+  const f = TL.statusFilter;
+  if (f === 'all') return true;
+  const ds = displayStatus(t.status);
+  if (f === 'active')       return ds === 'In Progress' || ds === 'To Do';
+  if (f === 'inprogress')   return ds === 'In Progress';
+  if (f === 'todo')         return ds === 'To Do';
+  if (f === 'done')         return ds === 'Done';
+  if (f === 'delay')        return ds === 'Delay';
+  if (f === 'onhold')       return ds === 'On Hold';
+  if (f === 'waitingtelco') return ds === 'Waiting telco';
+  return true;
+}
+
+function renderTlStatusPills(items) {
+  const counts = tlStatusCounts(items);
+  document.getElementById('tl-status-pills').innerHTML = TL_STATUS_PILLS.map(p => {
+    const count = counts[p.key] ?? 0;
+    const isActive = TL.statusFilter === p.key;
+    const st = TL_PILL_STYLE[p.cls];
+    const style = (st.base) + (isActive ? ';' + st.active : '');
+    const countBg = p.key === 'all' ? 'background:rgba(255,255,255,.22);color:#fff' : 'background:rgba(0,0,0,.08)';
+    const zero = count === 0 && p.key !== 'all' ? ' sp-zero' : '';
+    return `<button class="status-pill${zero}" style="${style}" onclick="setTlStatusFilter('${p.key}')">
+      ${p.dot ? `<span class="sp-dot" style="background:${p.dot}"></span>` : ''}
+      ${p.label}
+      <span class="sp-count" style="${countBg}">${count}</span>
+    </button>`;
+  }).join('');
+}
+
+function renderTlLegend() {
+  const items = [
+    { label:'Done',          style:'background:var(--green-400);border:1px solid var(--green-500)' },
+    { label:'In Progress',   style:'background:var(--blue-400);border:1px solid var(--blue-500)' },
+    { label:'To Do',         style:'background:var(--ink-200);border:1px solid var(--ink-300)' },
+    { label:'Delay',         style:'background:var(--red-400);border:1px solid var(--red-500)' },
+    { label:'On Hold',       style:'background:var(--violet-400);border:1px solid var(--violet-500)' },
+    { label:'Waiting telco', style:'background:var(--amber-400);border:1px solid var(--amber-500)' },
+  ];
+  let html = items.map(i =>
+    `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:18px;height:10px;border-radius:3px;${i.style};display:inline-block"></span>${i.label}</div>`
+  ).join('');
+  html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:24px;height:10px;border-radius:3px;background:transparent;border:2px dashed var(--red-400);display:inline-block"></span>Tanggal baru</div>`;
+  html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span class="tl-new-badge" style="margin:0">NEW</span>dibuat ≤7 hari</div>`;
+  html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:2px;height:14px;background:var(--blue-400);display:inline-block;border-radius:2px"></span>Hari ini</div>`;
+  document.getElementById('tl-legend').innerHTML = html;
+}
+
+function setTlStatusFilter(key) {
+  TL.statusFilter = key;
+  if (TL.data) { renderTlStatusPills(TL.data.items || []); renderTimeline(TL.data); }
+}
 
 async function loadTimelinePage() {
   if (!STATE.members?.length) return;
@@ -1544,6 +2026,8 @@ async function loadTimelinePage() {
     TL.data = data;
     document.getElementById('tl-meta').textContent =
       `${data.totalIssues} issues · ${data.items?.length || 0} developer`;
+    renderTlStatusPills(data.items || []);
+    renderTlLegend();
     renderTimeline(data);
   } catch(e) {
     showError('Gagal load timeline: ' + e.message);
@@ -1554,10 +2038,19 @@ async function loadTimelinePage() {
 
 function renderTimeline(data) {
   const wrap  = document.getElementById('timeline-wrap');
-  const items = data.items || [];
+
+  // Apply status pill filter at task level, drop people with no remaining tasks.
+  const items = (data.items || [])
+    .map(p => ({ ...p, tasks: p.tasks.filter(taskMatchesStatusFilter) }))
+    .filter(p => p.tasks.length);
 
   if (!items.length) {
-    wrap.innerHTML = `<div style="padding:60px;text-align:center;color:var(--ink-400);font-size:13px">Tidak ada task dalam rentang waktu ini</div>`;
+    const filtered = TL.statusFilter !== 'all';
+    wrap.innerHTML = emptyState({
+      icon: '📅',
+      title: filtered ? 'Tidak ada task untuk status ini' : 'Tidak ada data timeline',
+      description: filtered ? 'Coba pilih pill status lain atau "All".' : 'Coba ubah filter kategori, project, atau developer.'
+    });
     return;
   }
 
@@ -1606,57 +2099,80 @@ function renderTimeline(data) {
       ? `<span style="font-size:9.5px;color:var(--ink-400)">${profile.level}</span>`
       : '';
 
-    // Sort tasks: In Progress first, then by barStart
-    const statusOrder = s => ['In Progress','In Development','Coding'].includes(s) ? 0 : s === 'To Do' ? 1 : 2;
-    const sorted = [...person.tasks].sort((a, b) => statusOrder(a.status) - statusOrder(b.status) || a.barStart.localeCompare(b.barStart));
+    // Sort: In Progress first, then by start date
+    const statusOrder = t => { const ds = displayStatus(t.status); return ds==='In Progress'?0 : ds==='To Do'?1 : ds==='Done'?3 : 2; };
+    const sorted = [...person.tasks].sort((a, b) => statusOrder(a) - statusOrder(b) || (a.origBarStart||a.barStart).localeCompare(b.origBarStart||b.barStart));
 
-    // Stack tasks into lanes to avoid overlap
+    // Row gets taller when any task is rescheduled (room for the dual bar)
+    const rowHasReschedule = sorted.some(t => t.isRescheduled && t.newBarEnd);
+    const LANE_H = rowHasReschedule ? 44 : 26;
+
+    const px = iso => Math.max(0, Math.ceil((new Date(iso) - startD) / 86400000)) * DAY_W;
+    const widthOf = (a, b) => Math.max(DAY_W, (Math.ceil((new Date(b) - new Date(a)) / 86400000) + 1) * DAY_W);
+    const esc = v => (v||'').replace(/'/g,'`').replace(/"/g,'&quot;');
+    const sevenAgo = new Date(today); sevenAgo.setDate(sevenAgo.getDate() - 7);
+
+    // Stack into lanes (by combined original+new horizontal extent)
     const lanes = [];
     const bars = sorted.map(task => {
-      const s = new Date(task.barStart); s.setHours(0,0,0,0);
-      const e = new Date(task.barEnd);   e.setHours(0,0,0,0);
-      const left  = Math.max(0, Math.ceil((s - startD) / 86400000)) * DAY_W;
-      const width = Math.max(DAY_W, (Math.ceil((e - s) / 86400000) + 1) * DAY_W);
+      const oStart = task.origBarStart || task.barStart;
+      const oEnd   = task.origBarEnd   || task.barEnd;
+      const left   = px(oStart);
+      const width  = widthOf(oStart, oEnd);
+      // combined extent for overlap (include new bar)
+      const extentRight = task.isRescheduled && task.newBarEnd
+        ? Math.max(left + width, px(task.newBarStart) + widthOf(task.newBarStart, task.newBarEnd))
+        : left + width;
 
-      // Find a lane with no overlap
       let lane = 0;
       while (lanes[lane] !== undefined && lanes[lane] > left) lane++;
-      lanes[lane] = left + width;
+      lanes[lane] = extentRight;
 
+      const topOffset = 8 + lane * LANE_H;
+      const ds = displayStatus(task.status);
+      const style = STATUS_BAR_STYLE[ds] || STATUS_BAR_STYLE['To Do'];
+      const e = new Date(oEnd); e.setHours(0,0,0,0);
       const isOverdue = !task.isDone && e < today;
-      let cls = task.isDone ? 'tl-bar-done'
-              : isOverdue   ? 'tl-bar-overdue'
-              : ['In Progress','In Development','Coding'].includes(task.status) ? 'tl-bar-progress'
-              : 'tl-bar-todo';
-      if (task.isRescheduled) cls += ' tl-bar-rescheduled';
+      const overdueOutline = (isOverdue && ds !== 'Delay') ? ';outline:1.5px solid var(--red-400);outline-offset:-1px' : '';
+      const isNew = task.created && new Date(task.created) > sevenAgo;
+      const newBadge = isNew ? `<span class="tl-new-badge">NEW</span>` : '';
 
-      const topOffset = 8 + lane * 26;
-
-      // Build tooltip data attrs (escaped)
-      const esc  = v => (v||'').replace(/'/g,'`').replace(/"/g,'&quot;');
+      const dueDate = task.newDue || task.origDue || oEnd || '';
       const rescheduledAttr = task.isRescheduled
         ? `data-orig-start="${task.origStart||''}" data-new-start="${task.newStart||''}" data-orig-due="${task.origDue||''}" data-new-due="${task.newDue||''}" data-rescheduled="1"`
         : '';
 
-      const reschedDot = task.isRescheduled
-        ? `<span class="tl-reschedule-dot" title="Rescheduled"></span>`
-        : '';
+      // ORIGINAL bar (solid, coloured by status)
+      let html = `<div class="tl-bar"
+        style="left:${left}px;width:${Math.min(width, totalDays * DAY_W - left)}px;top:${topOffset}px;position:absolute;background:${style.bg};color:${style.text};border:1px solid ${style.border}${overdueOutline}"
+        data-key="${esc(task.key)}" data-summary="${esc(task.summary)}" data-status="${esc(task.status)}"
+        data-project="${esc(task.project)}" data-assignee="${esc(person.displayName)}" data-due="${dueDate}"
+        data-overdue="${isOverdue ? '1' : ''}" data-done="${task.isDone ? '1' : ''}"
+        data-bar-start="${oStart}" data-bar-end="${oEnd}" ${rescheduledAttr}
+        onmouseenter="tlTooltipEnter(event,this)" onmouseleave="tlTooltipLeave()"
+      >${task.key}${newBadge}</div>`;
 
-      return `<div class="tl-bar ${cls}"
-        style="left:${left}px;width:${Math.min(width, totalDays * DAY_W - left)}px;top:${topOffset}px;position:absolute"
-        data-key="${esc(task.key)}"
-        data-summary="${esc(task.summary)}"
-        data-status="${esc(task.status)}"
-        data-project="${esc(task.project)}"
-        data-bar-start="${task.barStart}"
-        data-bar-end="${task.barEnd}"
-        ${rescheduledAttr}
-        onmouseenter="showTlTooltipFromEl(event,this)"
-        onmouseleave="hideTlTooltip()"
-      >${reschedDot}${task.key}</div>`;
+      // NEW-DATE bar (dashed) below original when rescheduled
+      if (task.isRescheduled && task.newBarEnd) {
+        const nLeft  = px(task.newBarStart);
+        const nWidth = widthOf(task.newBarStart, task.newBarEnd);
+        const slipDays = task.origDue && task.newDue
+          ? Math.round((new Date(task.newDue) - new Date(task.origDue)) / 86400000) : 1;
+        const slipCls = slipDays > 0 ? '' : ' slip-orange';
+        const slipLabel = slipDays !== 0 ? `${slipDays>0?'+':''}${slipDays}d` : '';
+        html += `<div class="tl-bar-new${slipCls}"
+          style="left:${nLeft}px;width:${Math.min(nWidth, totalDays*DAY_W - nLeft)}px;top:${topOffset+22}px;position:absolute"
+          data-key="${esc(task.key)}" data-summary="${esc(task.summary)}" data-status="${esc(task.status)}"
+          data-project="${esc(task.project)}" data-assignee="${esc(person.displayName)}" data-due="${task.newDue||''}"
+          data-bar-start="${task.newBarStart}" data-bar-end="${task.newBarEnd}" ${rescheduledAttr}
+          onmouseenter="tlTooltipEnter(event,this)" onmouseleave="tlTooltipLeave()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="1 4 1 10 7 10"/><path d="M3.5 15a9 9 0 1 0 .5-3.3"/></svg>
+          ${task.newDue || 'baru'} ${slipLabel}</div>`;
+      }
+      return html;
     });
 
-    const rowH = Math.max(52, (lanes.length || 1) * 26 + 16);
+    const rowH = Math.max(52, (lanes.length || 1) * LANE_H + 16);
     const barsArea = `<div class="tl-bars-area" style="min-height:${rowH}px">
       ${showToday ? `<div class="tl-today-col" style="left:${todayPx}px;width:${DAY_W}px;position:absolute;top:0;bottom:0;background:rgba(74,148,232,.06);border-left:2px solid var(--blue-300)"></div>` : ''}
       ${bars.join('')}
@@ -1687,41 +2203,75 @@ function renderTimeline(data) {
     </div>`;
 }
 
+// Tooltip with 200ms delay before showing (avoids flicker while sweeping bars).
+let tlTooltipTimer = null;
+
+function tlTooltipEnter(e, el) {
+  clearTimeout(tlTooltipTimer);
+  const evt = { clientX: e.clientX, clientY: e.clientY };
+  tlTooltipTimer = setTimeout(() => showTlTooltipFromEl(evt, el), 200);
+}
+
+function tlTooltipLeave() {
+  clearTimeout(tlTooltipTimer);
+  hideTlTooltip();
+}
+
+// Status badge colour by timeline state.
+function tlStatusBadge(d) {
+  let bg, label = d.status || '—';
+  if (d.done === '1')         bg = 'var(--status-healthy-bar)';
+  else if (d.overdue === '1') { bg = 'var(--status-overload-bar)'; }
+  else if (['In Progress','In Development','Coding'].includes(d.status)) bg = 'var(--blue-400)';
+  else                        bg = 'var(--ink-300)';
+  return `<span style="display:inline-block;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:600;background:${bg};color:#fff">${label}</span>`;
+}
+
 function showTlTooltipFromEl(e, el) {
   const d = el.dataset;
   const t = document.getElementById('tl-tooltip');
   t.style.display = 'block';
 
-  let dateHtml = `<span style="opacity:.6;font-size:10.5px">📅 ${d.barStart} → ${d.barEnd}</span>`;
+  const dueHtml = d.due
+    ? `<div style="opacity:.85;font-size:10.5px;margin-top:4px">📅 Due date: <strong>${d.due}</strong></div>`
+    : `<div style="opacity:.55;font-size:10.5px;margin-top:4px">📅 Tidak ada due date</div>`;
 
+  let reschedHtml = '';
   if (d.rescheduled === '1') {
     const startLine = d.newStart
       ? `<div style="margin-top:5px;padding:4px 6px;background:rgba(224,140,36,.18);border-radius:4px;font-size:10.5px">
-           🔄 <strong>New Start Date:</strong> ${d.newStart}
+           🔄 <strong>New Start:</strong> ${d.newStart}
            ${d.origStart && d.origStart !== d.newStart ? `<span style="opacity:.6;text-decoration:line-through;margin-left:4px">${d.origStart}</span>` : ''}
          </div>`
       : '';
     const dueLine = d.newDue
       ? `<div style="margin-top:3px;padding:4px 6px;background:rgba(224,140,36,.18);border-radius:4px;font-size:10.5px">
-           🔄 <strong>New Due Date:</strong> ${d.newDue}
+           🔄 <strong>New Due:</strong> ${d.newDue}
            ${d.origDue && d.origDue !== d.newDue ? `<span style="opacity:.6;text-decoration:line-through;margin-left:4px">${d.origDue}</span>` : ''}
          </div>`
       : '';
-    dateHtml = `<span style="opacity:.6;font-size:10.5px">📅 ${d.barStart} → ${d.barEnd}</span>${startLine}${dueLine}`;
+    reschedHtml = startLine + dueLine;
   }
 
   t.innerHTML = `
-    <div style="font-weight:600;margin-bottom:3px">${d.key}</div>
-    <div style="opacity:.9;font-size:11px;margin-bottom:4px;line-height:1.4">${d.summary}</div>
-    <div style="opacity:.7;font-size:10.5px;margin-bottom:4px">${d.project} · ${d.status}</div>
-    ${dateHtml}`;
+    <div style="font-weight:600;margin-bottom:3px">${d.key}${d.summary ? ' — ' + d.summary : ''}</div>
+    ${d.assignee ? `<div style="opacity:.8;font-size:10.5px;margin-bottom:3px">Assignee: ${d.assignee}</div>` : ''}
+    <div style="margin-bottom:3px">${tlStatusBadge(d)}${d.project ? `<span style="opacity:.6;font-size:10.5px;margin-left:6px">${d.project}</span>` : ''}</div>
+    ${dueHtml}${reschedHtml}`;
   moveTlTooltip(e);
 }
 
 function moveTlTooltip(e) {
   const t = document.getElementById('tl-tooltip');
-  t.style.left = (e.clientX + 14) + 'px';
-  t.style.top  = (e.clientY - 10) + 'px';
+  const tw = t.offsetWidth || 240, th = t.offsetHeight || 80;
+  // Default above-right of cursor; flip to stay inside viewport.
+  let left = e.clientX + 14;
+  let top  = e.clientY - th - 12;
+  if (left + tw > window.innerWidth - 8)  left = e.clientX - tw - 14;
+  if (top < 8)                            top  = e.clientY + 18; // flip below
+  if (left < 8) left = 8;
+  t.style.left = left + 'px';
+  t.style.top  = top + 'px';
 }
 
 function hideTlTooltip() {
@@ -1735,6 +2285,30 @@ document.addEventListener('mousemove', e => {
 // ======== MEMBERS ========
 let membersData = { all: [], profiles: {}, jabatanLevels: {}, dirty: {} };
 
+// Utilization per member from capacity data (null if not loaded yet)
+function getMemberUtil(accountId) {
+  const d = STATE.capacity?.developers?.find(x => x.accountId === accountId);
+  return d ? d.utilization : null;
+}
+// Workload mini-bar cell
+function workloadCell(util) {
+  if (util == null) return `<span style="color:var(--ink-300);font-size:12px">—</span>`;
+  const cls = util > 100 ? 'fill-over' : util > 70 ? 'fill-warn' : util > 0 ? 'fill-ok' : 'fill-idle';
+  const numColor = util > 100 ? 'color:var(--red-600)' : util > 0 ? 'color:var(--ink-700)' : 'color:var(--ink-400)';
+  return `<div class="workload-cell">
+    <div class="workload-track"><div class="workload-fill ${cls}" style="width:${Math.min(util,100)}%"></div></div>
+    <span class="workload-num" style="${numColor}">${util > 0 ? util + '%' : '—'}</span>
+  </div>`;
+}
+// Workload status badge
+function workloadBadge(util) {
+  if (util == null) return `<span class="wl-badge idle">—</span>`;
+  if (util === 0)   return `<span class="wl-badge idle">Tidak aktif</span>`;
+  if (util > 100)   return `<span class="wl-badge over">Overloaded</span>`;
+  if (util >= 70)   return `<span class="wl-badge normal">Normal</span>`;
+  return `<span class="wl-badge low">Rendah</span>`;
+}
+
 async function loadMembersPage() {
   if (!STATE.members?.length) return;
   showLoading('Memuat data anggota tim…');
@@ -1744,8 +2318,11 @@ async function loadMembersPage() {
     membersData.jabatanLevels = res.jabatanLevels || {};
     membersData.all = STATE.members.map(m => ({
       ...m,
-      ...(membersData.profiles[m.accountId] || {})
+      ...(membersData.profiles[m.accountId] || {}),
+      utilization: getMemberUtil(m.accountId)
     }));
+    // 3b. Sort default: utilization DESC (overloaded di atas)
+    membersData.all.sort((a, b) => (b.utilization ?? -1) - (a.utilization ?? -1));
     STATE.memberProfiles = membersData.profiles;
     updateJabatanStats();
     renderMembersTable(membersData.all);
@@ -1758,13 +2335,17 @@ async function loadMembersPage() {
 
 function updateJabatanStats() {
   const counts = { CTO:0, PM:0, BA:0, QA:0, Dev:0 };
+  let unset = 0;
   for (const m of membersData.all) {
     if (m.jabatan && counts[m.jabatan] !== undefined) counts[m.jabatan]++;
+    else unset++;
   }
   Object.entries(counts).forEach(([j, c]) => {
     const el = document.getElementById('stat-' + j);
     if (el) el.textContent = c || '—';
   });
+  const unsetEl = document.getElementById('stat-unset');
+  if (unsetEl) unsetEl.textContent = unset || '—';
 }
 
 function renderMembersTable(members) {
@@ -1812,6 +2393,8 @@ function renderMembersTable(members) {
             : `<option value="">— Pilih jabatan dulu —</option>`}
         </select>
       </td>
+      <td>${workloadCell(m.utilization)}</td>
+      <td>${workloadBadge(m.utilization)}</td>
       <td>
         <button class="save-btn" id="sbtn-${m.accountId}" onclick="saveSingleProfile('${m.accountId}')">
           <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l4 4 6-7"/></svg>
@@ -1829,9 +2412,11 @@ function onJabatanChange(sel) {
   const lvlSel    = document.getElementById('lvl-' + accountId);
   lvlSel.innerHTML = levels.map((l,i) => `<option ${i===0?'selected':''}>${l}</option>`).join('');
 
-  // Mark dirty
+  // Mark dirty + sync in-memory jabatan immediately so counters react
   membersData.dirty[accountId] = true;
   document.getElementById('bulk-save-btn').style.display = '';
+  const m0 = membersData.all.find(x => x.accountId === accountId);
+  if (m0) m0.jabatan = jabatan; // empty string when "— Pilih —" → counted as unset
   onLevelChange(accountId, levels[0] || '');
 }
 
@@ -1842,9 +2427,10 @@ function onLevelChange(accountId, level) {
   const m = membersData.all.find(x => x.accountId === accountId);
   if (m) {
     const jabSel = document.querySelector(`.jabatan-select[data-id="${accountId}"]`);
-    m.jabatan = jabSel?.value || m.jabatan;
+    m.jabatan = jabSel ? jabSel.value : m.jabatan; // honour cleared selection
     m.level   = level;
   }
+  updateJabatanStats(); // reactive: update counters without needing Save
 }
 
 async function saveSingleProfile(accountId) {
@@ -1915,12 +2501,20 @@ function filterMembersTable() {
   const q       = document.getElementById('members-search').value.toLowerCase();
   const grp     = document.getElementById('members-group-filter').value;
   const jabatan = document.getElementById('members-jabatan-filter').value;
+  const wl      = document.getElementById('members-workload-filter')?.value || '';
 
   const filtered = membersData.all.filter(m => {
     if (q && !m.displayName?.toLowerCase().includes(q) && !m.emailAddress?.toLowerCase().includes(q)) return false;
     if (grp && !m.groups?.includes(grp)) return false;
     if (jabatan === 'unset' && m.jabatan) return false;
     if (jabatan && jabatan !== 'unset' && m.jabatan !== jabatan) return false;
+    if (wl) {
+      const u = m.utilization ?? 0;
+      if (wl === 'overloaded' && !(u > 100)) return false;
+      if (wl === 'normal'     && !(u >= 70 && u <= 100)) return false;
+      if (wl === 'low'        && !(u >= 30 && u < 70)) return false;
+      if (wl === 'idle'       && !(u < 30)) return false;
+    }
     return true;
   });
   renderMembersTable(filtered);

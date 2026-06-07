@@ -9,9 +9,10 @@ node_modules/
 # Runtime data (member profiles persisted locally)
 data/member-profiles.json
 
-# OS / editor
+# OS / editor / local tooling
 .DS_Store
 *.log
 npm-debug.log*
 .vscode/
 .idea/
+.claude/
