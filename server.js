@@ -461,6 +461,7 @@ app.get('/api/forecast', async (req, res) => {
 // ——— GET /api/sync-status ———
 app.get('/api/sync-status', async (req, res) => {
   try {
+    await Promise.all([ensureProjects(), ensureMembers()]);
     const projects = cache.projects?.projects || [];
     const members = cache.members || [];
 
@@ -508,6 +509,7 @@ app.get('/api/sync-status', async (req, res) => {
 app.get('/api/tasks', async (req, res) => {
   try {
     const { assigneeId, projectKey, status } = req.query;
+    await Promise.all([ensureProjects(), ensureMembers()]);
     const projects = cache.projects?.projects || [];
     const members = cache.members || [];
 
@@ -647,6 +649,8 @@ app.post('/api/member-profiles/bulk', (req, res) => {
 app.get('/api/timeline', async (req, res) => {
   try {
     const { assigneeId, category, projectKey, group } = req.query;
+    // Ensure base cache (serverless instances start empty — no warmup)
+    await Promise.all([ensureProjects(), ensureMembers()]);
     const members = cache.members || [];
     const allProjects = cache.projects?.projects || [];
 
