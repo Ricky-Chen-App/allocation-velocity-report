@@ -233,7 +233,7 @@ async function computeCapacity() {
         name: p.name,
         pct: BASE_CAPACITY > 0 ? Math.round((p.load / BASE_CAPACITY) * 100) : 0,
         count: p.count
-      })).sort((a, b) => b.pct - a.pct).slice(0, 5);
+      })).sort((a, b) => b.pct - a.pct).slice(0, 20); // keep more so overflow/modal works
 
       return {
         accountId: member.accountId,
@@ -643,6 +643,51 @@ app.post('/api/member-profiles/bulk', (req, res) => {
   }
   writeProfiles(profiles);
   res.json({ updated: Object.keys(profiles).length });
+});
+
+// ——— GET /api/drilldown?assigneeId=&projectKey= ———
+// Epics → tasks → subtasks for one developer in one project (Developer Capacity drill-down)
+app.get('/api/drilldown', async (req, res) => {
+  try {
+    const { assigneeId, projectKey } = req.query;
+    if (!assigneeId || !projectKey) return res.status(400).json({ error: 'assigneeId & projectKey wajib' });
+    await ensureProjects();
+    const proj = (cache.projects?.projects || []).find(p => p.key === projectKey);
+
+    const jql = `assignee = "${assigneeId}" AND project = "${projectKey}" ORDER BY created DESC`;
+    const issues = await jiraSearchAll(jql, 'summary,status,customfield_10016,parent,subtasks,issuetype', 800);
+
+    const epicMap = {};
+    for (const it of issues) {
+      const f = it.fields || {};
+      const epicKey   = f.parent?.key || 'NO_EPIC';
+      const epicTitle = f.parent?.fields?.summary || 'Tanpa Epic';
+      if (!epicMap[epicKey]) epicMap[epicKey] = { key: epicKey, title: epicTitle, taskCount: 0, tasks: [] };
+      const e = epicMap[epicKey];
+      e.taskCount++;
+      e.tasks.push({
+        key: it.key,
+        title: f.summary,
+        status: f.status?.name,
+        storyPoints: f.customfield_10016 ?? null,
+        subtasks: (f.subtasks || []).map(s => ({ key: s.key, title: s.fields?.summary, status: s.fields?.status?.name }))
+      });
+    }
+
+    const isDone = s => /done|closed|resolved|complete|production/i.test(s || '');
+    res.json({
+      projectKey,
+      projectName: proj?.name || projectKey,
+      totalTasks: issues.length,
+      doneTasks: issues.filter(i => isDone(i.fields?.status?.name)).length,
+      inProgressTasks: issues.filter(i => /progress|develop|coding|review/i.test(i.fields?.status?.name || '')).length,
+      delayTasks: issues.filter(i => /delay/i.test(i.fields?.status?.name || '')).length,
+      epics: Object.values(epicMap).sort((a, b) => b.taskCount - a.taskCount)
+    });
+  } catch (e) {
+    console.error('drilldown error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ——— TIMELINE ———
