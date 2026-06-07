@@ -2153,6 +2153,7 @@ const JIRA_STATUS_MAP = {
 };
 function displayStatus(raw) {
   const k = (raw || '').toLowerCase().trim();
+  if (k.includes('drop') || k.includes('cancel')) return 'Dropped';   // excluded from view
   if (JIRA_STATUS_MAP[k]) return JIRA_STATUS_MAP[k];
   // Fallback: substring matching for custom/variant Jira names (e.g. "Done Production")
   if (k.includes('done') || k.includes('closed') || k.includes('resolved') || k.includes('complete') || k.includes('production')) return 'Done';
@@ -2282,6 +2283,11 @@ async function loadTimelinePage() {
     if (assigneeId)  params.set('assigneeId',  assigneeId);
 
     const data = await api(`/api/timeline?${params.toString()}`);
+    // Exclude "Dropped"/"Cancelled" tasks entirely from the view (request 4)
+    data.items = (data.items || [])
+      .map(p => ({ ...p, tasks: p.tasks.filter(t => displayStatus(t.status) !== 'Dropped') }))
+      .filter(p => p.tasks.length);
+    data.totalIssues = data.items.reduce((s,p) => s + p.tasks.length, 0);
     TL.data = data;
     document.getElementById('tl-meta').textContent =
       `${data.totalIssues} issues · ${data.items?.length || 0} developer`;

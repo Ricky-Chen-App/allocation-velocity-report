@@ -54,7 +54,7 @@ const TARGET_GROUPS = [
 ];
 
 // Simple in-memory cache
-const cache = { projects: null, members: null, capacity: null, forecast: null, ts: {} };
+const cache = { projects: null, members: null, capacity: null, forecast: null, timeline: {}, ts: {} };
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
 function isFresh(key) {
@@ -68,6 +68,22 @@ async function jiraGet(path) {
     throw new Error(`Jira API ${res.status}: ${text.slice(0, 200)}`);
   }
   return res.json();
+}
+
+// Paginate /rest/api/3/search/jql via TOKEN-based pagination (nextPageToken).
+// The new endpoint ignores startAt and has no `total`, so we must follow tokens.
+async function jiraSearchAll(jql, fields, cap = 5000) {
+  let all = [], token = null, guard = 0;
+  while (all.length < cap && guard++ < 100) {
+    const params = new URLSearchParams({ jql, maxResults: '1000', fields });
+    if (token) params.set('nextPageToken', token);
+    const data = await jiraGet(`/rest/api/3/search/jql?${params.toString()}`);
+    const issues = data.issues || [];
+    all = all.concat(issues);
+    if (data.isLast || !data.nextPageToken || !issues.length) break;
+    token = data.nextPageToken;
+  }
+  return all;
 }
 
 // ——— Shared cache loaders (work in both server & serverless) ———
@@ -171,16 +187,7 @@ async function computeCapacity() {
 
     // JQL: issues assigned to our members in our projects, active this month
     const jql = `project in (${projectKeys.slice(0, 50).map(k => `"${k}"`).join(',')}) AND assignee in (${memberIds.slice(0, 50).map(id => `"${id}"`).join(',')}) AND (status != Done OR updated >= "${startOfMonth}") ORDER BY updated DESC`;
-
-    let allIssues = [];
-    let startAt = 0;
-    while (true) {
-      const data = await jiraGet(`/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&startAt=${startAt}&maxResults=100&fields=assignee,summary,status,priority,customfield_10016,timeoriginalestimate,timeestimate,timespent,created,resolutiondate,updated,project,issuetype`);
-      allIssues = allIssues.concat(data.issues || []);
-      if (allIssues.length >= data.total || !data.issues?.length) break;
-      startAt += 100;
-      if (startAt > 2000) break; // safety
-    }
+    const allIssues = await jiraSearchAll(jql, 'assignee,summary,status,priority,customfield_10016,timeoriginalestimate,timeestimate,timespent,created,resolutiondate,updated,project,issuetype', 5000);
 
     // Group issues by assignee
     const issuesByAssignee = {};
@@ -361,20 +368,10 @@ async function computeForecast() {
   }
 
   const projectKeys = projects.map(p => p.key);
-  const jql = `project in (${projectKeys.slice(0, 50).map(k => `"${k}"`).join(',')}) AND status not in (Done, Closed, Resolved) ORDER BY priority DESC`;
+  const jql = `project in (${projectKeys.map(k => `"${k}"`).join(',')}) AND status not in (Done, Closed, Resolved) ORDER BY priority DESC`;
   const fields = 'summary,status,priority,customfield_10016,timeoriginalestimate,project,assignee,issuetype';
-  const fetchPage = (s) => jiraGet(`/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&startAt=${s}&maxResults=100&fields=${fields}`);
-
-  // Fetch first page to learn total, then fetch remaining pages IN PARALLEL
-  const first = await fetchPage(0);
-  let backlog = first.issues || [];
-  const total = Math.min(first.total || backlog.length, 5000);
-  const pageStarts = [];
-  for (let s = 100; s < total; s += 100) pageStarts.push(s);
-  if (pageStarts.length) {
-    const rest = await Promise.all(pageStarts.map(s => fetchPage(s).catch(() => ({ issues: [] }))));
-    for (const r of rest) backlog = backlog.concat(r.issues || []);
-  }
+  // Token-based pagination (the new /search/jql ignores startAt)
+  const backlog = await jiraSearchAll(jql, fields, 5000);
 
     // Group by project category
     const projectCategoryMap = {};
@@ -531,11 +528,11 @@ app.get('/api/tasks', async (req, res) => {
     if (status) jql += ` AND status = "${status}"`;
     jql += ' ORDER BY updated DESC';
 
-    const data = await jiraGet(`/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=200&fields=summary,status,assignee,priority,project,issuetype,customfield_10016,timeoriginalestimate,created,updated,duedate`);
+    const issues = await jiraSearchAll(jql, 'summary,status,assignee,priority,project,issuetype,customfield_10016,timeoriginalestimate,created,updated,duedate', 3000);
 
     res.json({
-      total: data.total,
-      issues: (data.issues || []).map(i => ({
+      total: issues.length,
+      issues: issues.map(i => ({
         key: i.key,
         summary: i.fields.summary,
         status: i.fields.status?.name,
@@ -655,6 +652,12 @@ app.get('/api/timeline', async (req, res) => {
 
     if (!members.length || !allProjects.length) return res.json({ items: [], dateRange: {} });
 
+    // Cache per filter combo (timeline fetch is heavy: thousands of issues)
+    const cacheKey = `${category||''}|${projectKey||''}|${group||''}|${assigneeId||''}`;
+    if (cache.timeline[cacheKey] && (Date.now() - (cache.ts['tl:'+cacheKey]||0) < CACHE_TTL)) {
+      return res.json(cache.timeline[cacheKey]);
+    }
+
     // Filter members by group if requested
     const filteredMembers = group
       ? members.filter(m => (m.groups || []).includes(group))
@@ -671,8 +674,9 @@ app.get('/api/timeline', async (req, res) => {
     const projectKeys = projects.map(p => p.key);
     const profiles = readProfiles();
 
-    // Batch members in groups of 20 to avoid JQL length limits
-    const BATCH = 20;
+    // Batch members into small groups so the batches can run IN PARALLEL
+    // (smaller batches → each fits in one 1000-row page → faster fan-out)
+    const BATCH = 10;
     const memberBatches = [];
     for (let i = 0; i < allMemberIds.length; i += BATCH) {
       memberBatches.push(allMemberIds.slice(i, i + BATCH));
@@ -688,33 +692,30 @@ app.get('/api/timeline', async (req, res) => {
 
     const byAssignee = {};
 
-    for (const batch of memberBatches) {
-      if (!batch.length || !projectKeys.length) continue;
-      const jql = `project in (${projectKeys.slice(0, 30).map(k => `"${k}"`).join(',')}) AND assignee in (${batch.map(id => `"${id}"`).join(',')}) AND created >= "${startStr}" ORDER BY assignee, created DESC`;
+    const tlFields = [
+      'summary','status','assignee','priority','project','issuetype',
+      'customfield_10016',       // story points
+      'timeoriginalestimate',
+      'created','updated','resolutiondate',
+      'duedate',                 // original due date
+      'customfield_10015',       // start date (original)
+      'customfield_10578',       // New Start Date
+      'customfield_10049',       // New Due Date
+      'customfield_10062',       // End date
+      'customfield_10008'        // Change start date
+    ].join(',');
 
-      let batchIssues = [];
-      try {
-        // Include all date fields: original + new start/due
-        const fields = [
-          'summary','status','assignee','priority','project','issuetype',
-          'customfield_10016',       // story points
-          'timeoriginalestimate',
-          'created','updated','resolutiondate',
-          'duedate',                 // original due date
-          'customfield_10015',       // start date (original)
-          'customfield_10578',       // New Start Date
-          'customfield_10049',       // New Due Date
-          'customfield_10062',       // End date
-          'customfield_10008'        // Change start date
-        ].join(',');
-        const data = await jiraGet(`/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&startAt=0&maxResults=200&fields=${fields}`);
-        batchIssues = data.issues || [];
-      } catch(e) {
-        console.warn('Timeline batch error:', e.message);
-        continue;
-      }
+    // Run all member-batches in parallel (each token-paginated internally)
+    const projJql = `project in (${projectKeys.map(k => `"${k}"`).join(',')})`;
+    const batchResults = await Promise.all(memberBatches.map(async batch => {
+      if (!batch.length || !projectKeys.length) return [];
+      const jql = `${projJql} AND assignee in (${batch.map(id => `"${id}"`).join(',')}) AND created >= "${startStr}" ORDER BY assignee, created DESC`;
+      try { return await jiraSearchAll(jql, tlFields, 4000); }
+      catch (e) { console.warn('Timeline batch error:', e.message); return []; }
+    }));
 
-      for (const issue of batchIssues) {
+    {
+      for (const issue of batchResults.flat()) {
         const aid   = issue.fields.assignee?.accountId;
         const aName = issue.fields.assignee?.displayName;
         if (!aid) continue;
@@ -732,8 +733,8 @@ app.get('/api/timeline', async (req, res) => {
           };
         }
 
-        // Limit per person (year view → allow more; groups are collapsible)
-        if (byAssignee[aid].tasks.length >= 60) continue;
+        // Limit per person (high cap; groups are collapsible so DOM stays light)
+        if (byAssignee[aid].tasks.length >= 300) continue;
 
         const f = issue.fields;
         const isDone = ['Done','Closed','Resolved'].includes(f.status?.name);
@@ -814,13 +815,16 @@ app.get('/api/timeline', async (req, res) => {
 
     const totalIssues = Object.values(byAssignee).reduce((s, a) => s + a.tasks.length, 0);
 
-    res.json({
+    const result = {
       items: Object.values(byAssignee)
         .filter(a => a.tasks.length > 0)
         .sort((a, b) => a.displayName.localeCompare(b.displayName)),
       dateRange: { start: startStr, end: endStr },
       totalIssues
-    });
+    };
+    cache.timeline[cacheKey] = result;
+    cache.ts['tl:'+cacheKey] = Date.now();
+    res.json(result);
   } catch(e) {
     console.error('timeline error:', e.message);
     res.status(500).json({ error: e.message });
