@@ -437,6 +437,28 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .wl-badge.normal{background:var(--status-healthy-bg);color:var(--status-healthy-text);border:1px solid var(--green-100)}
 .wl-badge.low{background:var(--status-warning-bg);color:var(--status-warning-text);border:1px solid var(--amber-100)}
 
+/* ——— TIMELINE GANTT v3 (collapsible groups + epic names) ——— */
+.tl-grp-header{display:flex;align-items:stretch;border-bottom:1px solid var(--ink-100);cursor:pointer;background:var(--ink-50);min-height:46px;transition:background var(--transition)}
+.tl-grp-header:hover{background:var(--ink-100)}
+.tl-grp-left{display:flex;align-items:center;gap:9px;padding:8px 14px;border-right:1px solid var(--ink-100);position:sticky;left:0;background:var(--ink-50);z-index:3}
+.tl-grp-header:hover .tl-grp-left{background:var(--ink-100)}
+.tl-grp-chev{width:14px;height:14px;color:var(--ink-400);flex-shrink:0;transition:transform var(--transition)}
+.tl-grp-chev.open{transform:rotate(90deg)}
+.tl-grp-name{font-size:12.5px;font-weight:600;color:var(--ink-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-grp-sub{font-size:10.5px;color:var(--ink-400);margin-top:1px}
+.tl-grp-track{position:relative;flex-shrink:0}
+.tl-grp-span{position:absolute;top:50%;transform:translateY(-50%);height:14px;border-radius:7px;background:var(--violet-100);overflow:hidden}
+.tl-grp-span-fill{height:100%;background:var(--violet-400);opacity:.55}
+.tl-task-row{display:flex;align-items:stretch;border-bottom:1px solid var(--ink-50);position:relative}
+.tl-task-row:hover{background:var(--ink-50)}
+.tl-task-left{display:flex;align-items:center;gap:6px;padding:4px 14px 4px 30px;border-right:1px solid var(--ink-100);position:sticky;left:0;background:var(--ink-0);z-index:3}
+.tl-task-row:hover .tl-task-left{background:var(--ink-50)}
+.tl-task-key{font-size:10.5px;font-family:var(--font-mono);color:var(--ink-400);flex-shrink:0}
+.tl-task-name{font-size:11.5px;font-weight:500;color:var(--ink-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-task-bars{position:relative;flex-shrink:0}
+.tl-bar-label{position:absolute;font-size:10px;color:var(--ink-700);white-space:nowrap;pointer-events:none;line-height:20px;height:20px;display:flex;align-items:center}
+.tl-ovr-badge{background:var(--red-100);color:var(--red-700);font-size:8px;font-weight:700;padding:0 4px;border-radius:3px;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
+
 /* ——— MOBILE TOPBAR + HAMBURGER ——— */
 .mobile-topbar{display:none;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--ink-100);background:var(--ink-0);position:sticky;top:0;z-index:30}
 .hamburger{background:none;border:none;cursor:pointer;padding:4px;color:var(--ink-700);display:flex}
@@ -450,6 +472,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
   .dash-grid{grid-template-columns:1fr;padding:0 16px 24px}
   .velocity-grid{grid-template-columns:1fr;padding:0 16px 24px}
   .sync-stats-row{grid-template-columns:repeat(2,1fr);padding:16px 16px 0}
+  #tl-summary{grid-template-columns:repeat(2,1fr)!important;padding:16px 16px 0}
   #jabatan-stats{grid-template-columns:repeat(3,1fr)!important}
   .exec-hero,.page-header{padding-left:16px;padding-right:16px}
   .status-pills,.sync-legend,.alert-banner,.timeline-controls{padding-left:16px;padding-right:16px}
@@ -606,6 +629,8 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
           </div>
         </div>
       </div>
+      <!-- Filter bar (Task 3c) -->
+      <div id="cap-filter-bar" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:14px 32px 0"></div>
       <!-- Group sections rendered by JS -->
       <div class="cap-sections" id="cap-sections">
         <div style="padding:40px;text-align:center;color:var(--ink-400)">Loading capacity data…</div>
@@ -687,6 +712,8 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
           <option value="">Semua Project</option>
         </select>
       </div>
+      <!-- 5a. AI Risk + Recommendations panel -->
+      <div id="task-ai-panel" style="padding:16px 32px 0;display:flex;flex-direction:column;gap:12px"></div>
       <div class="task-grid" id="task-columns">
         <div class="task-col"><div class="task-col-header"><span class="task-col-title">To Do</span></div><div class="task-cards" id="col-todo"><div style="padding:20px;text-align:center;color:var(--ink-400);font-size:12px">Loading…</div></div></div>
         <div class="task-col"><div class="task-col-header"><span class="task-col-title">In Progress</span></div><div class="task-cards" id="col-inprogress"><div style="padding:20px;text-align:center;color:var(--ink-400);font-size:12px">Loading…</div></div></div>
@@ -741,6 +768,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
               <th>Summary</th>
               <th>Project</th>
               <th>Assignee</th>
+              <th>Reporter</th>
               <th>Status</th>
               <th>Priority</th>
               <th>Sync<i class="help-icon" data-hint="Synced = assignee terdaftar di tim. External = assignee tidak ada di team list dan utilisasinya tidak dihitung. Unassigned = belum ada assignee di Jira.">i</i></th>
@@ -748,7 +776,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
             </tr>
           </thead>
           <tbody id="sync-tbody">
-            <tr><td colspan="8" style="padding:40px;text-align:center;color:var(--ink-400)">Loading sync data…</td></tr>
+            <tr><td colspan="9" style="padding:40px;text-align:center;color:var(--ink-400)">Loading sync data…</td></tr>
           </tbody>
         </table>
       </div>
@@ -759,9 +787,16 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
       <div class="page-header">
         <div>
           <div class="page-title">Timeline</div>
-          <div class="page-sub">Gantt view — task per developer dari Jira</div>
+          <div class="page-sub">Gantt view — task dari Jira</div>
+        </div>
+        <!-- 4a. View mode toggle -->
+        <div class="pill-group" id="tl-view-toggle">
+          <button class="pill active" onclick="setTlViewMode('developer',this)">Per Developer</button>
+          <button class="pill" onclick="setTlViewMode('project',this)">Per Project</button>
         </div>
       </div>
+      <!-- 4c. Summary cards -->
+      <div id="tl-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:16px 32px 0"></div>
       <div class="timeline-controls">
         <select class="select-filter" id="tl-category-filter" onchange="onTlCategoryChange()">
           <option value="">Semua Kategori</option>
@@ -1109,7 +1144,7 @@ function renderExecutivePage(cap) {
         Active Projects
       </div>
       <div class="kpi-value">${projects.length}</div>
-      <div class="kpi-delta info">5 kategori</div>
+      <div class="kpi-delta info">${(STATE.projects?.categories || []).length} kategori</div>
     </div>
     <div class="kpi-card" style="${critCard}">
       <div class="kpi-label">
@@ -1204,7 +1239,7 @@ function renderExecutivePage(cap) {
   const aiBullets = [
     s.overloaded > 0 ? `<div class="exec-ai-bullet"><svg viewBox="0 0 16 16" fill="none" stroke="var(--red-500)" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v4M8 11v.5"/></svg><span><strong>${s.overloaded} developer overloaded</strong> bulan ini. ${overloaded[0]?.displayName || ''} paling tinggi di ${overloaded[0]?.utilization || 0}%.</span></div>` : '',
     idleDevs.length > 0 ? `<div class="exec-ai-bullet"><svg viewBox="0 0 16 16" fill="none" stroke="var(--blue-500)" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v4M8 11v.5"/></svg><span><strong>${idleDevs.length} developer underutilized</strong> (&lt;30%) — kapasitas dapat dioptimalkan untuk menyerap overflow dari tim yang overloaded.</span></div>` : '',
-    `<div class="exec-ai-bullet"><svg viewBox="0 0 16 16" fill="none" stroke="var(--green-500)" stroke-width="1.5"><path d="M3 8l4 4 6-7"/></svg><span><strong>Total ${projects.length} project aktif</strong> dari 5 kategori (VAS, Product, Project, Platform Internal, QA). ${s.healthy} developer dalam kondisi sehat (70–100%).</span></div>`,
+    `<div class="exec-ai-bullet"><svg viewBox="0 0 16 16" fill="none" stroke="var(--green-500)" stroke-width="1.5"><path d="M3 8l4 4 6-7"/></svg><span><strong>Total ${projects.length} project aktif</strong> dari kategori VAS Project, Product OTT, Project, Platform Internal, QA & RnD. ${s.healthy} developer dalam kondisi sehat (70–100%).</span></div>`,
     `<div class="exec-ai-bullet"><svg viewBox="0 0 16 16" fill="none" stroke="var(--amber-500)" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v4M8 11v.5"/></svg><span>Rata-rata utilization tim <strong>${s.avgUtilization}%</strong>. ${s.avgUtilization > 100 ? 'Perlu redistribusi task segera.' : s.avgUtilization > 85 ? 'Mendekati batas kapasitas, pantau terus.' : 'Kapasitas masih dalam batas normal.'}</span></div>`
   ].filter(Boolean).join('');
 
@@ -1324,14 +1359,58 @@ const GROUPS_ORDER = ['PMO Team','Cehat Sehat Developer','Developer','Matainja D
 
 // paging state per group: { page, perPage, query }
 const CAP_PAGING = {};
+// Top-level filters (Task 3c)
+const CAP_FILTER = { group:'', status:'', project:'' };
+
+// Apply status + project filters to a member list (group/search handled elsewhere)
+function capApplyFilters(members) {
+  return members.filter(d => {
+    if (CAP_FILTER.status === 'overloaded' && !(d.utilization > 100)) return false;
+    if (CAP_FILTER.status === 'normal' && !(d.utilization >= 70 && d.utilization <= 100)) return false;
+    if (CAP_FILTER.status === 'idle' && !(d.utilization < 30)) return false;
+    if (CAP_FILTER.project && !(d.projectAllocations || []).some(p => p.key === CAP_FILTER.project)) return false;
+    return true;
+  });
+}
+
+function renderCapFilterBar() {
+  const bar = document.getElementById('cap-filter-bar');
+  if (!bar || !STATE.capacity) return;
+  const projects = STATE.projects?.projects || [];
+  const hasFilter = CAP_FILTER.group || CAP_FILTER.status || CAP_FILTER.project;
+  bar.innerHTML = `
+    <select class="select-filter" onchange="setCapFilter('group',this.value)">
+      <option value="">Semua Grup</option>
+      ${GROUPS_ORDER.map(g => `<option value="${g}" ${CAP_FILTER.group===g?'selected':''}>${g}</option>`).join('')}
+    </select>
+    <select class="select-filter" onchange="setCapFilter('status',this.value)">
+      <option value="">Semua Status</option>
+      <option value="overloaded" ${CAP_FILTER.status==='overloaded'?'selected':''}>Kelebihan beban (&gt;100%)</option>
+      <option value="normal" ${CAP_FILTER.status==='normal'?'selected':''}>Normal (70–100%)</option>
+      <option value="idle" ${CAP_FILTER.status==='idle'?'selected':''}>Idle (&lt;30%)</option>
+    </select>
+    <select class="select-filter" onchange="setCapFilter('project',this.value)">
+      <option value="">Semua Project</option>
+      ${projects.map(p => `<option value="${p.key}" ${CAP_FILTER.project===p.key?'selected':''}>${p.name} (${p.key})</option>`).join('')}
+    </select>
+    ${hasFilter ? `<button class="btn btn-ghost" style="padding:6px 12px;color:var(--red-500);border-color:var(--red-100)" onclick="resetCapFilter()">✕ Reset filter</button>` : ''}`;
+}
+
+function setCapFilter(key, val) { CAP_FILTER[key] = val; renderCapacityTable(STATE.capacity); }
+function resetCapFilter() { CAP_FILTER.group=''; CAP_FILTER.status=''; CAP_FILTER.project=''; renderCapacityTable(STATE.capacity); }
 
 function renderCapacityTable(cap) {
+  renderCapFilterBar();
   const container = document.getElementById('cap-sections');
   container.innerHTML = '';
 
-  GROUPS_ORDER.forEach(group => {
-    const members = cap.developers.filter(d => d.groups.includes(group));
+  const visibleGroups = CAP_FILTER.group ? [CAP_FILTER.group] : GROUPS_ORDER;
+  let anyShown = false;
+
+  visibleGroups.forEach(group => {
+    const members = capApplyFilters(cap.developers.filter(d => d.groups.includes(group)));
     if (!members.length) return;
+    anyShown = true;
 
     // Init paging state for group
     if (!CAP_PAGING[group]) CAP_PAGING[group] = { page: 0, perPage: 10, query: '' };
@@ -1400,6 +1479,15 @@ function renderCapacityTable(cap) {
 
     renderCapGroupRows(group, members);
   });
+
+  if (!anyShown) {
+    container.innerHTML = emptyState({
+      icon: '🔍',
+      title: 'Tidak ada developer cocok',
+      description: 'Tidak ada developer yang sesuai filter. Coba ubah atau reset filter.',
+      action: { label: 'Reset filter', onClick: 'resetCapFilter()' }
+    });
+  }
 }
 
 function toggleCapSection(group) {
@@ -1411,20 +1499,20 @@ function toggleCapSection(group) {
 function onCapSearch(group, query) {
   CAP_PAGING[group].query = query.toLowerCase();
   CAP_PAGING[group].page  = 0;
-  const members = STATE.capacity.developers.filter(d => d.groups.includes(group));
+  const members = capApplyFilters(STATE.capacity.developers.filter(d => d.groups.includes(group)));
   renderCapGroupRows(group, members);
 }
 
 function setCapPerPage(group, val) {
   CAP_PAGING[group].perPage = val === 'all' ? 9999 : parseInt(val);
   CAP_PAGING[group].page    = 0;
-  const members = STATE.capacity.developers.filter(d => d.groups.includes(group));
+  const members = capApplyFilters(STATE.capacity.developers.filter(d => d.groups.includes(group)));
   renderCapGroupRows(group, members);
 }
 
 function capGoPage(group, page) {
   CAP_PAGING[group].page = page;
-  const members = STATE.capacity.developers.filter(d => d.groups.includes(group));
+  const members = capApplyFilters(STATE.capacity.developers.filter(d => d.groups.includes(group)));
   renderCapGroupRows(group, members);
 }
 
@@ -1461,10 +1549,20 @@ function renderCapGroupRows(group, allMembers) {
         const flag      = util > 100
           ? `<span class="row-flag over">Kelebihan beban</span>`
           : util < 30 ? `<span class="row-flag idle">Idle</span>` : '';
-        const projPills = d.projectAllocations.map((p, pi) => {
+        // 3b. Project allocation pills with NAME (truncated) + tooltip
+        const projPills = d.projectAllocations.slice(0,3).map((p, pi) => {
           const c = PROJ_PILL_COLORS[pi % PROJ_PILL_COLORS.length];
-          return `<span class="project-pill" style="background:${c.bg};color:${c.color}"><span class="pp-dot" style="background:${c.dot}"></span>${p.key} ${p.pct}%</span>`;
-        }).join('');
+          const nm = p.name ? `<span style="opacity:.75;font-weight:400;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}</span>` : '';
+          return `<span class="project-pill" style="background:${c.bg};color:${c.color}" title="${p.name||p.key} — ${p.pct}% utilisasi">
+            <span class="pp-dot" style="background:${c.dot}"></span><strong>${p.key}</strong>${nm}<span>${p.pct}%</span></span>`;
+        }).join('') + (d.projectAllocations.length > 3 ? `<span style="font-size:10px;color:var(--ink-400)">+${d.projectAllocations.length-3} lainnya</span>` : '');
+
+        // 3a. Available status indicator
+        const av = d.available;
+        const avCfg = av > 30 ? { l:'Aman', c:'var(--green-600)', bg:'var(--green-50)', b:'var(--green-100)' }
+                    : av > 10 ? { l:'Mepet', c:'var(--amber-600)', bg:'var(--amber-50)', b:'var(--amber-100)' }
+                    : av > 0  ? { l:'Penuh', c:'var(--red-600)', bg:'var(--red-50)', b:'var(--red-100)' }
+                    :           { l:'Habis', c:'var(--red-700)', bg:'var(--red-100)', b:'var(--red-200)' };
 
         // Task breakdown: "X aktif / Y total". Idle = ada task tapi 0 aktif → badge abu.
         let tasksCell;
@@ -1493,7 +1591,12 @@ function renderCapGroupRows(group, allMembers) {
               <span class="util-num ${numClass}">${util}%</span>
             </div>
           </td>
-          <td style="color:${util<30?'var(--ink-400)':'var(--status-healthy-text)'};font-weight:600;font-size:12.5px">${d.available}%</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="color:${av<10?'var(--red-600)':'var(--ink-600)'};font-weight:600;font-size:12.5px;font-variant-numeric:tabular-nums;min-width:30px">${av}%</span>
+              <span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:4px;background:${avCfg.bg};color:${avCfg.c};border:1px solid ${avCfg.b}">${avCfg.l}</span>
+            </div>
+          </td>
           <td style="color:var(--status-overload-text);font-weight:600;font-size:12.5px">${d.overload>0?'+'+d.overload+'%':'—'}</td>
           <td style="font-weight:500">${tasksCell}</td>
           <td>${projPills||'<span style="color:var(--ink-400);font-size:12px">—</span>'}</td>
@@ -1676,9 +1779,31 @@ function filterTasks() {
   renderTaskColumns(filtered);
 }
 
+// Is a task overdue? (has due date in the past and not done)
+function taskIsOverdue(t) {
+  if (!t.dueDate) return false;
+  const done = ['Done','Closed','Resolved','Completed'].includes(t.status) || displayStatus(t.status) === 'Done';
+  if (done) return false;
+  const today = new Date(); today.setHours(0,0,0,0);
+  return new Date(t.dueDate) < today;
+}
+function taskOverdueDays(t) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  return Math.round((today - new Date(t.dueDate)) / 86400000);
+}
+
 function taskCardHtml(t) {
   const initials = t.assignee?.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() || '?';
   const pClass = `p-${(t.priority || 'medium').toLowerCase()}`;
+  // 5c. Due date / overdue indicator
+  let dueHtml = '';
+  if (t.dueDate) {
+    const od = taskIsOverdue(t);
+    const dueFmt = new Date(t.dueDate).toLocaleDateString('id-ID',{day:'numeric',month:'short'});
+    dueHtml = `<div style="display:flex;align-items:center;gap:4px;font-size:10px;margin-top:5px;${od?'color:var(--red-500);font-weight:600':'color:var(--ink-400)'}">
+      <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6h12M5 1.5v3M11 1.5v3"/></svg>
+      ${od ? `Terlambat ${taskOverdueDays(t)}h` : dueFmt}</div>`;
+  }
   return `
     <div class="task-card">
       <div class="task-key">${t.key}</div>
@@ -1688,7 +1813,54 @@ function taskCardHtml(t) {
         ${t.storyPoints ? `<span style="font-size:10px;color:var(--ink-400)">${t.storyPoints}pt</span>` : ''}
         <span class="assignee-chip"><span class="mini-av">${initials}</span>${t.assignee || 'Unassigned'}</span>
       </div>
+      ${dueHtml}
     </div>`;
+}
+
+// 5b. AI analysis from task + capacity data
+function generateTaskAI(tasks) {
+  const risks = [], recs = [];
+  const overdue = tasks.filter(taskIsOverdue);
+  const blocked = tasks.filter(t => ['On Hold','Waiting telco'].includes(displayStatus(t.status)) || /hold|telco|block/i.test(t.status||''));
+  const inProgress = tasks.filter(t => displayStatus(t.status) === 'In Progress');
+  const overloaded = (STATE.capacity?.developers || []).filter(d => d.utilization > 100)
+    .sort((a,b)=>b.utilization-a.utilization);
+
+  if (overdue.length > 5) risks.push({ sev:'critical', msg:`${overdue.length} task overdue — indikasi masalah delivery sistemik, perlu review kapasitas.` });
+  if (blocked.length > 3) risks.push({ sev:'high', msg:`${blocked.length} task blocked (On Hold / Waiting telco) — follow up dengan mitra segera.` });
+  if (overloaded.length > 0) risks.push({ sev:'high', msg:`${overloaded.length} developer kelebihan beban — ${overloaded[0].displayName} paling tinggi di ${overloaded[0].utilization}%.` });
+
+  if (overloaded.length > 0) recs.push(`Redistribusi task dari ${overloaded[0].displayName} ke developer idle.`);
+  if (blocked.length > 0) recs.push(`Follow up ${blocked.length} task yang blocked dengan mitra telco/eksternal.`);
+  if (inProgress.length > 10) recs.push(`Batasi WIP: ${inProgress.length} task In Progress terlalu banyak — kurangi paralel per developer.`);
+  return { risks, recs };
+}
+
+function renderTaskAIPanel(tasks) {
+  const { risks, recs } = generateTaskAI(tasks);
+  const panel = document.getElementById('task-ai-panel');
+  if (!risks.length && !recs.length) { panel.innerHTML = ''; return; }
+  const riskHtml = risks.length ? `
+    <div class="card" style="overflow:hidden">
+      <div class="card-header" style="background:var(--ink-50)">
+        <div class="card-title"><svg viewBox="0 0 16 16" fill="none" stroke="var(--amber-500)" stroke-width="1.5"><path d="M8 2l6 11H2z"/><path d="M8 6v3M8 11v.3"/></svg>Risk Highlights</div>
+        <span class="ai-count-badge has-flags">${risks.length}</span>
+      </div>
+      <div>${risks.map(r => `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 18px;border-bottom:1px solid var(--ink-50);background:${r.sev==='critical'?'var(--red-50)':'var(--amber-50)'}">
+        <span style="flex-shrink:0">${r.sev==='critical'?'🔴':r.sev==='high'?'🟠':'🟡'}</span>
+        <span style="font-size:12px;color:var(--ink-700);line-height:1.5">${r.msg}</span></div>`).join('')}</div>
+    </div>` : '';
+  const recHtml = recs.length ? `
+    <div class="card" style="overflow:hidden;border-color:var(--blue-100)">
+      <div class="card-header" style="background:var(--blue-50);border-color:var(--blue-100)">
+        <div class="card-title" style="color:var(--blue-700)"><svg viewBox="0 0 16 16" fill="none" stroke="var(--blue-500)" stroke-width="1.5"><path d="M8 1a5 5 0 0 0-3 9v2h6v-2a5 5 0 0 0-3-9z"/><path d="M6 14h4"/></svg>Rekomendasi AI</div>
+        <span class="ai-count-badge" style="background:var(--blue-50);color:var(--blue-600)">${recs.length}</span>
+      </div>
+      <div>${recs.map((r,i) => `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 18px;border-bottom:1px solid var(--blue-50);background:var(--ink-0)">
+        <span style="flex-shrink:0;width:20px;height:20px;border-radius:50%;background:var(--blue-50);color:var(--blue-600);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">${i+1}</span>
+        <span style="font-size:12px;color:var(--ink-700);line-height:1.5">${r}</span></div>`).join('')}</div>
+    </div>` : '';
+  panel.innerHTML = riskHtml + recHtml;
 }
 
 function toggleDoneExpand() {
@@ -1698,6 +1870,7 @@ function toggleDoneExpand() {
 
 function renderTaskColumns(tasks) {
   STATE._lastTaskRender = tasks; // remember for toggleDoneExpand re-render
+  renderTaskAIPanel(tasks);
   const cols = {
     todo: tasks.filter(t => ['To Do','Open','Backlog','New'].includes(t.status)),
     inprogress: tasks.filter(t => ['In Progress','In Development','Coding'].includes(t.status)),
@@ -1799,20 +1972,50 @@ function filterSyncTable() {
   renderSyncTable(filtered);
 }
 
+function initials(name) {
+  return (name || '?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+}
+// Relative time in Indonesian + full timestamp for tooltip
+function relativeTime(dateStr) {
+  if (!dateStr) return { rel:'—', abs:'' };
+  const d = new Date(dateStr), now = new Date();
+  const sec = Math.round((now - d) / 1000);
+  let rel;
+  if (sec < 60) rel = 'baru saja';
+  else if (sec < 3600) rel = `${Math.floor(sec/60)} menit lalu`;
+  else if (sec < 86400) rel = `${Math.floor(sec/3600)} jam lalu`;
+  else if (sec < 2592000) rel = `${Math.floor(sec/86400)} hari lalu`;
+  else rel = d.toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'});
+  const abs = d.toLocaleString('id-ID',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  return { rel, abs };
+}
+// Priority badge with colored dot
+function priorityBadge(p) {
+  const k = (p || 'Medium').toLowerCase();
+  const cfg = (k.includes('highest') || k.includes('high')) ? { c:'var(--red-500)',  bg:'var(--red-50)' }
+            : (k.includes('low'))                            ? { c:'var(--ink-400)',  bg:'var(--ink-50)' }
+            :                                                  { c:'var(--amber-500)',bg:'var(--amber-50)' };
+  return `<span class="priority-badge" style="background:${cfg.bg};color:${cfg.c};display:inline-flex;align-items:center;gap:4px">
+    <span style="width:6px;height:6px;border-radius:50%;background:${cfg.c}"></span>${p || 'Medium'}</span>`;
+}
+
 function renderSyncTable(issues) {
   document.getElementById('sync-tbody').innerHTML = issues.length
-    ? issues.map(i => `
+    ? issues.map(i => {
+      const t = relativeTime(i.updated);
+      return `
       <tr>
         <td><span class="jira-id">${i.key}</span></td>
-        <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.summary}</td>
+        <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.summary}</td>
         <td style="font-size:12px;color:var(--ink-500)">${i.project || '—'}</td>
         <td style="font-size:12px">${i.assignee || '<span style="color:var(--ink-400)">Unassigned</span>'}</td>
+        <td>${i.reporter ? `<div style="display:flex;align-items:center;gap:6px"><span class="dev-init" style="width:20px;height:20px;font-size:9px;background:var(--violet-50);color:var(--violet-600)">${initials(i.reporter)}</span><span style="font-size:11.5px;color:var(--ink-600);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.reporter}</span></div>` : '<span style="color:var(--ink-300)">—</span>'}</td>
         <td><span style="font-size:11.5px;font-weight:500;color:var(--ink-600)">${i.status || '—'}</span></td>
-        <td><span class="priority-badge p-${(i.priority||'medium').toLowerCase()}">${i.priority || 'Medium'}</span></td>
+        <td>${priorityBadge(i.priority)}</td>
         <td><span class="sync-badge ${i.syncStatus}">${i.syncStatus === 'synced' ? 'Synced' : i.syncStatus === 'unassigned' ? 'Unassigned' : 'External'}</span></td>
-        <td style="font-size:11px;color:var(--ink-400)">${formatDate(i.updated?.slice(0,10))}</td>
-      </tr>`).join('')
-    : `<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--ink-400)">Tidak ada data</td></tr>`;
+        <td><span style="font-size:11px;color:var(--ink-400);border-bottom:1px dashed var(--ink-200);cursor:help" title="${t.abs}">${t.rel}</span></td>
+      </tr>`}).join('')
+    : `<tr><td colspan="9" style="padding:40px;text-align:center;color:var(--ink-400)">Tidak ada data</td></tr>`;
 }
 
 // ——— EXPORT ———
@@ -1881,7 +2084,63 @@ function onTlCategoryChange() {
 }
 
 // ======== TIMELINE ========
-let TL = { data: null, statusFilter: 'all' };
+let TL = { data: null, statusFilter: 'all', viewMode: 'developer', expanded: new Set() };
+
+// Toggle a project/developer group (collapse/expand); default = collapsed
+function toggleTlGroup(id) {
+  if (TL.expanded.has(id)) TL.expanded.delete(id); else TL.expanded.add(id);
+  if (TL.data) renderTimeline(TL.data);
+}
+function tlExpandAll(open) {
+  TL.expanded = new Set();
+  if (open) tlBuildItems(TL.data).forEach(g => TL.expanded.add(g.accountId));
+  if (TL.data) renderTimeline(TL.data);
+}
+
+// 4a. Build rows by viewMode: 'developer' (rows=people) or 'project' (rows=projects)
+function tlBuildItems(data) {
+  const raw = data.items || [];
+  if (TL.viewMode === 'developer') return raw;
+  // Project mode: flatten tasks, tag assignee, regroup by project
+  const byProj = {};
+  for (const person of raw) {
+    for (const t of person.tasks) {
+      const pk = t.projectKey || t.project || '—';
+      if (!byProj[pk]) byProj[pk] = { accountId: 'proj-'+pk, displayName: t.project || pk, group:'', isProject:true, tasks: [] };
+      byProj[pk].tasks.push({ ...t, _assignee: person.displayName });
+    }
+  }
+  return Object.values(byProj).sort((a,b) => b.tasks.length - a.tasks.length);
+}
+
+function setTlViewMode(mode, btn) {
+  TL.viewMode = mode;
+  TL.expanded = new Set(); // default collapsed in the new mode
+  document.querySelectorAll('#tl-view-toggle .pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  if (TL.data) renderTimeline(TL.data);
+}
+
+// 4c. Summary stat cards
+function renderTlSummary(items) {
+  const tasks = items.flatMap(p => p.tasks);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const completed = tasks.filter(t => t.isDone).length;
+  const overdue = tasks.filter(t => !t.isDone && new Date(t.barEnd) < today).length;
+  const rescheduled = tasks.filter(t => t.isRescheduled).length;
+  const projectCount = new Set(tasks.map(t => t.projectKey || t.project)).size;
+  const total = tasks.length;
+  const pct = total ? Math.round(completed/total*100) : 0;
+  const card = (bg,bd,lc,lbl,val,sub,sc) => `<div style="background:${bg};border:1px solid ${bd};border-radius:var(--radius-md);padding:12px 14px">
+    <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:${lc};margin-bottom:4px">${lbl}</div>
+    <div style="font-size:22px;font-weight:700;color:${sc||'var(--ink-900)'};line-height:1">${val}</div>
+    <div style="font-size:10px;color:${lc};margin-top:3px">${sub}</div></div>`;
+  document.getElementById('tl-summary').innerHTML =
+    card('var(--ink-50)','var(--ink-100)','var(--ink-400)','Total Task', total, `${projectCount} project`) +
+    card('var(--green-50)','var(--green-100)','var(--green-600)','Completed', completed, `${pct}% selesai`, 'var(--green-700)') +
+    card('var(--red-50)','var(--red-100)','var(--red-500)','Overdue', overdue, 'Perlu tindakan', 'var(--red-600)') +
+    card('var(--amber-50)','var(--amber-100)','var(--amber-600)','Rescheduled', rescheduled, 'Tanggal digeser', 'var(--amber-700)');
+}
 
 // Map raw Jira status → display bucket. Tambah alias di sini bila nama Jira beda.
 const JIRA_STATUS_MAP = {
@@ -2039,10 +2298,12 @@ async function loadTimelinePage() {
 function renderTimeline(data) {
   const wrap  = document.getElementById('timeline-wrap');
 
-  // Apply status pill filter at task level, drop people with no remaining tasks.
-  const items = (data.items || [])
+  // Build rows per view mode, then apply status pill filter at task level.
+  const items = tlBuildItems(data)
     .map(p => ({ ...p, tasks: p.tasks.filter(taskMatchesStatusFilter) }))
     .filter(p => p.tasks.length);
+
+  renderTlSummary(items);
 
   if (!items.length) {
     const filtered = TL.statusFilter !== 'all';
@@ -2055,151 +2316,126 @@ function renderTimeline(data) {
   }
 
   const { start, end } = data.dateRange;
-  const startD = new Date(start);
-  const endD   = new Date(end);
+  const startD = new Date(start), endD = new Date(end);
   const totalDays = Math.ceil((endD - startD) / 86400000) + 1;
-  const today = new Date();
-  today.setHours(0,0,0,0);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const sevenAgo = new Date(today); sevenAgo.setDate(today.getDate() - 7);
 
-  const DAY_W = 28; // px per day
-  const PERSON_W = 220;
+  const DAY_W = 3.4;        // year view → compact month scale
+  const PERSON_W = 300;
+  const chartW = Math.round(totalDays * DAY_W);
+  const px  = iso => Math.max(0, Math.round((new Date(iso) - startD) / 86400000)) * DAY_W;
+  const wOf = (a, b) => Math.max(7, (Math.round((new Date(b) - new Date(a)) / 86400000) + 1) * DAY_W);
+  const esc = v => (v||'').replace(/'/g,'`').replace(/"/g,'&quot;');
+  const fmt = iso => iso ? new Date(iso).toLocaleDateString('id-ID',{day:'numeric',month:'short'}) : '';
 
-  // Build week headers
-  const weeks = [];
-  const cur = new Date(startD);
-  while (cur <= endD) {
-    const wStart = new Date(cur);
-    const wEnd = new Date(cur); wEnd.setDate(wEnd.getDate() + 6);
-    weeks.push({
-      label: cur.toLocaleDateString('id-ID', { day:'numeric', month:'short' }),
-      days: Math.min(7, Math.ceil((endD - cur) / 86400000) + 1)
-    });
-    cur.setDate(cur.getDate() + 7);
+  // Monthly column headers
+  const months = [];
+  let mc = new Date(startD.getFullYear(), startD.getMonth(), 1);
+  while (mc <= endD) {
+    const dim = new Date(mc.getFullYear(), mc.getMonth()+1, 0).getDate();
+    months.push({ label: mc.toLocaleDateString('id-ID',{month:'short'}), w: Math.round(dim * DAY_W) });
+    mc = new Date(mc.getFullYear(), mc.getMonth()+1, 1);
   }
+  const headerCols = months.map(mo => `<div class="tl-week-label" style="width:${mo.w}px;min-width:${mo.w}px;text-align:center;padding:10px 0">${mo.label}</div>`).join('');
 
-  const headerCols = weeks.map(w =>
-    `<div class="tl-week-label" style="width:${w.days * DAY_W}px;min-width:${w.days * DAY_W}px">${w.label}</div>`
-  ).join('');
-
-  // Today marker position
-  const todayOffset = Math.max(0, Math.ceil((today - startD) / 86400000));
+  const todayOffset = Math.round((today - startD) / 86400000);
   const todayPx = todayOffset * DAY_W;
   const showToday = todayOffset >= 0 && todayOffset <= totalDays;
+  const todayMark = showToday ? `<div style="position:absolute;top:0;bottom:0;left:${todayPx}px;width:2px;background:var(--amber-500);opacity:.55;z-index:2;pointer-events:none"></div>` : '';
 
-  const profiles = STATE.memberProfiles || {};
+  const groupRows = items.map(grp => {
+    const gid = grp.accountId;
+    const expanded = TL.expanded.has(gid);
+    const isProj = grp.isProject;
+    const gc = isProj ? { bg:'var(--violet-50)', color:'var(--violet-700)' }
+                      : (GROUP_COLORS[grp.group] || { bg:'var(--blue-50)', color:'var(--blue-700)' });
+    const initials = isProj
+      ? ((grp.displayName.match(/[A-Z0-9]/g) || [grp.displayName[0]]).slice(0,2).join('').toUpperCase())
+      : grp.displayName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const total = grp.tasks.length;
+    const done  = grp.tasks.filter(t => t.isDone).length;
+    const pctDone = total ? Math.round(done/total*100) : 0;
 
-  const rows = items.map(person => {
-    const initials = person.displayName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-    const gc = GROUP_COLORS[person.group] || { bg: 'var(--blue-50)', color: 'var(--blue-700)' };
-    const profile = profiles[person.accountId] || {};
-    const jabLabel = profile.jabatan
-      ? `<span class="jabatan-badge j-${profile.jabatan}" style="font-size:9.5px;padding:1px 6px">${profile.jabatan}</span>`
-      : '';
-    const levelLabel = profile.level
-      ? `<span style="font-size:9.5px;color:var(--ink-400)">${profile.level}</span>`
-      : '';
+    // group span bar
+    const allStarts = grp.tasks.map(t => t.origBarStart||t.barStart).filter(Boolean).sort();
+    const allEnds   = grp.tasks.map(t => t.origBarEnd||t.barEnd).filter(Boolean).sort();
+    const gLeft  = allStarts.length ? px(allStarts[0]) : 0;
+    const gRight = allEnds.length ? px(allEnds[allEnds.length-1]) + DAY_W*3 : 0;
+    const gSpan  = Math.max(0, gRight - gLeft);
 
-    // Sort: In Progress first, then by start date
-    const statusOrder = t => { const ds = displayStatus(t.status); return ds==='In Progress'?0 : ds==='To Do'?1 : ds==='Done'?3 : 2; };
-    const sorted = [...person.tasks].sort((a, b) => statusOrder(a) - statusOrder(b) || (a.origBarStart||a.barStart).localeCompare(b.origBarStart||b.barStart));
+    // attrs builder for a bar
+    const attrs = (t, sVal, eVal, dueVal, ov, dn) =>
+      `data-key="${esc(t.key)}" data-summary="${esc(t.summary)}" data-status="${esc(t.status)}" data-project="${esc(t.project)}" data-assignee="${esc(t._assignee||grp.displayName)}" data-due="${dueVal||''}" data-overdue="${ov?'1':''}" data-done="${dn?'1':''}" data-bar-start="${sVal}" data-bar-end="${eVal}" ${t.isRescheduled?`data-orig-start="${t.origStart||''}" data-new-start="${t.newStart||''}" data-orig-due="${t.origDue||''}" data-new-due="${t.newDue||''}" data-rescheduled="1"`:''} onmouseenter="tlTooltipEnter(event,this)" onmouseleave="tlTooltipLeave()"`;
 
-    // Row gets taller when any task is rescheduled (room for the dual bar)
-    const rowHasReschedule = sorted.some(t => t.isRescheduled && t.newBarEnd);
-    const LANE_H = rowHasReschedule ? 44 : 26;
-
-    const px = iso => Math.max(0, Math.ceil((new Date(iso) - startD) / 86400000)) * DAY_W;
-    const widthOf = (a, b) => Math.max(DAY_W, (Math.ceil((new Date(b) - new Date(a)) / 86400000) + 1) * DAY_W);
-    const esc = v => (v||'').replace(/'/g,'`').replace(/"/g,'&quot;');
-    const sevenAgo = new Date(today); sevenAgo.setDate(sevenAgo.getDate() - 7);
-
-    // Stack into lanes (by combined original+new horizontal extent)
-    const lanes = [];
-    const bars = sorted.map(task => {
-      const oStart = task.origBarStart || task.barStart;
-      const oEnd   = task.origBarEnd   || task.barEnd;
-      const left   = px(oStart);
-      const width  = widthOf(oStart, oEnd);
-      // combined extent for overlap (include new bar)
-      const extentRight = task.isRescheduled && task.newBarEnd
-        ? Math.max(left + width, px(task.newBarStart) + widthOf(task.newBarStart, task.newBarEnd))
-        : left + width;
-
-      let lane = 0;
-      while (lanes[lane] !== undefined && lanes[lane] > left) lane++;
-      lanes[lane] = extentRight;
-
-      const topOffset = 8 + lane * LANE_H;
-      const ds = displayStatus(task.status);
-      const style = STATUS_BAR_STYLE[ds] || STATUS_BAR_STYLE['To Do'];
-      const e = new Date(oEnd); e.setHours(0,0,0,0);
-      const isOverdue = !task.isDone && e < today;
-      const overdueOutline = (isOverdue && ds !== 'Delay') ? ';outline:1.5px solid var(--red-400);outline-offset:-1px' : '';
-      const isNew = task.created && new Date(task.created) > sevenAgo;
-      const newBadge = isNew ? `<span class="tl-new-badge">NEW</span>` : '';
-
-      const dueDate = task.newDue || task.origDue || oEnd || '';
-      const rescheduledAttr = task.isRescheduled
-        ? `data-orig-start="${task.origStart||''}" data-new-start="${task.newStart||''}" data-orig-due="${task.origDue||''}" data-new-due="${task.newDue||''}" data-rescheduled="1"`
-        : '';
-
-      // ORIGINAL bar (solid, coloured by status)
-      let html = `<div class="tl-bar"
-        style="left:${left}px;width:${Math.min(width, totalDays * DAY_W - left)}px;top:${topOffset}px;position:absolute;background:${style.bg};color:${style.text};border:1px solid ${style.border}${overdueOutline}"
-        data-key="${esc(task.key)}" data-summary="${esc(task.summary)}" data-status="${esc(task.status)}"
-        data-project="${esc(task.project)}" data-assignee="${esc(person.displayName)}" data-due="${dueDate}"
-        data-overdue="${isOverdue ? '1' : ''}" data-done="${task.isDone ? '1' : ''}"
-        data-bar-start="${oStart}" data-bar-end="${oEnd}" ${rescheduledAttr}
-        onmouseenter="tlTooltipEnter(event,this)" onmouseleave="tlTooltipLeave()"
-      >${task.key}${newBadge}</div>`;
-
-      // NEW-DATE bar (dashed) below original when rescheduled
-      if (task.isRescheduled && task.newBarEnd) {
-        const nLeft  = px(task.newBarStart);
-        const nWidth = widthOf(task.newBarStart, task.newBarEnd);
-        const slipDays = task.origDue && task.newDue
-          ? Math.round((new Date(task.newDue) - new Date(task.origDue)) / 86400000) : 1;
-        const slipCls = slipDays > 0 ? '' : ' slip-orange';
-        const slipLabel = slipDays !== 0 ? `${slipDays>0?'+':''}${slipDays}d` : '';
-        html += `<div class="tl-bar-new${slipCls}"
-          style="left:${nLeft}px;width:${Math.min(nWidth, totalDays*DAY_W - nLeft)}px;top:${topOffset+22}px;position:absolute"
-          data-key="${esc(task.key)}" data-summary="${esc(task.summary)}" data-status="${esc(task.status)}"
-          data-project="${esc(task.project)}" data-assignee="${esc(person.displayName)}" data-due="${task.newDue||''}"
-          data-bar-start="${task.newBarStart}" data-bar-end="${task.newBarEnd}" ${rescheduledAttr}
-          onmouseenter="tlTooltipEnter(event,this)" onmouseleave="tlTooltipLeave()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="1 4 1 10 7 10"/><path d="M3.5 15a9 9 0 1 0 .5-3.3"/></svg>
-          ${task.newDue || 'baru'} ${slipLabel}</div>`;
-      }
-      return html;
-    });
-
-    const rowH = Math.max(52, (lanes.length || 1) * LANE_H + 16);
-    const barsArea = `<div class="tl-bars-area" style="min-height:${rowH}px">
-      ${showToday ? `<div class="tl-today-col" style="left:${todayPx}px;width:${DAY_W}px;position:absolute;top:0;bottom:0;background:rgba(74,148,232,.06);border-left:2px solid var(--blue-300)"></div>` : ''}
-      ${bars.join('')}
-    </div>`;
-
-    return `<div class="tl-row" style="min-height:${rowH}px">
-      <div class="tl-person" style="min-height:${rowH}px">
+    let html = `<div class="tl-grp-header" onclick="toggleTlGroup('${esc(gid)}')">
+      <div class="tl-grp-left" style="width:${PERSON_W}px;min-width:${PERSON_W}px">
+        <svg class="tl-grp-chev ${expanded?'open':''}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4l4 4-4 4"/></svg>
         <div class="dev-init" style="background:${gc.bg};color:${gc.color};flex-shrink:0">${initials}</div>
-        <div class="tl-person-info">
-          <div class="tl-person-name">${person.displayName}</div>
-          <div class="tl-person-meta" style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
-            ${jabLabel}${levelLabel}
-          </div>
-          <div class="tl-person-meta">${person.tasks.length} tasks</div>
+        <div style="min-width:0;flex:1">
+          <div class="tl-grp-name">${grp.displayName}</div>
+          <div class="tl-grp-sub">${total} epics · ${done} done</div>
         </div>
       </div>
-      ${barsArea}
+      <div class="tl-grp-track" style="width:${chartW}px">
+        ${todayMark}
+        ${gSpan>0 ? `<div class="tl-grp-span" style="left:${gLeft}px;width:${gSpan}px" title="${pctDone}% selesai"><div class="tl-grp-span-fill" style="width:${pctDone}%"></div></div>` : ''}
+      </div>
     </div>`;
+
+    if (expanded) {
+      const sorted = [...grp.tasks].sort((a,b) => (a.origBarStart||a.barStart).localeCompare(b.origBarStart||b.barStart));
+      html += sorted.map(task => {
+        const oStart = task.origBarStart || task.barStart;
+        const oEnd   = task.origBarEnd   || task.barEnd;
+        const left = px(oStart), width = wOf(oStart, oEnd);
+        const ds = displayStatus(task.status);
+        const style = STATUS_BAR_STYLE[ds] || STATUS_BAR_STYLE['To Do'];
+        const e = new Date(oEnd); e.setHours(0,0,0,0);
+        const isOverdue = !task.isDone && e < today;
+        const isNew = task.created && new Date(task.created) > sevenAgo;
+        const dueDate = task.newDue || task.origDue || oEnd || '';
+        const hasResched = task.isRescheduled && task.newBarEnd;
+        const rowH = hasResched ? 46 : 30;
+        const ovOutline = (isOverdue && ds !== 'Delay') ? ';outline:1.5px solid var(--red-400);outline-offset:-1px' : '';
+
+        let bars = `${todayMark}
+          <div class="tl-bar" style="left:${left}px;width:${width}px;top:6px;position:absolute;background:${style.bg};color:${style.text};border:1px solid ${style.border}${ovOutline}" ${attrs(task,oStart,oEnd,dueDate,isOverdue,task.isDone)}></div>
+          <div class="tl-bar-label" style="left:${left+width+6}px;top:6px">${task.summary || task.key} <span style="opacity:.5">${fmt(oStart)} → ${fmt(oEnd)}</span></div>`;
+        if (hasResched) {
+          const nLeft = px(task.newBarStart), nWidth = wOf(task.newBarStart, task.newBarEnd);
+          const slip = task.origDue && task.newDue ? Math.round((new Date(task.newDue) - new Date(task.origDue))/86400000) : 1;
+          bars += `<div class="tl-bar-new${slip>0?'':' slip-orange'}" style="left:${nLeft}px;width:${nWidth}px;top:27px;position:absolute" ${attrs(task,task.newBarStart,task.newBarEnd,task.newDue,false,false)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="1 4 1 10 7 10"/><path d="M3.5 15a9 9 0 1 0 .5-3.3"/></svg></div>
+            <div class="tl-bar-label" style="left:${nLeft+nWidth+6}px;top:25px;font-size:9px;height:16px;line-height:16px;color:${slip>0?'var(--red-500)':'var(--amber-600)'}">→ ${fmt(task.newDue)} ${slip!==0?(slip>0?'+':'')+slip+'d':''}</div>`;
+        }
+
+        return `<div class="tl-task-row" style="height:${rowH}px">
+          <div class="tl-task-left" style="width:${PERSON_W}px;min-width:${PERSON_W}px">
+            <span style="width:9px;height:9px;border-radius:2px;background:${style.bg};flex-shrink:0"></span>
+            <span class="tl-task-key">${task.key}</span>
+            <span class="tl-task-name" title="${esc(task.summary)}">${task.summary || ''}</span>
+            ${isOverdue?'<span class="tl-ovr-badge">OVR</span>':''}${isNew?'<span class="tl-new-badge">NEW</span>':''}
+          </div>
+          <div class="tl-task-bars" style="width:${chartW}px">${bars}</div>
+        </div>`;
+      }).join('');
+    }
+    return html;
   }).join('');
 
+  const colLabel = TL.viewMode === 'project' ? 'PROJECT / EPIC' : 'DEVELOPER / EPIC';
   wrap.innerHTML = `
-    <div style="min-width:${PERSON_W + totalDays * DAY_W}px">
+    <div style="min-width:${PERSON_W + chartW}px">
       <div class="tl-header-row">
-        <div class="tl-person-col">Developer</div>
+        <div class="tl-person-col" style="width:${PERSON_W}px;min-width:${PERSON_W}px;display:flex;align-items:center;gap:8px">
+          <span style="flex:1">${colLabel}</span>
+          <button class="pill" style="font-size:10px;padding:3px 8px" onclick="event.stopPropagation();tlExpandAll(true)">Expand all</button>
+          <button class="pill" style="font-size:10px;padding:3px 8px" onclick="event.stopPropagation();tlExpandAll(false)">Collapse</button>
+        </div>
         <div class="tl-dates">${headerCols}</div>
       </div>
-      ${rows}
+      ${groupRows}
     </div>`;
 }
 
@@ -2547,6 +2783,14 @@ function formatDate(str) {
 
 // ——— AUTO REFRESH every 5 min ———
 setInterval(refreshAll, 5 * 60 * 1000);
+
+// Re-render relative times in Jira Sync table every 60s (Task 1b)
+setInterval(() => {
+  const page = document.getElementById('page-jirasync');
+  if (page?.classList.contains('active') && STATE.allSyncIssues?.length) {
+    renderSyncTable(STATE.allSyncIssues);
+  }
+}, 60 * 1000);
 
 // ——— START ———
 init();

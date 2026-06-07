@@ -38,8 +38,10 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
-// Target project categories
-const TARGET_CATEGORIES = ['VAS', 'Product', 'Project', 'Platform Internal', 'QA'];
+// Target project categories — EXACT names (case-insensitive).
+// Jira renames (per 2026): "Product"→"Product OTT", "Project OTT"→"Project". + RnD.
+// "Team Product" sengaja TIDAK disertakan.
+const TARGET_CATEGORIES = ['VAS Project', 'Product OTT', 'Project', 'Platform Internal', 'QA', 'RnD'];
 
 // Target user groups
 const TARGET_GROUPS = [
@@ -75,7 +77,7 @@ async function ensureProjects() {
   if (isFresh('projects') && cache.projects) return cache.projects;
   const cats = await jiraGet('/rest/api/3/projectCategory');
   const targetCatIds = cats
-    .filter(c => TARGET_CATEGORIES.some(t => c.name.toLowerCase().includes(t.toLowerCase())))
+    .filter(c => TARGET_CATEGORIES.some(t => c.name.toLowerCase().trim() === t.toLowerCase().trim()))
     .map(c => ({ id: c.id, name: c.name }));
   const allProjects = await jiraGet('/rest/api/3/project?expand=projectKeys,description&maxResults=500');
   const filtered = allProjects.filter(p => p.projectCategory && targetCatIds.some(c => c.id === p.projectCategory.id));
@@ -471,7 +473,7 @@ app.get('/api/sync-status', async (req, res) => {
     const projectKeys = projects.map(p => p.key);
     const jql = `project in (${projectKeys.slice(0, 30).map(k => `"${k}"`).join(',')}) AND updated >= "${since}" ORDER BY updated DESC`;
 
-    const data = await jiraGet(`/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=100&fields=summary,status,assignee,updated,project,priority,issuetype`);
+    const data = await jiraGet(`/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=100&fields=summary,status,assignee,reporter,updated,project,priority,issuetype`);
     const issues = data.issues || [];
 
     const memberSet = new Set(members.map(m => m.accountId));
@@ -491,6 +493,7 @@ app.get('/api/sync-status', async (req, res) => {
         status: i.fields.status?.name,
         assignee: i.fields.assignee?.displayName || '—',
         assigneeId: i.fields.assignee?.accountId,
+        reporter: i.fields.reporter?.displayName || null,
         project: i.fields.project?.name,
         priority: i.fields.priority?.name,
         updated: i.fields.updated,
@@ -675,21 +678,19 @@ app.get('/api/timeline', async (req, res) => {
       memberBatches.push(allMemberIds.slice(i, i + BATCH));
     }
 
-    // Display window: 3 months back to 6 months forward
+    // Display window = TAHUN BERJALAN (1 Jan – 31 Des). Data = task yang DIBUAT tahun ini.
     const now = new Date();
-    const startDate = new Date(now); startDate.setMonth(startDate.getMonth() - 3);
-    const endDate   = new Date(now); endDate.setMonth(endDate.getMonth() + 6);
+    const yr = now.getFullYear();
+    const startDate = new Date(yr, 0, 1);
+    const endDate   = new Date(yr, 11, 31);
     const startStr  = startDate.toISOString().split('T')[0];
     const endStr    = endDate.toISOString().split('T')[0];
-
-    // JQL lookback: same as startDate
-    const lookbackStr = startStr;
 
     const byAssignee = {};
 
     for (const batch of memberBatches) {
       if (!batch.length || !projectKeys.length) continue;
-      const jql = `project in (${projectKeys.slice(0, 30).map(k => `"${k}"`).join(',')}) AND assignee in (${batch.map(id => `"${id}"`).join(',')}) AND (status != Done OR updated >= "${lookbackStr}") ORDER BY assignee, updated DESC`;
+      const jql = `project in (${projectKeys.slice(0, 30).map(k => `"${k}"`).join(',')}) AND assignee in (${batch.map(id => `"${id}"`).join(',')}) AND created >= "${startStr}" ORDER BY assignee, created DESC`;
 
       let batchIssues = [];
       try {
@@ -731,8 +732,8 @@ app.get('/api/timeline', async (req, res) => {
           };
         }
 
-        // Limit to 25 tasks per person to keep timeline readable
-        if (byAssignee[aid].tasks.length >= 25) continue;
+        // Limit per person (year view → allow more; groups are collapsible)
+        if (byAssignee[aid].tasks.length >= 60) continue;
 
         const f = issue.fields;
         const isDone = ['Done','Closed','Resolved'].includes(f.status?.name);
