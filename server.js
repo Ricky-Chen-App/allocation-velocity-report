@@ -727,6 +727,77 @@ app.get('/api/drilldown', async (req, res) => {
 });
 
 // ——— TIMELINE ———
+
+// Jira fields needed to place a bar on the timeline (shared by timeline + subtask endpoints)
+const TL_FIELDS = [
+  'summary','status','assignee','priority','project','issuetype',
+  'customfield_10016',       // story points
+  'timeoriginalestimate',
+  'created','updated','resolutiondate',
+  'duedate',                 // original due date
+  'customfield_10015',       // start date (original)
+  'customfield_10578',       // New Start Date
+  'customfield_10049',       // New Due Date
+  'customfield_10062',       // End date
+  'customfield_10008',       // Change start date
+  'subtasks'
+].join(',');
+
+// Resolve a Jira issue's bar coordinates within [startDate, endDate].
+// Returns null when the issue falls entirely outside the display window.
+function computeTaskBars(f, startDate, endDate) {
+  const newStartDate  = f.customfield_10578 ? new Date(f.customfield_10578) : null;
+  const origStartDate = f.customfield_10015 ? new Date(f.customfield_10015) : null;
+  const createdDate   = new Date(f.created);
+  const newDueDate    = f.customfield_10049 ? new Date(f.customfield_10049) : null;
+  const origDueDate   = f.duedate           ? new Date(f.duedate)           : null;
+  const endDate2      = f.customfield_10062 ? new Date(f.customfield_10062) : null;
+  const resolvedDate  = f.resolutiondate    ? new Date(f.resolutiondate)    : null;
+
+  const hasNewStart = !!newStartDate;
+  const hasNewDue   = !!newDueDate;
+  const isRescheduled = hasNewStart || hasNewDue;
+
+  const effectiveStart = newStartDate || origStartDate || createdDate;
+  const clampedStart   = new Date(Math.max(effectiveStart.getTime(), startDate.getTime()));
+
+  const hoursEst = (f.timeoriginalestimate || 0) / 3600;
+  const daysEst  = hoursEst > 0 ? Math.ceil(hoursEst / 6) : Math.max(1, f.customfield_10016 || 3);
+  const fallbackEnd = new Date(clampedStart);
+  fallbackEnd.setDate(fallbackEnd.getDate() + Math.min(daysEst, 10));
+
+  const effectiveEnd = newDueDate || origDueDate || endDate2 || resolvedDate || fallbackEnd;
+  const clampedEnd   = new Date(Math.min(effectiveEnd.getTime(), endDate.getTime()));
+
+  if (clampedEnd < startDate || clampedStart > endDate) return null;
+
+  const clamp = d => new Date(Math.max(startDate.getTime(), Math.min(d.getTime(), endDate.getTime())));
+  const iso   = d => d.toISOString().split('T')[0];
+  const origStartEff = origStartDate || createdDate;
+  const origEndEff   = origDueDate || endDate2 || resolvedDate || (() => { const x = new Date(origStartEff); x.setDate(x.getDate() + Math.min(daysEst, 10)); return x; })();
+  const origBarStart = iso(clamp(origStartEff));
+  const origBarEnd   = iso(clamp(origEndEff));
+  let newBarStart = null, newBarEnd = null;
+  if (isRescheduled) {
+    const ns = newStartDate || origStartEff;
+    const ne = newDueDate   || origEndEff;
+    newBarStart = iso(clamp(ns));
+    newBarEnd   = iso(clamp(ne));
+  }
+
+  return {
+    isRescheduled, hasNewStart, hasNewDue,
+    created:    f.created ? iso(new Date(f.created)) : null,
+    origStart:  origStartDate ? iso(origStartDate) : null,
+    newStart:   newStartDate  ? iso(newStartDate)  : null,
+    origDue:    origDueDate   ? iso(origDueDate)   : null,
+    newDue:     newDueDate    ? iso(newDueDate)    : null,
+    barStart:   iso(clampedStart),
+    barEnd:     iso(clampedEnd),
+    origBarStart, origBarEnd, newBarStart, newBarEnd
+  };
+}
+
 app.get('/api/timeline', async (req, res) => {
   try {
     const { assigneeId, category, projectKey, group } = req.query;
@@ -777,19 +848,7 @@ app.get('/api/timeline', async (req, res) => {
 
     const byAssignee = {};
 
-    const tlFields = [
-      'summary','status','assignee','priority','project','issuetype',
-      'customfield_10016',       // story points
-      'timeoriginalestimate',
-      'created','updated','resolutiondate',
-      'duedate',                 // original due date
-      'customfield_10015',       // start date (original)
-      'customfield_10578',       // New Start Date
-      'customfield_10049',       // New Due Date
-      'customfield_10062',       // End date
-      'customfield_10008',       // Change start date
-      'subtasks'
-    ].join(',');
+    const tlFields = TL_FIELDS;
 
     // Run all member-batches in parallel (each token-paginated internally)
     const projJql = `project in (${projectKeys.map(k => `"${k}"`).join(',')})`;
@@ -826,77 +885,19 @@ app.get('/api/timeline', async (req, res) => {
         const f = issue.fields;
         const isDone = ['Done','Closed','Resolved'].includes(f.status?.name);
 
-        // ——— Date resolution with priority ———
-        // New Start Date (customfield_10578) → Start date (10015) → created
-        const newStartDate  = f.customfield_10578 ? new Date(f.customfield_10578) : null;
-        const origStartDate = f.customfield_10015 ? new Date(f.customfield_10015) : null;
-        const createdDate   = new Date(f.created);
-
-        // New Due Date (customfield_10049) → Due date → End date (10062) → resolved → estimated
-        const newDueDate    = f.customfield_10049 ? new Date(f.customfield_10049) : null;
-        const origDueDate   = f.duedate           ? new Date(f.duedate)           : null;
-        const endDate2      = f.customfield_10062 ? new Date(f.customfield_10062) : null;
-        const resolvedDate  = f.resolutiondate    ? new Date(f.resolutiondate)    : null;
-
-        // Detect if timeline was rescheduled
-        const hasNewStart = !!newStartDate;
-        const hasNewDue   = !!newDueDate;
-        const isRescheduled = hasNewStart || hasNewDue;
-
-        // Effective start for bar
-        const effectiveStart = newStartDate || origStartDate || createdDate;
-        const clampedStart   = new Date(Math.max(effectiveStart.getTime(), startDate.getTime()));
-
-        // Effective end for bar
-        const hoursEst = (f.timeoriginalestimate || 0) / 3600;
-        const daysEst  = hoursEst > 0 ? Math.ceil(hoursEst / 6) : Math.max(1, f.customfield_10016 || 3);
-        const fallbackEnd = new Date(clampedStart);
-        fallbackEnd.setDate(fallbackEnd.getDate() + Math.min(daysEst, 10));
-
-        const effectiveEnd = newDueDate || origDueDate || endDate2 || resolvedDate || fallbackEnd;
-        const clampedEnd   = new Date(Math.min(effectiveEnd.getTime(), endDate.getTime()));
-
-        if (clampedEnd < startDate || clampedStart > endDate) continue;
-
-        // ——— Dual-bar dates: ORIGINAL schedule vs NEW (rescheduled) target ———
-        const clamp = d => new Date(Math.max(startDate.getTime(), Math.min(d.getTime(), endDate.getTime())));
-        const iso   = d => d.toISOString().split('T')[0];
-        // Original bar always uses pre-reschedule dates
-        const origStartEff = origStartDate || createdDate;
-        const origEndEff   = origDueDate || endDate2 || resolvedDate || (() => { const x = new Date(origStartEff); x.setDate(x.getDate() + Math.min(daysEst, 10)); return x; })();
-        const origBarStart = iso(clamp(origStartEff));
-        const origBarEnd   = iso(clamp(origEndEff));
-        // New bar only when rescheduled
-        let newBarStart = null, newBarEnd = null;
-        if (isRescheduled) {
-          const ns = newStartDate || origStartEff;
-          const ne = newDueDate   || origEndEff;
-          newBarStart = iso(clamp(ns));
-          newBarEnd   = iso(clamp(ne));
-        }
+        const bars = computeTaskBars(f, startDate, endDate);
+        if (!bars) continue; // outside display window
 
         byAssignee[aid].tasks.push({
-          key:          issue.key,
-          summary:      f.summary,
-          status:       f.status?.name,
+          key:        issue.key,
+          summary:    f.summary,
+          status:     f.status?.name,
           isDone,
-          isRescheduled,
-          hasNewStart,
-          hasNewDue,
-          created:      f.created ? iso(new Date(f.created)) : null,
-          // raw date values for tooltip
-          origStart:    origStartDate?.toISOString().split('T')[0] || null,
-          newStart:     newStartDate?.toISOString().split('T')[0]  || null,
-          origDue:      origDueDate?.toISOString().split('T')[0]   || null,
-          newDue:       newDueDate?.toISOString().split('T')[0]    || null,
           priority:   f.priority?.name,
           project:    f.project?.name,
           projectKey: f.project?.key,
-          barStart:   clampedStart.toISOString().split('T')[0],
-          barEnd:     clampedEnd.toISOString().split('T')[0],
-          // dual-bar coordinates
-          origBarStart, origBarEnd, newBarStart, newBarEnd,
-          // lightweight subtask list (no own dates in Jira search payload)
+          ...bars,
+          // lightweight subtask list; their bar coords are fetched lazily on expand
           subtasks: (f.subtasks || [])
             .filter(s => !isDropped(s.fields?.status?.name))
             .map(s => ({
@@ -923,6 +924,40 @@ app.get('/api/timeline', async (req, res) => {
     res.json(result);
   } catch(e) {
     console.error('timeline error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Bar coordinates for specific subtask keys (fetched lazily when a task is expanded).
+app.get('/api/timeline-subtasks', async (req, res) => {
+  try {
+    const keys = String(req.query.keys || '')
+      .split(',').map(k => k.trim()).filter(Boolean)
+      .slice(0, 100); // safety cap per request
+    if (!keys.length) return res.json({ bars: {} });
+
+    const now = new Date(), yr = now.getFullYear();
+    const startDate = new Date(yr, 0, 1), endDate = new Date(yr, 11, 31);
+
+    const jql = `key in (${keys.map(k => `"${k}"`).join(',')})`;
+    const issues = await jiraSearchAll(jql, TL_FIELDS, 200);
+
+    const out = {};
+    for (const issue of issues) {
+      const f = issue.fields;
+      if (isDropped(f.status?.name)) continue;
+      const bars = computeTaskBars(f, startDate, endDate);
+      if (!bars) continue; // outside display window
+      out[issue.key] = {
+        summary: f.summary,
+        status:  f.status?.name,
+        isDone:  ['Done','Closed','Resolved'].includes(f.status?.name),
+        ...bars
+      };
+    }
+    res.json({ bars: out });
+  } catch(e) {
+    console.error('timeline-subtasks error:', e.message);
     res.status(500).json({ error: e.message });
   }
 });

@@ -470,6 +470,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .tl-sub-key{font-size:9.5px;font-family:var(--font-mono);color:var(--ink-300);flex-shrink:0}
 .tl-sub-name{font-size:10.5px;color:var(--ink-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tl-sub-bars{flex:1}
+.tl-sub-bar-loading{position:absolute;font-size:11px;letter-spacing:2px;color:var(--ink-300);padding-left:8px}
 .tl-task-bars{position:relative;flex-shrink:0}
 .tl-bar-label{position:absolute;font-size:10px;color:var(--ink-700);white-space:nowrap;pointer-events:none;line-height:20px;height:20px;display:flex;align-items:center}
 .tl-ovr-badge{background:var(--red-100);color:var(--red-700);font-size:8px;font-weight:700;padding:0 4px;border-radius:3px;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
@@ -2369,29 +2370,67 @@ function onTlCategoryChange() {
 }
 
 // ======== TIMELINE ========
-let TL = { data: null, statusFilter: 'all', viewMode: 'developer', expanded: new Set(), expandedTasks: new Set() };
+let TL = { data: null, statusFilter: 'all', viewMode: 'developer', expanded: new Set(), expandedTasks: new Set(), subBars: {} };
 
 // Toggle a project/developer group (collapse/expand); default = collapsed
 function toggleTlGroup(id) {
   if (TL.expanded.has(id)) TL.expanded.delete(id); else TL.expanded.add(id);
   if (TL.data) renderTimeline(TL.data);
 }
+// Find a task by key in the loaded timeline data (raw developer-keyed items)
+function tlFindTask(key) {
+  for (const p of (TL.data?.items || [])) {
+    for (const t of p.tasks) if (t.key === key) return t;
+  }
+  return null;
+}
+// Lazily fetch bar coordinates for a task's subtasks (subtask dates aren't in the
+// main timeline payload). Caches results in TL.subBars; null = fetched, no bar.
+function tlFetchSubBars(key) {
+  const task = tlFindTask(key);
+  const missing = (task?.subtasks || []).map(s => s.key).filter(k => !(k in TL.subBars));
+  return tlFetchSubBarKeys(missing);
+}
 // Toggle a task's subtasks list (collapse/expand); default = collapsed
 function tlToggleTask(key, ev) {
   if (ev) ev.stopPropagation();
-  if (TL.expandedTasks.has(key)) TL.expandedTasks.delete(key); else TL.expandedTasks.add(key);
-  if (TL.data) renderTimeline(TL.data);
+  if (TL.expandedTasks.has(key)) {
+    TL.expandedTasks.delete(key);
+    if (TL.data) renderTimeline(TL.data);
+    return;
+  }
+  TL.expandedTasks.add(key);
+  if (TL.data) renderTimeline(TL.data); // show rows immediately
+  tlFetchSubBars(key);                   // then fill in bars when dates arrive
 }
 function tlExpandAll(open) {
   TL.expanded = new Set();
   TL.expandedTasks = new Set();
+  const subKeys = [];
   if (open) {
     tlBuildItems(TL.data).forEach(g => {
       TL.expanded.add(g.accountId);
-      g.tasks.forEach(t => { if ((t.subtasks||[]).length) TL.expandedTasks.add(t.key); });
+      g.tasks.forEach(t => {
+        const subs = t.subtasks || [];
+        if (subs.length) { TL.expandedTasks.add(t.key); subs.forEach(s => subKeys.push(s.key)); }
+      });
     });
   }
   if (TL.data) renderTimeline(TL.data);
+  // Batch-fetch all subtask bars in chunks (deduped via TL.subBars cache)
+  const missing = [...new Set(subKeys)].filter(k => !(k in TL.subBars));
+  for (let i = 0; i < missing.length; i += 100) tlFetchSubBarKeys(missing.slice(i, i + 100));
+}
+
+// Fetch + cache bar coordinates for an explicit list of subtask keys, then re-render.
+async function tlFetchSubBarKeys(keys) {
+  if (!keys.length) return;
+  try {
+    const r = await api(`/api/timeline-subtasks?keys=${encodeURIComponent(keys.join(','))}`);
+    Object.assign(TL.subBars, r.bars || {});
+    keys.forEach(k => { if (!(k in TL.subBars)) TL.subBars[k] = null; });
+    if (TL.data) renderTimeline(TL.data);
+  } catch (e) { /* leave unfetched; bars stay empty */ }
 }
 
 // 4a. Build rows by viewMode: 'developer' (rows=people) or 'project' (rows=projects)
@@ -2720,6 +2759,21 @@ function renderTimeline(data) {
           : `<span style="width:12px;flex-shrink:0"></span>`;
         const subRows = (taskExpanded ? subtasks.map(s => {
           const sStyle = STATUS_BAR_STYLE[displayStatus(s.status)] || STATUS_BAR_STYLE['To Do'];
+          // Draw the subtask's own bar once its dates have been fetched (TL.subBars).
+          const d = TL.subBars[s.key];
+          let subBar = '';
+          if (d && d.barStart && d.barEnd) {
+            const sLeft = px(d.barStart), sWidth = wOf(d.barStart, d.barEnd);
+            const sd = displayStatus(d.status || s.status);
+            const bStyle = STATUS_BAR_STYLE[sd] || STATUS_BAR_STYLE['To Do'];
+            const se = new Date(d.barEnd); se.setHours(0,0,0,0);
+            const sOver = !d.isDone && se < today;
+            subBar = `${todayMark}
+              <div class="tl-bar" style="left:${sLeft}px;width:${sWidth}px;top:7px;height:16px;position:absolute;background:${bStyle.bg};color:${bStyle.text};border:1px solid ${bStyle.border}${(sOver && sd!=='Delay')?';outline:1.5px solid var(--red-400);outline-offset:-1px':''}" ${attrs({key:s.key,summary:s.summary,status:s.status,project:task.project,_assignee:task._assignee||grp.displayName},d.barStart,d.barEnd,d.newDue||d.origDue||d.barEnd,sOver,d.isDone)}></div>
+              <div class="tl-bar-label" style="left:${sLeft+sWidth+6}px;top:7px;font-size:9.5px;height:16px;line-height:16px">${fmt(d.barStart)} → ${fmt(d.barEnd)}</div>`;
+          } else if (d === undefined) {
+            subBar = `<div class="tl-sub-bar-loading" style="left:0;top:11px">·····</div>`;
+          }
           return `<div class="tl-sub-row" style="min-height:30px">
             <div class="tl-sub-left" style="width:${PERSON_W}px;min-width:${PERSON_W}px">
               <span style="width:7px;height:7px;border-radius:2px;background:${sStyle.bg};flex-shrink:0"></span>
@@ -2727,7 +2781,7 @@ function renderTimeline(data) {
               <span class="tl-sub-name" title="${esc(s.summary||'')}">${s.summary || ''}</span>
               ${statusPill(s.status)}
             </div>
-            <div class="tl-sub-bars" style="width:${chartW}px"></div>
+            <div class="tl-sub-bars" style="width:${chartW}px;position:relative">${subBar}</div>
           </div>`;
         }).join('') : '');
 
