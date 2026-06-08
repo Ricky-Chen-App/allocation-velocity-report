@@ -61,6 +61,11 @@ function isFresh(key) {
   return cache.ts[key] && Date.now() - cache.ts[key] < CACHE_TTL;
 }
 
+// Tasks with status "Dropped"/"Cancelled" are ignored everywhere (not fetched into any view/calc)
+function isDropped(status) {
+  return /drop|cancel/i.test(status || '');
+}
+
 async function jiraGet(path) {
   const res = await fetch(`${JIRA_BASE}${path}`, { headers: HEADERS });
   if (!res.ok) {
@@ -194,6 +199,7 @@ async function computeCapacity() {
     for (const issue of allIssues) {
       const aid = issue.fields.assignee?.accountId;
       if (!aid) continue;
+      if (isDropped(issue.fields.status?.name)) continue; // ignore Dropped entirely
       if (!issuesByAssignee[aid]) issuesByAssignee[aid] = [];
       issuesByAssignee[aid].push(issue);
     }
@@ -379,7 +385,8 @@ async function computeForecast() {
   const jql = `project in (${projectKeys.map(k => `"${k}"`).join(',')}) AND status not in (Done, Closed, Resolved) ORDER BY priority DESC`;
   const fields = 'summary,status,priority,customfield_10016,timeoriginalestimate,project,assignee,issuetype';
   // Token-based pagination (the new /search/jql ignores startAt)
-  const backlog = await jiraSearchAll(jql, fields, 5000);
+  const backlog = (await jiraSearchAll(jql, fields, 5000))
+    .filter(i => !isDropped(i.fields?.status?.name)); // ignore Dropped
 
     // Group by project category
     const projectCategoryMap = {};
@@ -480,7 +487,7 @@ app.get('/api/sync-status', async (req, res) => {
     const jql = `project in (${projectKeys.slice(0, 30).map(k => `"${k}"`).join(',')}) AND updated >= "${since}" ORDER BY updated DESC`;
 
     const data = await jiraGet(`/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=100&fields=summary,status,assignee,reporter,updated,project,priority,issuetype`);
-    const issues = data.issues || [];
+    const issues = (data.issues || []).filter(i => !isDropped(i.fields.status?.name)); // ignore Dropped
 
     const memberSet = new Set(members.map(m => m.accountId));
     const synced = issues.filter(i => i.fields.assignee && memberSet.has(i.fields.assignee.accountId));
@@ -538,7 +545,8 @@ app.get('/api/tasks', async (req, res) => {
     if (status) jql += ` AND status = "${status}"`;
     jql += ' ORDER BY updated DESC';
 
-    const issues = await jiraSearchAll(jql, 'summary,status,assignee,priority,project,issuetype,customfield_10016,timeoriginalestimate,created,updated,duedate', 3000);
+    const issues = (await jiraSearchAll(jql, 'summary,status,assignee,priority,project,issuetype,customfield_10016,timeoriginalestimate,created,updated,duedate', 3000))
+      .filter(i => !isDropped(i.fields.status?.name)); // ignore Dropped
 
     res.json({
       total: issues.length,
@@ -666,10 +674,10 @@ app.get('/api/drilldown', async (req, res) => {
     const issues = await jiraSearchAll(jql, 'summary,status,customfield_10016,parent,subtasks,issuetype', 800);
 
     const isDone = s => /done|closed|resolved|complete|production/i.test(s || '');
-    const doneCount = issues.filter(i => isDone(i.fields?.status?.name)).length;
-
-    // Only display NON-DONE tasks (request: data selain status done)
-    const active = issues.filter(i => !isDone(i.fields?.status?.name));
+    // Ignore Dropped entirely; then display only NON-DONE tasks
+    const kept = issues.filter(i => !isDropped(i.fields?.status?.name));
+    const doneCount = kept.filter(i => isDone(i.fields?.status?.name)).length;
+    const active = kept.filter(i => !isDone(i.fields?.status?.name));
 
     const epicMap = {};
     for (const it of active) {
@@ -686,7 +694,7 @@ app.get('/api/drilldown', async (req, res) => {
         storyPoints: f.customfield_10016 ?? null,
         // also hide done subtasks
         subtasks: (f.subtasks || [])
-          .filter(s => !isDone(s.fields?.status?.name))
+          .filter(s => !isDone(s.fields?.status?.name) && !isDropped(s.fields?.status?.name))
           .map(s => ({ key: s.key, title: s.fields?.summary, status: s.fields?.status?.name }))
       });
     }
@@ -784,6 +792,7 @@ app.get('/api/timeline', async (req, res) => {
         const aid   = issue.fields.assignee?.accountId;
         const aName = issue.fields.assignee?.displayName;
         if (!aid) continue;
+        if (isDropped(issue.fields.status?.name)) continue; // ignore Dropped entirely
 
         if (!byAssignee[aid]) {
           const member  = members.find(m => m.accountId === aid) || {};
