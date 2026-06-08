@@ -787,7 +787,8 @@ app.get('/api/timeline', async (req, res) => {
       'customfield_10578',       // New Start Date
       'customfield_10049',       // New Due Date
       'customfield_10062',       // End date
-      'customfield_10008'        // Change start date
+      'customfield_10008',       // Change start date
+      'subtasks'
     ].join(',');
 
     // Run all member-batches in parallel (each token-paginated internally)
@@ -894,7 +895,16 @@ app.get('/api/timeline', async (req, res) => {
           barStart:   clampedStart.toISOString().split('T')[0],
           barEnd:     clampedEnd.toISOString().split('T')[0],
           // dual-bar coordinates
-          origBarStart, origBarEnd, newBarStart, newBarEnd
+          origBarStart, origBarEnd, newBarStart, newBarEnd,
+          // lightweight subtask list (no own dates in Jira search payload)
+          subtasks: (f.subtasks || [])
+            .filter(s => !isDropped(s.fields?.status?.name))
+            .map(s => ({
+              key:     s.key,
+              summary: s.fields?.summary,
+              status:  s.fields?.status?.name,
+              isDone:  ['Done','Closed','Resolved'].includes(s.fields?.status?.name)
+            }))
         });
       }
     }
