@@ -206,9 +206,13 @@ async function computeCapacity() {
       const projectMap = {};
 
       for (const issue of issues) {
-        // Utilization counts only NON-DONE tasks (done work no longer consumes capacity)
-        const st = issue.fields.status?.name || '';
-        if (/done|closed|resolved|complete|production/i.test(st)) continue;
+        // Utilization counts only tasks that are actively consuming capacity.
+        // Excluded: Done (selesai) AND To Do (belum dikerjakan) — both still DISPLAYED elsewhere,
+        // but neither affects the capacity %, per-project or overall.
+        const k = (issue.fields.status?.name || '').toLowerCase().trim();
+        const isDone = /done|closed|resolved|complete|production/.test(k);
+        const isTodo = /to ?do|todo|backlog/.test(k) || k === 'open' || k === 'new';
+        if (isDone || isTodo) continue;
 
         const weight = getIssueWeight(issue);
         const activeDays = getActiveDays(issue, startOfMonth, endOfMonth, workingDays);
