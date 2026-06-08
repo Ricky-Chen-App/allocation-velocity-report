@@ -206,6 +206,10 @@ async function computeCapacity() {
       const projectMap = {};
 
       for (const issue of issues) {
+        // Utilization counts only NON-DONE tasks (done work no longer consumes capacity)
+        const st = issue.fields.status?.name || '';
+        if (/done|closed|resolved|complete|production/i.test(st)) continue;
+
         const weight = getIssueWeight(issue);
         const activeDays = getActiveDays(issue, startOfMonth, endOfMonth, workingDays);
         const contribution = weight * activeDays;
@@ -657,8 +661,14 @@ app.get('/api/drilldown', async (req, res) => {
     const jql = `assignee = "${assigneeId}" AND project = "${projectKey}" ORDER BY created DESC`;
     const issues = await jiraSearchAll(jql, 'summary,status,customfield_10016,parent,subtasks,issuetype', 800);
 
+    const isDone = s => /done|closed|resolved|complete|production/i.test(s || '');
+    const doneCount = issues.filter(i => isDone(i.fields?.status?.name)).length;
+
+    // Only display NON-DONE tasks (request: data selain status done)
+    const active = issues.filter(i => !isDone(i.fields?.status?.name));
+
     const epicMap = {};
-    for (const it of issues) {
+    for (const it of active) {
       const f = it.fields || {};
       const epicKey   = f.parent?.key || 'NO_EPIC';
       const epicTitle = f.parent?.fields?.summary || 'Tanpa Epic';
@@ -670,18 +680,20 @@ app.get('/api/drilldown', async (req, res) => {
         title: f.summary,
         status: f.status?.name,
         storyPoints: f.customfield_10016 ?? null,
-        subtasks: (f.subtasks || []).map(s => ({ key: s.key, title: s.fields?.summary, status: s.fields?.status?.name }))
+        // also hide done subtasks
+        subtasks: (f.subtasks || [])
+          .filter(s => !isDone(s.fields?.status?.name))
+          .map(s => ({ key: s.key, title: s.fields?.summary, status: s.fields?.status?.name }))
       });
     }
 
-    const isDone = s => /done|closed|resolved|complete|production/i.test(s || '');
     res.json({
       projectKey,
       projectName: proj?.name || projectKey,
-      totalTasks: issues.length,
-      doneTasks: issues.filter(i => isDone(i.fields?.status?.name)).length,
-      inProgressTasks: issues.filter(i => /progress|develop|coding|review/i.test(i.fields?.status?.name || '')).length,
-      delayTasks: issues.filter(i => /delay/i.test(i.fields?.status?.name || '')).length,
+      totalTasks: active.length,          // displayed (non-done)
+      doneTasks: doneCount,               // hidden — shown as context only
+      inProgressTasks: active.filter(i => /progress|develop|coding|review/i.test(i.fields?.status?.name || '')).length,
+      delayTasks: active.filter(i => /delay/i.test(i.fields?.status?.name || '')).length,
       epics: Object.values(epicMap).sort((a, b) => b.taskCount - a.taskCount)
     });
   } catch (e) {

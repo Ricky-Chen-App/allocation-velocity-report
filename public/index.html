@@ -473,8 +473,9 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .cap-drill-loading{display:flex;align-items:center;gap:10px;padding:18px;color:var(--ink-400);font-size:12.5px}
 .drill-close{margin-left:auto;font-size:11px;color:var(--ink-500);background:var(--ink-0);border:1px solid var(--ink-200);border-radius:var(--radius-sm);padding:3px 9px;cursor:pointer;font-family:var(--font-body)}
 .drill-close:hover{background:var(--ink-50)}
-.cap-drill-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px;max-height:380px;overflow-y:auto}
-.drill-epic{border:1px solid var(--ink-100);border-radius:var(--radius-sm);overflow:hidden}
+.cap-drill-body{padding:10px 12px;max-height:380px;overflow-y:auto}
+.drill-epic{border:1px solid var(--ink-100);border-radius:var(--radius-sm);overflow:hidden;margin-bottom:8px;flex-shrink:0}
+.drill-epic:last-child{margin-bottom:0}
 .drill-epic-hd{width:100%;display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--ink-0);border:none;cursor:pointer;text-align:left;font-family:var(--font-body);transition:background var(--transition)}
 .drill-epic-hd:hover{background:var(--blue-50)}
 .drill-chev{width:11px;height:11px;color:var(--ink-400);flex-shrink:0;transition:transform var(--transition)}
@@ -1817,16 +1818,16 @@ function renderDrill(accountId, data) {
     <div class="cap-drill-hd">
       <span style="width:8px;height:8px;border-radius:50%;background:var(--blue-500)"></span>
       <strong>${data.projectKey} — ${data.projectName}</strong>
-      <span style="font-size:11px;color:var(--ink-400)">${data.totalTasks} task</span>
+      <span style="font-size:11px;color:var(--ink-400)">${data.totalTasks} task aktif</span>
       <button class="drill-close" onclick="capDrill('${accountId}','${data.projectKey}')">✕ Tutup</button>
     </div>
-    <div class="cap-drill-body">${epicBlocks || '<div style="padding:12px;color:var(--ink-400);font-size:12px">Tidak ada task.</div>'}</div>
+    <div class="cap-drill-body">${epicBlocks || '<div style="padding:12px;color:var(--ink-400);font-size:12px">Tidak ada task aktif (semua sudah Done).</div>'}</div>
     <div class="cap-drill-summary">
       <span><strong>${epics.length}</strong> epic</span>
-      <span><strong>${data.totalTasks}</strong> task</span>
-      <span style="color:var(--green-700)"><strong>${data.doneTasks}</strong> selesai</span>
+      <span><strong>${data.totalTasks}</strong> task aktif</span>
       <span style="color:var(--blue-700)"><strong>${data.inProgressTasks}</strong> in progress</span>
       ${data.delayTasks>0?`<span style="color:var(--red-600)"><strong>${data.delayTasks}</strong> delay</span>`:''}
+      ${data.doneTasks>0?`<span style="color:var(--ink-400)">${data.doneTasks} done (disembunyikan)</span>`:''}
     </div>
   </div>`;
 }
