@@ -164,6 +164,18 @@ app.get('/api/members', async (req, res) => {
   }
 });
 
+// ——— Force a full re-sync from Jira (clear all server caches) ———
+app.get('/api/refresh', (req, res) => {
+  cache.projects = null;
+  cache.members  = null;
+  cache.capacity = null;
+  cache.forecast = null;
+  cache.timeline = {};
+  cache.ts = {};
+  console.log('↻ Cache cleared — next requests re-fetch fresh from Jira');
+  res.json({ ok: true, clearedAt: new Date().toISOString() });
+});
+
 // ——— Capacity computation (shared by endpoint + warmup) ———
 async function computeCapacity() {
   if (isFresh('capacity') && cache.capacity) return cache.capacity;
@@ -212,13 +224,13 @@ async function computeCapacity() {
       const projectMap = {};
 
       for (const issue of issues) {
-        // Utilization counts only tasks that are actively consuming capacity.
-        // Excluded: Done (selesai) AND To Do (belum dikerjakan) — both still DISPLAYED elsewhere,
-        // but neither affects the capacity %, per-project or overall.
+        // Utilization counts only tasks ACTIVELY consuming capacity (In Progress, Delay, ...).
+        // Excluded (still DISPLAYED, but not counted): Done, To Do, On Hold/Blocked, Waiting telco.
         const k = (issue.fields.status?.name || '').toLowerCase().trim();
-        const isDone = /done|closed|resolved|complete|production/.test(k);
-        const isTodo = /to ?do|todo|backlog/.test(k) || k === 'open' || k === 'new';
-        if (isDone || isTodo) continue;
+        const isDone    = /done|closed|resolved|complete|production/.test(k);
+        const isTodo    = /to ?do|todo|backlog/.test(k) || k === 'open' || k === 'new';
+        const isBlocked = /on ?hold|hold|block|waiting|telco|pending/.test(k);
+        if (isDone || isTodo || isBlocked) continue;
 
         const weight = getIssueWeight(issue);
         const activeDays = getActiveDays(issue, startOfMonth, endOfMonth, workingDays);

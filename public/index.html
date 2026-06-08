@@ -773,7 +773,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
           <div class="page-title">Jira Sync Status</div>
           <div class="page-sub">Issues 7 hari terakhir · linkit360.atlassian.net</div>
         </div>
-        <button class="btn btn-primary" onclick="loadSyncData()">
+        <button class="btn btn-primary" onclick="syncNow()">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8A6 6 0 0114 8M14 8a6 6 0 01-12 0"/><path d="M14 4v4h-4"/></svg>
           Sinkronkan Sekarang
         </button>
@@ -2160,6 +2160,30 @@ function renderTaskColumns(tasks) {
 }
 
 // ——— SYNC PAGE ———
+// "Sinkronkan Sekarang" — full re-sync from Jira (clears server + client cache),
+// so the user does NOT need the separate "Refresh Data" button.
+async function syncNow() {
+  showLoading('Sinkronisasi penuh dengan Jira…');
+  try {
+    await api('/api/refresh');               // clear server-side caches
+    // reset client state so everything re-fetches fresh
+    STATE.projects = null; STATE.members = null; STATE.capacity = null;
+    STATE.forecast = null; STATE.velocity = null; STATE.sync = null; STATE.tasks = null;
+    if (typeof TL !== 'undefined') TL.data = null;
+    if (typeof CAP_DRILL !== 'undefined') CAP_DRILL.cache = {};
+    const [projects, members] = await Promise.all([ api('/api/projects'), api('/api/members') ]);
+    STATE.projects = projects; STATE.members = members;
+    updatePeriodLabel();
+    await loadCapacity();                     // recompute capacity from fresh data
+    await loadSyncData();                     // refresh the sync table
+    document.getElementById('sync-label').textContent = `Tersinkron dari Jira · ${new Date().toLocaleTimeString('id-ID')}`;
+  } catch(e) {
+    showError('Gagal sinkronisasi: ' + e.message);
+  } finally {
+    hideLoading();
+  }
+}
+
 async function loadSyncData() {
   showLoading('Mengecek sync status Jira…');
   try {
