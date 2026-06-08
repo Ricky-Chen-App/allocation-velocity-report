@@ -6,19 +6,25 @@
 <title>Resource Portal — Linkit360</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
-  --ink-900:#0a0d12;--ink-800:#141820;--ink-700:#1e2433;--ink-600:#2c3347;
-  --ink-500:#4a5368;--ink-400:#6b7590;--ink-300:#9aa3b8;--ink-200:#c4cad8;
-  --ink-100:#e8ebf2;--ink-50:#f4f6fa;--ink-0:#ffffff;
-  --blue-700:#0f4c8a;--blue-600:#1862b5;--blue-500:#2277d4;--blue-400:#4a94e8;
-  --blue-100:#deeeff;--blue-50:#eef6ff;
-  --green-600:#0d6640;--green-500:#16915c;--green-400:#22b573;--green-100:#d2f4e4;--green-50:#edfaf3;
-  --amber-600:#92540a;--amber-500:#b96d14;--amber-400:#e08c24;--amber-100:#fde9c3;--amber-50:#fff6e3;
-  --red-600:#8b1f20;--red-500:#b52e2e;--red-400:#d94c4c;--red-100:#fbd8d8;--red-50:#fff0f0;
-  --violet-600:#4c2d9c;--violet-500:#6540c4;--violet-400:#8060e0;--violet-100:#e4dcf9;--violet-50:#f2eeff;
-  --teal-600:#0c5c62;--teal-500:#157880;--teal-400:#1e97a0;--teal-100:#ccf0f3;--teal-50:#e8f9fa;
+  /* —— Cool, true neutrals (OKLCH, hue ~262) — never cream/sand/beige —— */
+  --ink-900:oklch(0.205 0.022 262);--ink-800:oklch(0.24 0.02 262);--ink-700:oklch(0.31 0.019 262);--ink-600:oklch(0.40 0.018 262);
+  --ink-500:oklch(0.46 0.016 262);--ink-400:oklch(0.575 0.012 262);--ink-300:oklch(0.705 0.010 260);--ink-200:oklch(0.852 0.008 255);
+  --ink-100:oklch(0.912 0.006 255);--ink-50:oklch(0.968 0.005 255);--ink-0:oklch(1 0 0);
+  /* —— Committed accent: cobalt —— */
+  --blue-700:oklch(0.42 0.18 256);--blue-600:oklch(0.48 0.18 256);--blue-500:oklch(0.55 0.17 256);--blue-400:oklch(0.63 0.15 255);
+  --blue-100:oklch(0.90 0.05 256);--blue-50:oklch(0.95 0.03 256);
+  /* —— Heat scale: healthy / done —— */
+  --green-600:oklch(0.48 0.11 160);--green-500:oklch(0.565 0.13 159);--green-400:oklch(0.63 0.14 158);--green-100:oklch(0.90 0.06 160);--green-50:oklch(0.965 0.025 162);
+  /* —— Review / warning —— */
+  --amber-600:oklch(0.55 0.12 70);--amber-500:oklch(0.64 0.14 75);--amber-400:oklch(0.72 0.15 78);--amber-100:oklch(0.92 0.07 80);--amber-50:oklch(0.972 0.03 82);
+  /* —— Overload —— */
+  --red-600:oklch(0.47 0.17 25);--red-500:oklch(0.55 0.19 25);--red-400:oklch(0.63 0.18 25);--red-100:oklch(0.90 0.06 25);--red-50:oklch(0.965 0.025 25);
+  /* —— Project / secondary cool violet —— */
+  --violet-600:oklch(0.45 0.16 285);--violet-500:oklch(0.55 0.17 285);--violet-400:oklch(0.64 0.16 286);--violet-100:oklch(0.91 0.05 286);--violet-50:oklch(0.962 0.025 288);
+  --teal-600:oklch(0.48 0.08 200);--teal-500:oklch(0.57 0.09 200);--teal-400:oklch(0.64 0.10 200);--teal-100:oklch(0.91 0.045 200);--teal-50:oklch(0.962 0.02 200);
   /* —— Semantic status tokens (single source of truth for status colors) —— */
   --status-overload-bg:var(--red-50);   --status-overload-text:var(--red-600);   --status-overload-bar:var(--red-400);
   --status-warning-bg:var(--amber-50);  --status-warning-text:var(--amber-600);  --status-warning-bar:var(--amber-400);
@@ -27,11 +33,11 @@
   --status-external-bg:var(--amber-50); --status-external-text:var(--amber-600); --status-external-bar:var(--amber-400);
   --status-synced-bg:var(--green-50);   --status-synced-text:var(--green-600);   --status-synced-bar:var(--green-400);
   --sidebar-w:220px;--header-h:56px;
-  --radius-sm:6px;--radius-md:10px;--radius-lg:14px;--radius-xl:20px;
-  --shadow-xs:0 1px 2px rgba(10,13,18,.05);--shadow-sm:0 2px 8px rgba(10,13,18,.08);
-  --shadow-md:0 4px 16px rgba(10,13,18,.10);--shadow-lg:0 8px 32px rgba(10,13,18,.14);
-  --font-body:'DM Sans',sans-serif;--font-mono:'DM Mono',monospace;
-  --transition:150ms cubic-bezier(.4,0,.2,1);
+  --radius-sm:7px;--radius-md:10px;--radius-lg:12px;--radius-xl:18px;
+  --shadow-xs:0 1px 2px oklch(0.24 0.02 262/.05);--shadow-sm:0 2px 8px oklch(0.24 0.02 262/.08);
+  --shadow-md:0 4px 16px oklch(0.24 0.02 262/.10);--shadow-lg:0 8px 32px oklch(0.24 0.02 262/.14);
+  --font-body:'IBM Plex Sans',-apple-system,system-ui,sans-serif;--font-mono:'IBM Plex Mono',ui-monospace,monospace;
+  --transition:160ms cubic-bezier(.22,.61,.36,1);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:14px}
@@ -1239,7 +1245,7 @@ function renderExecutivePage(cap) {
   const pct = Math.min(util / 100, 1);
   const arcLen = 226;
   const fillLen = pct * arcLen;
-  const gaugeColor = s.avgUtilization > 100 ? '#d94c4c' : s.avgUtilization > 80 ? '#e08c24' : '#22b573';
+  const gaugeColor = s.avgUtilization > 100 ? 'var(--red-400)' : s.avgUtilization > 80 ? 'var(--amber-400)' : 'var(--green-400)';
 
   // Group utilization
   const groupStats = {};
@@ -1347,12 +1353,12 @@ function renderExecutivePage(cap) {
       </div>
       <div class="gauge-wrap">
         <svg width="180" height="110" viewBox="0 0 180 110" style="overflow:visible">
-          <path d="M18 100 A72 72 0 0 1 162 100" fill="none" stroke="#e8ebf2" stroke-width="14" stroke-linecap="round"/>
+          <path d="M18 100 A72 72 0 0 1 162 100" fill="none" stroke="var(--ink-100)" stroke-width="14" stroke-linecap="round"/>
           <path d="M18 100 A72 72 0 0 1 162 100" fill="none" stroke="${gaugeColor}" stroke-width="14" stroke-linecap="round" stroke-dasharray="${arcLen} ${arcLen}" stroke-dashoffset="${arcLen - fillLen}"/>
-          <line x1="162" y1="100" x2="162" y2="86" stroke="#9aa3b8" stroke-width="1.5" stroke-dasharray="3 2"/>
-          <text x="162" y="82" text-anchor="middle" font-size="9" fill="#9aa3b8">100%</text>
-          <text x="90" y="88" font-family="DM Sans,sans-serif" font-weight="600" font-size="32" fill="#0a0d12" letter-spacing="-2" text-anchor="middle">${s.avgUtilization}%</text>
-          <text x="90" y="104" font-family="DM Sans,sans-serif" font-size="11" fill="#6b7590" text-anchor="middle">Rata-rata Tim</text>
+          <line x1="162" y1="100" x2="162" y2="86" stroke="var(--ink-300)" stroke-width="1.5" stroke-dasharray="3 2"/>
+          <text x="162" y="82" text-anchor="middle" font-size="9" fill="var(--ink-300)">100%</text>
+          <text x="90" y="88" font-family="IBM Plex Sans,sans-serif" font-weight="600" font-size="32" fill="var(--ink-900)" letter-spacing="-2" text-anchor="middle">${s.avgUtilization}%</text>
+          <text x="90" y="104" font-family="IBM Plex Sans,sans-serif" font-size="11" fill="var(--ink-400)" text-anchor="middle">Rata-rata Tim</text>
         </svg>
       </div>
       <div class="gauge-footer">
@@ -2476,7 +2482,7 @@ const TL_STATUS_PILLS = [
   { key:'waitingtelco',label:'Waiting telco',dot:'var(--amber-500)',   cls:'orange'},
 ];
 const TL_PILL_STYLE = {
-  all:    { base:'background:var(--blue-700);color:#fff;border-color:var(--blue-700)',         active:'background:var(--blue-800,#0f4c8a)' },
+  all:    { base:'background:var(--blue-700);color:#fff;border-color:var(--blue-700)',         active:'background:var(--blue-700)' },
   amber:  { base:'background:var(--amber-50);color:var(--amber-700);border-color:var(--amber-200)', active:'background:var(--amber-100);border-color:var(--amber-400)' },
   green:  { base:'background:var(--green-50);color:var(--green-700);border-color:var(--green-200)', active:'background:var(--green-100);border-color:var(--green-400)' },
   blue:   { base:'background:var(--blue-50);color:var(--blue-700);border-color:var(--blue-200)',    active:'background:var(--blue-100);border-color:var(--blue-400)' },
