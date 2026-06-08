@@ -471,6 +471,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .tl-sub-name{font-size:10.5px;color:var(--ink-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tl-sub-bars{flex:1}
 .tl-sub-bar-loading{position:absolute;font-size:11px;letter-spacing:2px;color:var(--ink-300);padding-left:8px}
+.tl-sub-nodate{position:absolute;height:16px;display:inline-flex;align-items:center;padding:0 8px;font-size:9px;color:var(--ink-400);border:1px dashed var(--ink-200);border-radius:4px;background:var(--ink-50);white-space:nowrap}
 .tl-task-bars{position:relative;flex-shrink:0}
 .tl-bar-label{position:absolute;font-size:10px;color:var(--ink-700);white-space:nowrap;pointer-events:none;line-height:20px;height:20px;display:flex;align-items:center}
 .tl-ovr-badge{background:var(--red-100);color:var(--red-700);font-size:8px;font-weight:700;padding:0 4px;border-radius:3px;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
@@ -2657,17 +2658,41 @@ function renderTimeline(data) {
     return;
   }
 
-  const { start, end } = data.dateRange;
-  const startD = new Date(start), endD = new Date(end);
-  const totalDays = Math.ceil((endD - startD) / 86400000) + 1;
+  // ——— Task 1: auto-fit the date axis to the ACTUAL data range ———
+  // The server window is the full year; most data is clustered in a few months,
+  // so we snap the axis to the months that actually contain bars (incl. loaded
+  // subtask bars) and clamp to the server window. Month-based axis is preserved.
+  const srvStart = new Date(data.dateRange.start), srvEnd = new Date(data.dateRange.end);
+  const barDates = [];
+  for (const g of items) for (const t of g.tasks) {
+    [t.origBarStart, t.barStart, t.newBarStart, t.origBarEnd, t.barEnd, t.newBarEnd]
+      .forEach(d => { if (d) barDates.push(new Date(d)); });
+    for (const s of (t.subtasks || [])) {
+      const sb = TL.subBars[s.key];
+      if (sb && sb.barStart) { barDates.push(new Date(sb.barStart)); barDates.push(new Date(sb.barEnd)); }
+    }
+  }
+  let startD, endD;
+  if (barDates.length) {
+    const lo = new Date(Math.min(...barDates.map(d => d.getTime())));
+    const hi = new Date(Math.max(...barDates.map(d => d.getTime())));
+    startD = new Date(Math.max(new Date(lo.getFullYear(), lo.getMonth(), 1).getTime(), srvStart.getTime()));
+    endD   = new Date(Math.min(new Date(hi.getFullYear(), hi.getMonth() + 1, 0).getTime(), srvEnd.getTime()));
+  } else {
+    startD = srvStart; endD = srvEnd;
+  }
+  const totalDays = Math.max(1, Math.ceil((endD - startD) / 86400000) + 1);
   const today = new Date(); today.setHours(0,0,0,0);
   const sevenAgo = new Date(today); sevenAgo.setDate(today.getDate() - 7);
 
-  const DAY_W = 3.4;        // year view → compact month scale
   const PERSON_W = 300;
+  // Adaptive day width: fill a comfortable chart width. Clamped so a huge range
+  // stays compact (≈ old 3.4) and a narrow range doesn't over-stretch.
+  const TARGET_CHART_W = 1180;
+  const DAY_W = Math.max(3.0, Math.min(14, TARGET_CHART_W / totalDays));
   const chartW = Math.round(totalDays * DAY_W);
   const px  = iso => Math.max(0, Math.round((new Date(iso) - startD) / 86400000)) * DAY_W;
-  const wOf = (a, b) => Math.max(7, (Math.round((new Date(b) - new Date(a)) / 86400000) + 1) * DAY_W);
+  const wOf = (a, b) => Math.max(8, (Math.round((new Date(b) - new Date(a)) / 86400000) + 1) * DAY_W);
   const esc = v => (v||'').replace(/'/g,'`').replace(/"/g,'&quot;');
   const fmt = iso => iso ? new Date(iso).toLocaleDateString('id-ID',{day:'numeric',month:'short'}) : '';
 
@@ -2773,6 +2798,9 @@ function renderTimeline(data) {
               <div class="tl-bar-label" style="left:${sLeft+sWidth+6}px;top:7px;font-size:9.5px;height:16px;line-height:16px">${fmt(d.barStart)} → ${fmt(d.barEnd)}</div>`;
           } else if (d === undefined) {
             subBar = `<div class="tl-sub-bar-loading" style="left:0;top:11px">·····</div>`;
+          } else {
+            // Fetched, but the subtask has no usable date — show a clear placeholder
+            subBar = `<div class="tl-sub-nodate" style="left:0;top:7px">Tidak ada tanggal</div>`;
           }
           return `<div class="tl-sub-row" style="min-height:30px">
             <div class="tl-sub-left" style="width:${PERSON_W}px;min-width:${PERSON_W}px">
