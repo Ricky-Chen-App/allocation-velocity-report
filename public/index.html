@@ -278,6 +278,11 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 /* LOADING OVERLAY */
 .loading-overlay{position:fixed;inset:0;background:rgba(10,13,18,.3);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}
 .loading-overlay.show{opacity:1;pointer-events:all}
+/* Non-blocking top progress bar (replaces the blocking loading popup) */
+#top-loader{position:fixed;top:0;left:0;right:0;height:3px;z-index:200;overflow:hidden;opacity:0;transition:opacity .25s;pointer-events:none}
+#top-loader.show{opacity:1}
+#top-loader::before{content:'';position:absolute;top:0;height:100%;width:35%;left:-35%;border-radius:0 3px 3px 0;background:linear-gradient(90deg,transparent,var(--accent),var(--accent-2),transparent);animation:topload 1.1s var(--ease) infinite}
+@keyframes topload{0%{left:-35%}100%{left:100%}}
 .loading-card{background:var(--ink-0);border-radius:var(--radius-xl);padding:28px 36px;display:flex;flex-direction:column;align-items:center;gap:14px;box-shadow:var(--shadow-lg)}
 .loading-dots{display:flex;gap:6px}
 .loading-dot{width:8px;height:8px;border-radius:50%;background:var(--blue-400);animation:blink 1.2s ease-in-out infinite}
@@ -1035,19 +1040,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 </div>
 
 <!-- LOADING OVERLAY -->
-<div class="loading-overlay" id="loading-overlay">
-  <div class="loading-card">
-    <div class="ai-spark" style="width:40px;height:40px;border-radius:10px">
-      <svg viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="1.8" width="20" height="20"><path d="M8 2l1 3h3l-2.5 2 1 3L8 8.5 5.5 10l1-3L4 5h3z"/></svg>
-    </div>
-    <div class="loading-dots">
-      <div class="loading-dot"></div>
-      <div class="loading-dot"></div>
-      <div class="loading-dot"></div>
-    </div>
-    <div class="loading-text" id="loading-text">Loading data from Jira…</div>
-  </div>
-</div>
+<div id="top-loader" role="status" aria-label="Loading"></div>
 
 <script>
 /*
@@ -1163,12 +1156,15 @@ function toggleSidebar(open) {
 }
 
 // ——— Loading helpers ———
+// Non-blocking: a thin top progress bar instead of a blocking center popup.
+// When SILENT_LOAD is on (background auto-refresh) we show nothing at all.
+let SILENT_LOAD = false;
 function showLoading(msg) {
-  document.getElementById('loading-text').textContent = msg || 'Loading data from Jira…';
-  document.getElementById('loading-overlay').classList.add('show');
+  if (SILENT_LOAD) return;
+  document.getElementById('top-loader')?.classList.add('show');
 }
 function hideLoading() {
-  document.getElementById('loading-overlay').classList.remove('show');
+  document.getElementById('top-loader')?.classList.remove('show');
 }
 function showError(msg) {
   const b = document.getElementById('error-banner');
@@ -2253,7 +2249,7 @@ async function syncNow() {
 }
 
 async function loadSyncData() {
-  showLoading('Mengecek sync status Jira…');
+  showLoading('Checking Jira sync status…');
   try {
     const data = await api('/api/sync-status');
     STATE.sync = data;
@@ -3224,11 +3220,17 @@ function exportMembersCSV() {
 }
 
 // ——— REFRESH ———
-async function refreshAll() {
-  STATE.projects = null; STATE.members = null;
-  STATE.capacity = null; STATE.forecast = null;
-  STATE.velocity = null; STATE.sync = null; STATE.tasks = null;
-  await init();
+async function refreshAll(opts) {
+  const silent = !!(opts && opts.silent);
+  SILENT_LOAD = silent;
+  try {
+    STATE.projects = null; STATE.members = null;
+    STATE.capacity = null; STATE.forecast = null;
+    STATE.velocity = null; STATE.sync = null; STATE.tasks = null;
+    await init();
+  } finally {
+    SILENT_LOAD = false;
+  }
 }
 
 // ——— HELPERS ———
@@ -3238,8 +3240,8 @@ function formatDate(str) {
   return d.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
 }
 
-// ——— AUTO REFRESH every 5 min ———
-setInterval(refreshAll, 5 * 60 * 1000);
+// ——— AUTO REFRESH every 5 min (silent: no loading indicator) ———
+setInterval(() => refreshAll({ silent: true }), 5 * 60 * 1000);
 
 // Re-render relative times in Jira Sync table every 60s (Task 1b)
 setInterval(() => {
