@@ -18,43 +18,41 @@ glance.
 
 ## Current state of the code
 
-The working reference is a **single self-contained file**, `index.html`:
-HTML + CSS + vanilla JS, no build step, deployable to Vercel as-is. Data is a
-mock object (`DEVS`, `TASKS`, etc.) standing in for the Jira API.
+Two files do the work, no build step:
 
-This is intentional for the prototype phase. When migrating to a real app,
-preferred structure:
+- **`server.js`** — Express server. Talks to the live Jira REST API
+  (`linkit360.atlassian.net`), owns the weight/utilization model, caching, and
+  the JSON endpoints (`/api/timeline`, `/api/timeline-subtasks`, `/api/drilldown`,
+  capacity/velocity/members/sync, …). **This is the data layer** — keep it the
+  single source of truth for the utilization formula.
+- **`public/index.html`** — the entire frontend: HTML + CSS (`:root` design
+  tokens) + vanilla JS that fetches the endpoints and renders every view. No
+  framework, no bundler.
 
-```
-src/
-  lib/jira.ts        # Jira REST client + the weight/utilization model
-  data/types.ts      # Developer, Task, Sprint, ForecastRow
-  styles/tokens.css  # the design tokens below (single source of truth)
-  views/             # allocation, board, forecast, timeline, team, sync
-  components/        # HeatBar, KpiStrip, StatusChip, SyncBadge, States
-```
-
-Keep the single-file version working until the migration reaches parity.
+Data is **live from Jira**, not mock. Env/credentials live in `.env` /
+`*.env` files (not committed).
 
 ## Run / deploy
 
-- Local: open `index.html` directly, or `npx serve .`
-- Deploy: drop on Vercel (static). No env vars needed for the mock build.
-- Error-state preview: append `?state=error` to the URL.
+- Local: `npm start` (Express serves `public/` and the API on port 3000).
+- Deploy: `vercel --prod` (project `allocation-velocity-report`). The repo is on
+  GitHub (`Ricky-Chen-App/allocation-velocity-report`); pushes can auto-deploy if
+  the Vercel git integration is connected.
+- Visual language is **"Momentum"** (see Design system). UI copy is **English**.
 
 ## Information architecture
 
-Six destinations, two groups. Do not reintroduce a standalone "Executive" page —
-its KPIs live as the strip on top of Allocation.
+Seven destinations in the sidebar, two groups. **Do not add, remove, rename,
+merge, or reorder them.**
 
-**Plan**
-- `allocation` (home) — KPI strip + capacity board with workload heat-bars,
-  rows expand to show each developer's active tasks. Merges the old Executive +
-  Developer Capacity + Task Allocation.
-- `board` — kanban: To Do / In Progress / In Review / Done, filter by assignee
-  and project.
-- `forecast` — sprint velocity (last 5), remaining points/hours, completion
-  forecast by category, estimated completion date.
+**Dashboards**
+- `executive` (home) — KPI strip, team-utilization gauge, utilization-by-group,
+  action items, critical overloads, AI summary.
+- `capacity` (Developer Capacity) — per-developer workload heat-bars; rows
+  expand inline to a project drill-down (epics → tasks → subtasks).
+- `velocity` (Velocity & Forecast) — sprint velocity (last 5), remaining
+  points/hours, completion forecast by category, estimated completion date.
+- `tasks` (Task Allocation) — live tasks per developer from Jira.
 - `timeline` — Gantt on a **month-based** time axis (months are the columns;
   show day-level granularity within a month wherever space allows — never a
   week-based axis), grouped per developer or per project. A task that has
@@ -62,13 +60,15 @@ its KPIs live as the strip on top of Allocation.
   subtasks beneath it; expanding subtasks must never hide the parent's bar.
   Subtasks collapse/expand without leaving the Gantt.
 
-**Manage**
-- `team` — members table: group, role, level, workload, inline edit.
-- `sync` — Jira sync status, issue table, sync-status badges.
+**Admin**
+- `members` (Team Members) — members table: group, email, position, level,
+  workload; inline edit + bulk save.
+- `jirasync` (Jira Sync) — Jira sync status, issue table, sync-status badges.
 
 ## Data model
 
-The shapes the UI expects (mirror these when wiring the real API):
+Conceptual shapes (the **authoritative** field names live in `server.js`'s
+endpoint responses — check there before relying on a key):
 
 - **Developer** `{ id, name, init, group, role, level, email, util, sync }`
   - `util` is a percentage. `group` ∈ teams. `role` ∈ CTO/PM/BA/QA/Dev.
@@ -101,39 +101,46 @@ inline page chrome.
 The heat-bar is the signature element. Fill is capped visually at 100% with a
 fixed cap-line; rows sort overloaded-first.
 
-## Design system (single source of truth)
+## Design system — "Momentum" (single source of truth)
 
-Colors are OKLCH. Keep these as CSS variables; don't hardcode hex elsewhere.
+Colors are OKLCH, defined once in the `:root` of `public/index.html`. Reference
+the variables; **don't hardcode hex/oklch in components.** The token *names* in
+the code are the legacy ramps (`--ink-*`, `--blue-*`, `--green-*`, …); their
+*values* carry the Momentum palette below.
 
 ```css
-/* neutrals — cool, true (never cream/sand/beige) */
---bg:oklch(0.986 0.003 255);  --surface:oklch(1 0 0);
---panel:oklch(0.968 0.005 255); --panel-2:oklch(0.955 0.006 255);
---border:oklch(0.912 0.006 255); --border-strong:oklch(0.852 0.008 255);
---ink:oklch(0.24 0.02 262);   --ink-2:oklch(0.46 0.016 262); --muted:oklch(0.575 0.012 262);
+/* warm canvas + atmosphere (two radial glows on the app background) */
+--bg:oklch(0.984 0.012 75);  --surface(--ink-0):oklch(0.995 0.004 75);
+--surface-2(--ink-50):oklch(0.975 0.01 75);  --border(--ink-100):oklch(0.90 0.012 70);
+--ink(--ink-800):oklch(0.26 0.03 290);  --muted(--ink-400):oklch(0.60 0.02 290);
 
-/* committed accent — cobalt; actions, selection, state only. never decoration */
---accent:oklch(0.55 0.17 256); --accent-strong:oklch(0.48 0.18 256);
---accent-weak:oklch(0.95 0.03 256); --accent-ink:oklch(0.42 0.18 256);
+/* deep plum-charcoal sidebar (dark surface, light text) */
+--side:oklch(0.23 0.04 295); --side-2:oklch(0.28 0.045 295);
+--side-ink:oklch(0.92 0.02 290); --side-muted:oklch(0.68 0.03 290);
 
-/* workload heat scale — semantic, kept distinct from the brand accent */
---w-idle:oklch(0.68 0.018 262); --w-low:oklch(0.62 0.11 245);
---w-healthy:oklch(0.63 0.14 158); --w-over:oklch(0.585 0.2 24);
+/* primary accent — energetic indigo → violet gradient (--blue-* ramp) */
+--accent:oklch(0.55 0.19 278); --accent-2:oklch(0.62 0.2 300);
 
-/* task status */
---st-todo:slate · --st-prog:accent · --st-review:oklch(0.7 0.14 78) · --st-done:oklch(0.62 0.14 158)
+/* data + workload heat scale (idle → over) */
+--coral/--w-over:oklch(0.62-0.68 ~0.2 30); --amber:oklch(0.8 0.15 78);
+--teal:oklch(0.72 0.12 195); --w-healthy/green:oklch(0.72 0.16 150);
+--w-low:teal · --w-idle:oklch(0.72 0.045 235)
 
---r-card:10px; --r-ctrl:7px; --r-pill:999px;
---ease:cubic-bezier(.22,.61,.36,1);
+--radius-sm:9px; --radius-md:11px; --radius-lg:16px; --radius-xl:20px; --r-pill:999px;
+--ease:cubic-bezier(.22,.7,.3,1);
 ```
 
-- **Type:** IBM Plex Sans (UI) + IBM Plex Mono (IDs, numbers — tabular figures).
-  Base 15px. Fixed rem scale, ratio ~1.125–1.2. Hierarchy via weight, not just
-  size. No display fonts in labels/data.
-- **Motion:** 140–250ms, ease-out, conveys state only (no decorative motion, no
-  page-load choreography). Always honor `prefers-reduced-motion`.
-- **Layout:** responsive is structural (sidebar collapses to a drawer under
-  840px, tables scroll, board stacks), not fluid typography.
+- **Type:** **Bricolage Grotesque** (display: headings + big numbers, 600–800,
+  `letter-spacing:-.02em`), **Hanken Grotesk** (body/UI), **JetBrains Mono**
+  (IDs, metrics, tabular figures). Hierarchy via weight + the display face on
+  headline numbers.
+- **Motion:** 150–250ms, `--ease`. Tasteful only — hover lifts, gauge sweep,
+  bar grow, one staggered rise on mount. Always honor `prefers-reduced-motion`
+  (there is a global reduce block).
+- **Atmosphere:** the app shell is warm canvas + two faint radial glows
+  (violet top-right, coral top-left), not flat white.
+- **Layout:** responsive is structural (sidebar → drawer under 840px, tables
+  scroll), not fluid typography.
 
 ## Component conventions
 
@@ -142,21 +149,33 @@ Colors are OKLCH. Keep these as CSS variables; don't hardcode hex elsewhere.
 - **Loading = skeletons**, not center spinners. **Empty states teach** the next
   action. **Error states** name the failure, keep stale data labeled, offer
   retry (see the Sync view's "Couldn't reach Jira" pattern).
-- One button vocabulary across views (`.btn`, `.btn.primary`, `.btn.ghost`).
+- One button vocabulary across views (`.btn`, `.btn-primary`, `.btn-ghost`).
   Same status chip, same sync badge, same select everywhere.
 - Tables get tabular-nums on numeric columns and right-align them.
 
+**Momentum component direction:**
+- **Sidebar:** deep plum gradient, light text, each nav icon in a rounded-square
+  tinted badge; active item = indigo→violet gradient pill with soft glow.
+- **Topbar:** translucent blurred bar; gradient primary buttons (pill,
+  weight 700) that lift 1px on hover.
+- **Cards/KPIs:** rounded (`--radius-lg`), layered shadow, tinted icon badge,
+  Bricolage value. Gauges use a gradient value arc with rounded cap.
+- **Chips/badges/avatars:** pill chips by semantic colour; avatars are accent
+  gradient circles.
+
 ## Hard rules / guardrails
 
-- **English throughout.** No English/Indonesian mixing in the UI (this was the
-  top consistency bug in the original). Indonesian is fine only in help/tooltip
-  prose if ever needed.
+- **English throughout.** No English/Indonesian mixing in the UI. Jira data
+  values (project/group/person names) stay as-is — don't translate data.
 - Button labels are verb + object ("Export CSV", "Sync now"), not "OK".
-- No em dashes in UI copy. No marketing buzzwords.
-- **Banned visual patterns:** side-stripe borders, gradient text, decorative
-  glassmorphism, the big-number hero-metric template, identical card grids,
-  tiny uppercase tracked eyebrows, numbered section markers as scaffolding.
-- Accent color is for action/selection/state — not for filling space.
+- No marketing buzzwords.
+- **Momentum allows** gradients (nav pill, primary buttons, avatars, gauge
+  arcs), a translucent blurred topbar, and a hero gauge for the headline
+  metric — these are intentional, not banned. Keep gradients on surfaces, **not
+  on body text** (no gradient text). Don't invent new shadow/gradient values
+  outside the tokens.
+- Accent gradient signals the primary action / current selection (active nav,
+  primary button) and brand surfaces (avatars); keep it purposeful, not noise.
 - Modals are a last resort; prefer inline / progressive disclosure (the
   capacity rows expand inline rather than opening a dialog).
 - Don't add a charting dependency lightly — the velocity chart and Gantt are
@@ -164,8 +183,8 @@ Colors are OKLCH. Keep these as CSS variables; don't hardcode hex elsewhere.
 
 ## Roadmap / open work
 
-1. **Wire the real Jira API** in `lib/jira.ts`; map responses to the data model
-   above. Show real "last synced" time; wire the error state to actual failures.
+1. **Jira API is wired** (`server.js`, live data). Remaining: harden error
+   states for real API failures and surface accurate "last synced" everywhere.
 2. **Deepen Forecast and Timeline** — they're the lightest views right now.
    For Timeline specifically: keep the axis month-based (add day ticks inside a
    month when there's room), and keep parent task bars visible while their
