@@ -736,6 +736,8 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
           <div class="formula-text">
             weight(task): Small≤2d → 0.5 · Standard 3-5d → 1.0 · Large 6-10d → 2.0 · Epic>10d → 3.0
             &nbsp;|&nbsp; Utilization% = Σ(weight × active days) ÷ (4 tasks/day × working days) × 100
+            &nbsp;|&nbsp; Available% = max(0, 100 − Utilization%)
+            &nbsp;·&nbsp; Overloaded% = max(0, Utilization% − 100)
           </div>
         </div>
       </div>
@@ -1559,7 +1561,7 @@ function renderCapacityTable(cap) {
         <div class="cap-section-title">
           ${statusDot}
           <span style="background:${gc.bg};color:${gc.color};padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid ${gc.border}">${group}</span>
-          <span style="font-size:13px;color:var(--ink-600);font-weight:400">${members.length} anggota</span>
+          <span style="font-size:13px;color:var(--ink-600);font-weight:400">${members.length} members</span>
         </div>
         <div class="cap-section-stats">
           <div class="cap-section-stat">Avg <strong>${avgU}%</strong></div>
@@ -1575,7 +1577,7 @@ function renderCapacityTable(cap) {
             <input type="text" placeholder="Search name…" oninput="onCapSearch('${group}',this.value)" id="cap-search-${group.replace(/\s+/g,'-')}">
           </div>
           <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
-            <span style="font-size:12px;color:var(--ink-400)">Tampilkan:</span>
+            <span style="font-size:12px;color:var(--ink-400)">Show:</span>
             <select class="perpage-select" onchange="setCapPerPage('${group}',this.value)" id="pp-${group.replace(/\s+/g,'-')}">
               <option value="10">10</option>
               <option value="25">25</option>
@@ -1590,8 +1592,8 @@ function renderCapacityTable(cap) {
               <th style="width:36px">#</th>
               <th style="width:220px">Developer</th>
               <th>Utilization<i class="help-icon" data-hint="Utilization% = Σ(weight × active days) ÷ (4 tasks/day × working days) × 100. Weight: Small≤2d=0.5, Standard 3-5d=1.0, Large 6-10d=2.0, Epic>10d=3.0">i</i></th>
-              <th>Available</th>
-              <th>Overloaded</th>
+              <th>Available<i class="help-icon" data-hint="Available% = max(0, 100 − Utilization%). Free capacity left this period; 0% once a developer is at or over 100%.">i</i></th>
+              <th>Overloaded<i class="help-icon" data-hint="Overloaded% = max(0, Utilization% − 100). How far past full capacity a developer is (e.g. 138% → +38%).">i</i></th>
               <th>Tasks<i class="help-icon" data-hint="Active tasks = not Done in this period. If there are tasks but 0 active, this period's load = 0.">i</i></th>
               <th>Project Allocation</th>
             </tr>
@@ -1691,12 +1693,12 @@ function renderCapGroupRows(group, allMembers) {
 
         // 3a. Available status indicator
         const av = d.available;
-        const avCfg = av > 30 ? { l:'Aman', c:'var(--green-600)', bg:'var(--green-50)', b:'var(--green-100)' }
-                    : av > 10 ? { l:'Mepet', c:'var(--amber-600)', bg:'var(--amber-50)', b:'var(--amber-100)' }
-                    : av > 0  ? { l:'Penuh', c:'var(--red-600)', bg:'var(--red-50)', b:'var(--red-100)' }
-                    :           { l:'Habis', c:'var(--red-700)', bg:'var(--red-100)', b:'var(--red-200)' };
+        const avCfg = av > 30 ? { l:'Free', c:'var(--green-600)', bg:'var(--green-50)', b:'var(--green-100)' }
+                    : av > 10 ? { l:'Tight', c:'var(--amber-600)', bg:'var(--amber-50)', b:'var(--amber-100)' }
+                    : av > 0  ? { l:'Full', c:'var(--red-600)', bg:'var(--red-50)', b:'var(--red-100)' }
+                    :           { l:'None', c:'var(--red-700)', bg:'var(--red-100)', b:'var(--red-200)' };
 
-        // Task breakdown: "X aktif / Y total". Idle = ada task tapi 0 aktif → badge abu.
+        // Task breakdown: "X active / Y total". Idle = has tasks but 0 active → grey badge.
         let tasksCell;
         if (d.activeTaskCount > 0) {
           tasksCell = `<span style="color:var(--status-healthy-text);font-weight:600">${d.activeTaskCount} active</span>
