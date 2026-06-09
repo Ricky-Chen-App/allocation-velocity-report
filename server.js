@@ -801,6 +801,14 @@ function computeTaskBars(f, startDate, endDate) {
 app.get('/api/timeline', async (req, res) => {
   try {
     const { assigneeId, category, projectKey, group } = req.query;
+    // Multi-select filters: each param may be a comma-separated list of values
+    // (an empty list = no filter on that field). Single values stay compatible.
+    const toList = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean);
+    const categories   = toList(category);
+    const reqProjKeys  = toList(projectKey);
+    const groups       = toList(group);
+    const assigneeIds  = toList(assigneeId);
+
     // Ensure base cache (serverless instances start empty — no warmup)
     await Promise.all([ensureProjects(), ensureMembers()]);
     const members = cache.members || [];
@@ -809,24 +817,24 @@ app.get('/api/timeline', async (req, res) => {
     if (!members.length || !allProjects.length) return res.json({ items: [], dateRange: {} });
 
     // Cache per filter combo (timeline fetch is heavy: thousands of issues)
-    const cacheKey = `${category||''}|${projectKey||''}|${group||''}|${assigneeId||''}`;
+    const cacheKey = `${categories.join(',')}|${reqProjKeys.join(',')}|${groups.join(',')}|${assigneeIds.join(',')}`;
     if (cache.timeline[cacheKey] && (Date.now() - (cache.ts['tl:'+cacheKey]||0) < CACHE_TTL)) {
       return res.json(cache.timeline[cacheKey]);
     }
 
-    // Filter members by group if requested
-    const filteredMembers = group
-      ? members.filter(m => (m.groups || []).includes(group))
+    // Filter members by group(s) if requested (OR / IN match)
+    const filteredMembers = groups.length
+      ? members.filter(m => (m.groups || []).some(g => groups.includes(g)))
       : members;
 
-    const allMemberIds = assigneeId
-      ? [assigneeId]
+    const allMemberIds = assigneeIds.length
+      ? assigneeIds
       : filteredMembers.map(m => m.accountId);
 
-    // Filter projects by category / specific key
+    // Filter projects by category / specific key (OR / IN match)
     let projects = allProjects;
-    if (category)    projects = projects.filter(p => p.category === category || p.projectCategory?.name === category);
-    if (projectKey)  projects = projects.filter(p => p.key === projectKey);
+    if (categories.length)  projects = projects.filter(p => categories.includes(p.category) || categories.includes(p.projectCategory?.name));
+    if (reqProjKeys.length) projects = projects.filter(p => reqProjKeys.includes(p.key));
     const projectKeys = projects.map(p => p.key);
     const profiles = readProfiles();
 

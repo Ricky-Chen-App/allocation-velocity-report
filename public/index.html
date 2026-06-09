@@ -603,6 +603,45 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 
 /* Respect reduced motion */
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ===== Multi-select filter comboboxes (Timeline) ===== */
+.combo{position:relative}
+.combo-trigger{display:flex;align-items:center;gap:8px;min-width:172px;max-width:248px;padding:6px 11px;border-radius:var(--radius-md);border:1.5px solid var(--ink-100);background:var(--ink-0);cursor:pointer;font-family:var(--font-body);transition:border-color var(--transition),box-shadow var(--transition),background var(--transition)}
+.combo-trigger:hover{border-color:var(--ink-200)}
+.combo-trigger.active{border-color:var(--accent);background:var(--accent-weak)}
+.combo-trigger:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
+.combo-trigger-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.18;min-width:0;flex:1}
+.combo-field{font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-400)}
+.combo-value{font-size:12.5px;font-weight:500;color:var(--ink-800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:172px}
+.combo-trigger.active .combo-value{color:var(--blue-700)}
+.combo-count{font-family:var(--font-mono);font-size:10px;font-weight:600;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-radius:999px;padding:1px 6px;flex-shrink:0}
+.combo-chev{width:13px;height:13px;color:var(--ink-400);flex-shrink:0;transition:transform var(--transition)}
+.combo.open .combo-chev{transform:rotate(180deg)}
+.combo-panel{position:absolute;top:calc(100% + 6px);left:0;z-index:60;width:286px;background:var(--ink-0);border:1px solid var(--ink-100);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden;animation:comboIn .16s var(--ease)}
+@keyframes comboIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+.combo-search{padding:10px;border-bottom:1px solid var(--ink-100)}
+.combo-search input{width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1.5px solid var(--ink-100);font-size:12.5px;font-family:var(--font-body);color:var(--ink-800);outline:none}
+.combo-search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
+.combo-options{max-height:262px;overflow-y:auto;padding:6px}
+.combo-opt{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:var(--radius-sm);cursor:pointer}
+.combo-opt:hover,.combo-opt.focused{background:var(--ink-50)}
+.combo-check{width:16px;height:16px;border-radius:5px;border:1.5px solid var(--ink-200);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--ink-0)}
+.combo-opt[aria-selected="true"] .combo-check{background:linear-gradient(135deg,var(--accent),var(--accent-2));border-color:transparent}
+.combo-check svg{width:10px;height:10px;color:#fff;opacity:0}
+.combo-opt[aria-selected="true"] .combo-check svg{opacity:1}
+.combo-opt-main{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
+.combo-opt-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;font-size:12.5px;color:var(--ink-800)}
+.combo-opt-sub{font-size:10px;color:var(--ink-400);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--font-mono)}
+.combo-opt-count{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-400);flex-shrink:0}
+.combo-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+.combo-avatar{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:600;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent-2))}
+.combo-empty{padding:18px;text-align:center;color:var(--ink-400);font-size:12px}
+.combo-footer{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-top:1px solid var(--ink-100);background:var(--ink-50)}
+.combo-counter{font-size:11px;color:var(--ink-400);font-family:var(--font-mono)}
+.combo-clear,.combo-done{font-size:12px;font-weight:600;font-family:var(--font-body);border:none;cursor:pointer;padding:5px 11px;border-radius:var(--r-pill)}
+.combo-clear{color:var(--ink-500);background:none}
+.combo-clear:hover{background:var(--ink-100)}
+.combo-done{color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent-2))}
 </style>
 </head>
 <body>
@@ -915,18 +954,10 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
       <!-- 4c. Summary cards -->
       <div id="tl-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:16px 32px 0"></div>
       <div class="timeline-controls">
-        <select class="select-filter" id="tl-category-filter" onchange="onTlCategoryChange()">
-          <option value="">All Categories</option>
-        </select>
-        <select class="select-filter" id="tl-project-filter" onchange="loadTimelinePage()">
-          <option value="">All Projects</option>
-        </select>
-        <select class="select-filter" id="tl-group-filter" onchange="loadTimelinePage()">
-          <option value="">All Groups</option>
-        </select>
-        <select class="select-filter" id="tl-assignee-filter" onchange="loadTimelinePage()">
-          <option value="">All Developers</option>
-        </select>
+        <div class="combo" id="combo-category"></div>
+        <div class="combo" id="combo-project"></div>
+        <div class="combo" id="combo-group"></div>
+        <div class="combo" id="combo-assignee"></div>
         <span style="margin-left:auto;font-size:11.5px;color:var(--ink-400)" id="tl-meta"></span>
       </div>
       <!-- Status filter pills (primary filter) -->
@@ -2365,57 +2396,184 @@ function exportCapacityCSV() {
   a.click();
 }
 
-// ——— Populate timeline filter dropdowns ———
+// ——— Timeline filters: searchable multi-select comboboxes ———
+// Selected ids per field; empty array = "All" (no filter). Joined with commas
+// into the existing /api/timeline query (server does an IN/OR match).
+const TLF = { category: [], project: [], group: [], assignee: [] };
+const COMBOS = {};
+const cEsc = v => String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+const COMBO_CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M3 8.5l3.5 3.5L13 4.5"/></svg>';
+const initialsOf = n => (n||'').split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+const CAT_PALETTE = ['var(--violet-500)','var(--teal-500)','var(--amber-500)','var(--green-500)','var(--coral)','var(--blue-500)'];
+
 function populateTlFilters() {
-  const members    = STATE.members || [];
-  const projects   = STATE.projects?.projects || [];
-  // categories is [{id, name}] from API
+  const members  = STATE.members || [];
+  const projects = STATE.projects?.projects || [];
   const catNames = [...new Set((STATE.projects?.categories || []).map(c => c.name || c).filter(Boolean))];
   const groups   = [...new Set(members.flatMap(m => m.groups || []))].sort();
 
-  // Category dropdown
-  const catSel = document.getElementById('tl-category-filter');
-  const prevCat = catSel.value;
-  catSel.innerHTML = `<option value="">All Categories</option>` +
-    catNames.map(c => `<option value="${c}" ${c===prevCat?'selected':''}>${c}</option>`).join('');
+  const projByCat = {}; projects.forEach(p => { const k = p.category || p.projectCategory?.name || ''; if (k) projByCat[k] = (projByCat[k]||0)+1; });
+  const memByGrp  = {}; members.forEach(m => (m.groups||[]).forEach(g => memByGrp[g] = (memByGrp[g]||0)+1));
 
-  // Project dropdown (filtered by selected category)
-  const curCat = catSel.value;
-  const filteredProj = curCat
-    ? projects.filter(p => (p.category || p.projectCategory?.name) === curCat)
-    : projects;
-  const projSel = document.getElementById('tl-project-filter');
-  const prevProj = projSel.value;
-  projSel.innerHTML = `<option value="">All Projects</option>` +
-    filteredProj.map(p => `<option value="${p.key}" ${p.key===prevProj?'selected':''}>[${p.key}] ${p.name}</option>`).join('');
+  COMBOS.category = { el: document.getElementById('combo-category'), fieldName: 'Category', allLabel: 'All Categories',
+    options: catNames.map((c,i) => ({ value: c, label: c, count: projByCat[c]||0, dot: CAT_PALETTE[i % CAT_PALETTE.length] })),
+    onChange: () => { comboBuildProjects(); loadTimelinePage(); } };
+  COMBOS.group = { el: document.getElementById('combo-group'), fieldName: 'Group', allLabel: 'All Groups',
+    options: groups.map(g => ({ value: g, label: g, count: memByGrp[g]||0 })), onChange: loadTimelinePage };
+  COMBOS.assignee = { el: document.getElementById('combo-assignee'), fieldName: 'Developer', allLabel: 'All Developers',
+    options: members.map(m => ({ value: m.accountId, label: m.displayName, sub: (m.groups||[])[0]||'', avatar: initialsOf(m.displayName) })), onChange: loadTimelinePage };
+  comboBuildProjects();
 
-  // Group dropdown
-  const grpSel = document.getElementById('tl-group-filter');
-  const prevGrp = grpSel.value;
-  grpSel.innerHTML = `<option value="">All Groups</option>` +
-    groups.map(g => `<option value="${g}" ${g===prevGrp?'selected':''}>${g}</option>`).join('');
-
-  // Assignee dropdown
-  const asSel = document.getElementById('tl-assignee-filter');
-  const prevAs = asSel.value;
-  asSel.innerHTML = `<option value="">All Developers</option>` +
-    members.map(m => `<option value="${m.accountId}" ${m.accountId===prevAs?'selected':''}>${m.displayName}</option>`).join('');
+  // prune stale selections, then render all triggers
+  ['category','project','group','assignee'].forEach(f => {
+    if (!COMBOS[f]) return;
+    const valid = new Set(COMBOS[f].options.map(o => o.value));
+    TLF[f] = TLF[f].filter(v => valid.has(v));
+    comboRender(f);
+  });
 }
 
-function onTlCategoryChange() {
-  // Re-populate project dropdown based on selected category
+// Project options depend on the selected categories (IN match).
+function comboBuildProjects() {
   const projects = STATE.projects?.projects || [];
-  const curCat   = document.getElementById('tl-category-filter').value;
-  const filtered = curCat
-    ? projects.filter(p => (p.category || p.projectCategory?.name) === curCat)
+  const selCats = TLF.category;
+  const filtered = selCats.length
+    ? projects.filter(p => selCats.includes(p.category) || selCats.includes(p.projectCategory?.name))
     : projects;
-
-  const projSel  = document.getElementById('tl-project-filter');
-  projSel.innerHTML = `<option value="">All Projects</option>` +
-    filtered.map(p => `<option value="${p.key}">[${p.key}] ${p.name}</option>`).join('');
-
-  loadTimelinePage();
+  COMBOS.project = { el: document.getElementById('combo-project'), fieldName: 'Project', allLabel: 'All Projects',
+    options: filtered.map(p => ({ value: p.key, label: p.name, sub: `[${p.key}]` })), onChange: loadTimelinePage };
+  const valid = new Set(filtered.map(p => p.key));
+  TLF.project = TLF.project.filter(v => valid.has(v));
+  comboRender('project');
 }
+
+function comboTriggerLabel(field) {
+  const c = COMBOS[field], sel = TLF[field];
+  if (!sel.length) return c.allLabel;
+  if (sel.length === 1) return c.options.find(o => o.value === sel[0])?.label || '1 selected';
+  return `${sel.length} selected`;
+}
+
+function comboOptionsHtml(field, query) {
+  const c = COMBOS[field], sel = TLF[field];
+  const q = (query || '').toLowerCase().trim();
+  const filtered = c.options.filter(o => !q || o.label.toLowerCase().includes(q) || (o.sub||'').toLowerCase().includes(q));
+  const allRow = `<div class="combo-opt" role="option" aria-selected="${!sel.length}" data-v="__all__" onclick="comboPick('${field}','__all__')">
+      <span class="combo-check">${COMBO_CHECK}</span><div class="combo-opt-main"><span class="combo-opt-label">${cEsc(c.allLabel)}</span></div></div>`;
+  if (!filtered.length) return allRow + `<div class="combo-empty">No matches</div>`;
+  const rows = filtered.map(o => {
+    const on = sel.includes(o.value);
+    const lead = o.dot ? `<span class="combo-dot" style="background:${o.dot}"></span>`
+               : o.avatar ? `<span class="combo-avatar">${cEsc(o.avatar)}</span>` : '';
+    const sub = o.sub ? `<span class="combo-opt-sub">${cEsc(o.sub)}</span>` : '';
+    const cnt = (o.count != null) ? `<span class="combo-opt-count">${o.count}</span>` : '';
+    return `<div class="combo-opt" role="option" aria-selected="${on}" data-v="${cEsc(o.value)}" onclick="comboPick('${field}','${cEsc(o.value)}')">
+      <span class="combo-check">${COMBO_CHECK}</span>${lead}<div class="combo-opt-main"><span class="combo-opt-label">${cEsc(o.label)}</span>${sub}</div>${cnt}</div>`;
+  }).join('');
+  return allRow + rows;
+}
+
+function comboRender(field) {
+  const c = COMBOS[field];
+  if (!c || !c.el) return;
+  const sel = TLF[field];
+  c.el.innerHTML = `
+    <button type="button" class="combo-trigger${sel.length?' active':''}" role="combobox" aria-haspopup="listbox" aria-expanded="false" onclick="comboToggle('${field}',event)">
+      <span class="combo-trigger-label"><span class="combo-field">${c.fieldName}</span><span class="combo-value">${cEsc(comboTriggerLabel(field))}</span></span>
+      ${sel.length>1?`<span class="combo-count">${sel.length}</span>`:''}
+      <svg class="combo-chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l4 4 4-4"/></svg>
+    </button>
+    <div class="combo-panel" role="listbox" aria-multiselectable="true" style="display:none">
+      <div class="combo-search"><input type="text" placeholder="Search ${c.fieldName.toLowerCase()}…" oninput="comboFilter('${field}',this.value)" onkeydown="comboKey('${field}',event)"></div>
+      <div class="combo-options">${comboOptionsHtml(field, '')}</div>
+      <div class="combo-footer"><span class="combo-counter">${sel.length} selected</span><div style="display:flex;gap:8px"><button type="button" class="combo-clear" onclick="comboClear('${field}')">Clear</button><button type="button" class="combo-done" onclick="comboCloseAll()">Done</button></div></div>
+    </div>`;
+}
+
+function comboCloseAll() {
+  Object.values(COMBOS).forEach(c => {
+    if (!c.el) return;
+    c.el.classList.remove('open');
+    const p = c.el.querySelector('.combo-panel'); if (p) p.style.display = 'none';
+    const t = c.el.querySelector('.combo-trigger'); if (t) t.setAttribute('aria-expanded','false');
+  });
+}
+
+function comboToggle(field, ev) {
+  ev.stopPropagation();
+  const c = COMBOS[field];
+  const isOpen = c.el.classList.contains('open');
+  comboCloseAll();
+  if (isOpen) return;
+  c.el.classList.add('open');
+  c.el.querySelector('.combo-panel').style.display = 'block';
+  c.el.querySelector('.combo-trigger').setAttribute('aria-expanded','true');
+  comboRefreshOpen(field);
+  setTimeout(() => c.el.querySelector('.combo-search input')?.focus(), 0);
+}
+
+// Update an open panel's options + trigger in place (so search/scroll survive).
+function comboRefreshOpen(field) {
+  const c = COMBOS[field], sel = TLF[field];
+  const searchVal = c.el.querySelector('.combo-search input')?.value || '';
+  const optsEl = c.el.querySelector('.combo-options');
+  if (optsEl) optsEl.innerHTML = comboOptionsHtml(field, searchVal);
+  const trig = c.el.querySelector('.combo-trigger');
+  const valEl = c.el.querySelector('.combo-value');
+  if (valEl) valEl.textContent = comboTriggerLabel(field);
+  if (trig) trig.classList.toggle('active', sel.length > 0);
+  let cnt = c.el.querySelector('.combo-count');
+  if (sel.length > 1) {
+    if (!cnt) { cnt = document.createElement('span'); cnt.className = 'combo-count'; trig.insertBefore(cnt, trig.querySelector('.combo-chev')); }
+    cnt.textContent = sel.length;
+  } else if (cnt) { cnt.remove(); }
+  const counter = c.el.querySelector('.combo-counter');
+  if (counter) counter.textContent = `${sel.length} selected`;
+}
+
+function comboFilter(field, q) {
+  const optsEl = COMBOS[field].el.querySelector('.combo-options');
+  if (optsEl) optsEl.innerHTML = comboOptionsHtml(field, q);
+}
+
+function comboPick(field, value) {
+  const sel = TLF[field];
+  if (value === '__all__') { TLF[field] = []; }
+  else { const i = sel.indexOf(value); if (i >= 0) sel.splice(i,1); else sel.push(value); }
+  comboRefreshOpen(field);   // keep panel open
+  COMBOS[field].onChange();
+}
+
+function comboClear(field) {
+  TLF[field] = [];
+  comboRefreshOpen(field);
+  COMBOS[field].onChange();
+}
+
+function comboKey(field, ev) {
+  const optsEl = COMBOS[field].el.querySelector('.combo-options');
+  const rows = [...optsEl.querySelectorAll('.combo-opt')];
+  const cur = rows.findIndex(r => r.classList.contains('focused'));
+  if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+    ev.preventDefault();
+    if (!rows.length) return;
+    let n = cur + (ev.key === 'ArrowDown' ? 1 : -1);
+    if (n < 0) n = rows.length - 1; if (n >= rows.length) n = 0;
+    rows.forEach(r => r.classList.remove('focused'));
+    rows[n].classList.add('focused');
+    rows[n].scrollIntoView({ block: 'nearest' });
+  } else if (ev.key === 'Enter') {
+    ev.preventDefault();
+    if (cur >= 0) comboPick(field, rows[cur].dataset.v);
+  } else if (ev.key === 'Escape') {
+    ev.preventDefault();
+    comboCloseAll();
+    COMBOS[field].el.querySelector('.combo-trigger').focus();
+  }
+}
+
+// Click outside closes any open combo (registered once).
+document.addEventListener('click', e => { if (!e.target.closest('.combo')) comboCloseAll(); });
 
 // ======== TIMELINE ========
 let TL = { data: null, statusFilter: 'all', viewMode: 'developer', expanded: new Set(), expandedTasks: new Set(), subBars: {} };
@@ -2648,13 +2806,15 @@ function setTlStatusFilter(key) {
   if (TL.data) { renderTlStatusPills(TL.data.items || []); renderTimeline(TL.data); }
 }
 
+let tlLoadSeq = 0;
 async function loadTimelinePage() {
   if (!STATE.members?.length) return;
 
-  const category   = document.getElementById('tl-category-filter')?.value || '';
-  const projectKey = document.getElementById('tl-project-filter')?.value  || '';
-  const groupFilter= document.getElementById('tl-group-filter')?.value    || '';
-  const assigneeId = document.getElementById('tl-assignee-filter')?.value || '';
+  // Multi-select filters → comma-separated lists (server does an IN/OR match)
+  const category   = TLF.category.join(',');
+  const projectKey = TLF.project.join(',');
+  const groupFilter= TLF.group.join(',');
+  const assigneeId = TLF.assignee.join(',');
 
   TL.groupFilter = groupFilter;
 
@@ -2666,7 +2826,9 @@ async function loadTimelinePage() {
     if (groupFilter) params.set('group',        groupFilter);
     if (assigneeId)  params.set('assigneeId',  assigneeId);
 
+    const seq = ++tlLoadSeq;   // last-request-wins: ignore stale responses
     const data = await api(`/api/timeline?${params.toString()}`);
+    if (seq !== tlLoadSeq) return;   // a newer filter change superseded this one
     // Exclude "Dropped"/"Cancelled" tasks entirely from the view (request 4)
     data.items = (data.items || [])
       .map(p => ({ ...p, tasks: p.tasks.filter(t => displayStatus(t.status) !== 'Dropped') }))
