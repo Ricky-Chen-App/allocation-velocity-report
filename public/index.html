@@ -6,25 +6,31 @@
 <title>Resource Portal — Linkit360</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
-  /* —— Cool, true neutrals (OKLCH, hue ~262) — never cream/sand/beige —— */
-  --ink-900:oklch(0.205 0.022 262);--ink-800:oklch(0.24 0.02 262);--ink-700:oklch(0.31 0.019 262);--ink-600:oklch(0.40 0.018 262);
-  --ink-500:oklch(0.46 0.016 262);--ink-400:oklch(0.575 0.012 262);--ink-300:oklch(0.705 0.010 260);--ink-200:oklch(0.852 0.008 255);
-  --ink-100:oklch(0.912 0.006 255);--ink-50:oklch(0.968 0.005 255);--ink-0:oklch(1 0 0);
-  /* —— Committed accent: cobalt —— */
-  --blue-700:oklch(0.42 0.18 256);--blue-600:oklch(0.48 0.18 256);--blue-500:oklch(0.55 0.17 256);--blue-400:oklch(0.63 0.15 255);
-  --blue-100:oklch(0.90 0.05 256);--blue-50:oklch(0.95 0.03 256);
+  /* —— Momentum: warm canvas surfaces + cool plum ink (hue 290) —— */
+  --ink-900:oklch(0.22 0.03 290);--ink-800:oklch(0.26 0.03 290);--ink-700:oklch(0.34 0.028 290);--ink-600:oklch(0.42 0.026 290);
+  --ink-500:oklch(0.46 0.025 290);--ink-400:oklch(0.60 0.02 290);--ink-300:oklch(0.72 0.018 290);--ink-200:oklch(0.85 0.014 70);
+  --ink-100:oklch(0.90 0.012 70);--ink-50:oklch(0.975 0.01 75);--ink-0:oklch(0.995 0.004 75);
+  /* —— Momentum primary accent: energetic indigo —— */
+  --blue-700:oklch(0.45 0.20 282);--blue-600:oklch(0.48 0.19 278);--blue-500:oklch(0.55 0.19 278);--blue-400:oklch(0.62 0.20 290);
+  --blue-100:oklch(0.90 0.06 285);--blue-50:oklch(0.95 0.035 285);
   /* —— Heat scale: healthy / done —— */
-  --green-600:oklch(0.48 0.11 160);--green-500:oklch(0.565 0.13 159);--green-400:oklch(0.63 0.14 158);--green-100:oklch(0.90 0.06 160);--green-50:oklch(0.965 0.025 162);
-  /* —— Review / warning —— */
-  --amber-600:oklch(0.55 0.12 70);--amber-500:oklch(0.64 0.14 75);--amber-400:oklch(0.72 0.15 78);--amber-100:oklch(0.92 0.07 80);--amber-50:oklch(0.972 0.03 82);
-  /* —— Overload —— */
-  --red-600:oklch(0.47 0.17 25);--red-500:oklch(0.55 0.19 25);--red-400:oklch(0.63 0.18 25);--red-100:oklch(0.90 0.06 25);--red-50:oklch(0.965 0.025 25);
-  /* —— Project / secondary cool violet —— */
-  --violet-600:oklch(0.45 0.16 285);--violet-500:oklch(0.55 0.17 285);--violet-400:oklch(0.64 0.16 286);--violet-100:oklch(0.91 0.05 286);--violet-50:oklch(0.962 0.025 288);
-  --teal-600:oklch(0.48 0.08 200);--teal-500:oklch(0.57 0.09 200);--teal-400:oklch(0.64 0.10 200);--teal-100:oklch(0.91 0.045 200);--teal-50:oklch(0.962 0.02 200);
+  --green-600:oklch(0.52 0.13 150);--green-500:oklch(0.62 0.15 150);--green-400:oklch(0.72 0.16 150);--green-100:oklch(0.90 0.07 150);--green-50:oklch(0.96 0.03 150);
+  /* —— Review / warning (amber) —— */
+  --amber-600:oklch(0.60 0.12 70);--amber-500:oklch(0.70 0.14 75);--amber-400:oklch(0.80 0.15 78);--amber-100:oklch(0.92 0.08 80);--amber-50:oklch(0.965 0.035 82);
+  /* —— Overload (coral) —— */
+  --red-600:oklch(0.50 0.18 30);--red-500:oklch(0.58 0.20 30);--red-400:oklch(0.68 0.19 32);--red-100:oklch(0.90 0.07 30);--red-50:oklch(0.96 0.03 30);
+  /* —— Project / secondary violet —— */
+  --violet-600:oklch(0.48 0.18 300);--violet-500:oklch(0.55 0.19 300);--violet-400:oklch(0.62 0.20 300);--violet-100:oklch(0.91 0.06 300);--violet-50:oklch(0.96 0.03 300);
+  --teal-600:oklch(0.50 0.09 198);--teal-500:oklch(0.60 0.11 196);--teal-400:oklch(0.72 0.12 195);--teal-100:oklch(0.91 0.05 196);--teal-50:oklch(0.96 0.025 196);
+  /* —— Momentum extras: warm canvas bg, deep plum sidebar, gradient accent —— */
+  --bg:oklch(0.984 0.012 75);--surface-2:oklch(0.975 0.01 75);
+  --side:oklch(0.23 0.04 295);--side-2:oklch(0.28 0.045 295);--side-deep:oklch(0.20 0.04 298);
+  --side-ink:oklch(0.92 0.02 290);--side-muted:oklch(0.68 0.03 290);
+  --accent:oklch(0.55 0.19 278);--accent-2:oklch(0.62 0.20 300);--accent-weak:oklch(0.95 0.035 285);
+  --coral:oklch(0.68 0.19 32);
   /* —— Semantic status tokens (single source of truth for status colors) —— */
   --status-overload-bg:var(--red-50);   --status-overload-text:var(--red-600);   --status-overload-bar:var(--red-400);
   --status-warning-bg:var(--amber-50);  --status-warning-text:var(--amber-600);  --status-warning-bar:var(--amber-400);
@@ -33,15 +39,17 @@
   --status-external-bg:var(--amber-50); --status-external-text:var(--amber-600); --status-external-bar:var(--amber-400);
   --status-synced-bg:var(--green-50);   --status-synced-text:var(--green-600);   --status-synced-bar:var(--green-400);
   --sidebar-w:220px;--header-h:56px;
-  --radius-sm:7px;--radius-md:10px;--radius-lg:12px;--radius-xl:18px;
-  --shadow-xs:0 1px 2px oklch(0.24 0.02 262/.05);--shadow-sm:0 2px 8px oklch(0.24 0.02 262/.08);
-  --shadow-md:0 4px 16px oklch(0.24 0.02 262/.10);--shadow-lg:0 8px 32px oklch(0.24 0.02 262/.14);
-  --font-body:'IBM Plex Sans',-apple-system,system-ui,sans-serif;--font-mono:'IBM Plex Mono',ui-monospace,monospace;
-  --transition:160ms cubic-bezier(.22,.61,.36,1);
+  --radius-sm:9px;--radius-md:11px;--radius-lg:16px;--radius-xl:20px;--r-pill:999px;
+  --shadow-xs:0 1px 2px oklch(0.30 0.05 290/.06);--shadow-sm:0 2px 10px -4px oklch(0.30 0.05 290/.12);
+  --shadow-md:0 1px 2px oklch(0.30 0.05 290/.06),0 12px 28px -12px oklch(0.40 0.10 290/.22);--shadow-lg:0 18px 48px -12px oklch(0.30 0.08 290/.35);
+  --font-display:'Bricolage Grotesque','Hanken Grotesk',sans-serif;
+  --font-body:'Hanken Grotesk',-apple-system,system-ui,sans-serif;--font-mono:'JetBrains Mono',ui-monospace,monospace;
+  --transition:170ms cubic-bezier(.22,.7,.3,1);--ease:cubic-bezier(.22,.7,.3,1);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:14px}
-body{font-family:var(--font-body);background:var(--ink-50);color:var(--ink-800);display:flex;height:100vh;overflow:hidden}
+body{font-family:var(--font-body);background:var(--bg);color:var(--ink-800);display:flex;height:100vh;overflow:hidden;
+  background-image:radial-gradient(900px 500px at 88% -8%, oklch(0.62 0.2 300 / .10), transparent 60%),radial-gradient(800px 500px at -6% 4%, oklch(0.68 0.19 32 / .08), transparent 55%);background-attachment:fixed}
 
 /* SIDEBAR */
 .sidebar{width:var(--sidebar-w);background:var(--ink-0);border-right:1px solid var(--ink-100);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
@@ -550,6 +558,46 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
   .mobile-topbar{display:flex}
   .topbar{display:none}
 }
+/* ============ MOMENTUM RESTYLE OVERRIDES ============ */
+/* Display font on headings & big numbers */
+.page-title,.kpi-value,.gs-val,.logo-text,.card-title{font-family:var(--font-display);letter-spacing:-.02em}
+.kpi-value{letter-spacing:-.03em}
+
+/* Deep plum sidebar */
+.sidebar{background:linear-gradient(180deg,var(--side-2),var(--side));border-right:1px solid oklch(0.32 0.04 295)}
+.sidebar-logo{border-bottom-color:oklch(1 0 0/.08)}
+.logo-mark{background:linear-gradient(135deg,var(--accent),var(--accent-2))}
+.logo-text{color:var(--side-ink)}
+.logo-sub{color:var(--side-muted)}
+.nav-label{color:var(--side-muted)}
+.nav-item{color:var(--side-muted);border-left:none;border-radius:var(--radius-md);font-weight:500}
+.nav-item svg{width:28px;height:28px;padding:6px;border-radius:9px;background:oklch(1 0 0/.06);opacity:1;box-sizing:border-box;stroke-width:1.6;transition:background var(--transition)}
+.nav-item:hover{background:oklch(1 0 0/.06);color:var(--side-ink);border-left:none}
+.nav-item:hover svg{background:oklch(1 0 0/.12)}
+.nav-item.active{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-left:none;font-weight:700;box-shadow:0 10px 22px -10px var(--accent)}
+.nav-item.active svg{background:oklch(1 0 0/.20);opacity:1}
+.nav-badge{background:oklch(1 0 0/.14);color:var(--side-ink);font-family:var(--font-mono);font-weight:600}
+.nav-badge.red{background:oklch(0.68 0.19 32/.30);color:oklch(0.88 0.08 32)}
+.nav-badge.amber{background:oklch(0.80 0.15 78/.28);color:oklch(0.9 0.08 80)}
+.sidebar>div[style*="margin-top"]{border-top-color:oklch(1 0 0/.08)!important}
+.sidebar .btn-ghost{color:var(--side-ink);border-color:oklch(1 0 0/.16);background:oklch(1 0 0/.05)}
+.sidebar .btn-ghost:hover{background:oklch(1 0 0/.10);border-color:oklch(1 0 0/.24)}
+
+/* Translucent blurred topbar */
+.topbar{background:oklch(0.995 0.004 75/.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom-color:var(--ink-100)}
+
+/* Pill buttons, gradient primary */
+.btn{border-radius:var(--r-pill);font-weight:700}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;box-shadow:0 8px 20px -8px var(--accent)}
+.btn-primary:hover{background:linear-gradient(135deg,var(--accent-2),var(--accent));transform:translateY(-1px);box-shadow:0 11px 26px -8px var(--accent)}
+.btn-ghost:hover{transform:translateY(-1px)}
+
+/* Card depth + gradient avatar */
+.card,.kpi-card{box-shadow:var(--shadow-md)}
+.avatar{background:linear-gradient(135deg,var(--accent),var(--accent-2))}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
@@ -725,7 +773,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
           </div>
           <div style="padding:12px 0">
             <table class="cat-table" id="cat-table">
-              <thead><tr><th>Category</th><th>Issues</th><th>Points<i class="help-icon" data-hint="Story points belum diset di Jira. Kolom ini terisi otomatis setelah story points dikonfigurasi per issue di Jira Board → Backlog.">i</i></th><th>Est. Hours<i class="help-icon" data-hint="Time estimate (original estimate) belum diisi di Jira. Kolom ini terisi otomatis setelah estimasi waktu dikonfigurasi per issue.">i</i></th><th>Est. Days</th></tr></thead>
+              <thead><tr><th>Category</th><th>Issues</th><th>Points<i class="help-icon" data-hint="Story points are not set in Jira. This column fills automatically once story points are configured per issue in Jira Board → Backlog.">i</i></th><th>Est. Hours<i class="help-icon" data-hint="Time estimate (original estimate) is not set in Jira. This column fills automatically once a time estimate is configured per issue.">i</i></th><th>Est. Days</th></tr></thead>
               <tbody id="cat-tbody"><tr><td colspan="5" style="padding:30px;text-align:center;color:var(--ink-400)">Loading…</td></tr></tbody>
             </table>
           </div>
@@ -752,26 +800,26 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
       <div class="page-header">
         <div>
           <div class="page-title">Task Allocation</div>
-          <div class="page-sub">Live tasks per developer dari Jira</div>
+          <div class="page-sub">Live tasks per developer from Jira</div>
         </div>
       </div>
       <div class="task-filters">
         <div class="search-input" style="max-width:240px">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5"/></svg>
-          <input type="text" id="task-search" placeholder="Cari task atau assignee…" oninput="filterTasks()">
+          <input type="text" id="task-search" placeholder="Search task or assignee…" oninput="filterTasks()">
         </div>
         <select class="select-filter" id="task-status-filter" onchange="filterTasks()">
-          <option value="">Semua Status</option>
+          <option value="">All Statuses</option>
           <option value="To Do">To Do</option>
           <option value="In Progress">In Progress</option>
           <option value="In Review">In Review</option>
           <option value="Done">Done</option>
         </select>
         <select class="select-filter" id="task-assignee-filter" onchange="filterTasks()">
-          <option value="">Semua Assignee</option>
+          <option value="">All Assignees</option>
         </select>
         <select class="select-filter" id="task-project-filter" onchange="filterTasks()">
-          <option value="">Semua Project</option>
+          <option value="">All Projects</option>
         </select>
       </div>
       <!-- 5a. AI Risk + Recommendations panel -->
@@ -789,7 +837,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
       <div class="page-header">
         <div>
           <div class="page-title">Jira Sync Status</div>
-          <div class="page-sub">Issues 7 hari terakhir · linkit360.atlassian.net</div>
+          <div class="page-sub">Issues from the last 7 days · linkit360.atlassian.net</div>
         </div>
         <button class="btn btn-primary" onclick="syncNow()">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8A6 6 0 0114 8M14 8a6 6 0 01-12 0"/><path d="M14 4v4h-4"/></svg>
@@ -798,9 +846,9 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
       </div>
       <!-- 2a. Legend (selalu tampil) -->
       <div class="sync-legend">
-        <div class="sl-item"><span class="sl-dot" style="background:var(--green-500)"></span><span><strong>Synced</strong> — assignee anggota tim terdaftar</span></div>
-        <div class="sl-item"><span class="sl-dot" style="background:var(--amber-500)"></span><span><strong>External</strong> — assignee tidak ada di Team Members, utilisasi <strong>tidak</strong> terhitung</span></div>
-        <div class="sl-item"><span class="sl-dot" style="background:var(--ink-400)"></span><span><strong>Unassigned</strong> — belum ada assignee di Jira</span></div>
+        <div class="sl-item"><span class="sl-dot" style="background:var(--green-500)"></span><span><strong>Synced</strong> — assignee is a registered team member</span></div>
+        <div class="sl-item"><span class="sl-dot" style="background:var(--amber-500)"></span><span><strong>External</strong> — assignee not in Team Members, utilization <strong>not</strong> counted</span></div>
+        <div class="sl-item"><span class="sl-dot" style="background:var(--ink-400)"></span><span><strong>Unassigned</strong> — no assignee in Jira yet</span></div>
       </div>
       <!-- 2b. Warning banner (External) -->
       <div id="sync-ext-banner"></div>
@@ -814,10 +862,10 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
         <div class="sync-toolbar">
           <div class="search-input">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5"/></svg>
-            <input type="text" id="sync-search" placeholder="Cari issue key atau summary…" oninput="filterSyncTable()">
+            <input type="text" id="sync-search" placeholder="Search issue key or summary…" oninput="filterSyncTable()">
           </div>
           <select class="select-filter" id="sync-status-filter" onchange="filterSyncTable()">
-            <option value="">Semua Sync Status</option>
+            <option value="">All Sync Statuses</option>
             <option value="synced">Synced</option>
             <option value="unassigned">Unassigned</option>
             <option value="external">External</option>
@@ -833,7 +881,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
               <th>Reporter</th>
               <th>Status</th>
               <th>Priority</th>
-              <th>Sync<i class="help-icon" data-hint="Synced = assignee terdaftar di tim. External = assignee tidak ada di team list dan utilisasinya tidak dihitung. Unassigned = belum ada assignee di Jira.">i</i></th>
+              <th>Sync<i class="help-icon" data-hint="Synced = assignee is registered on the team. External = assignee is not in the team list and their utilization is not counted. Unassigned = no assignee in Jira yet.">i</i></th>
               <th>Updated</th>
             </tr>
           </thead>
@@ -849,7 +897,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
       <div class="page-header">
         <div>
           <div class="page-title">Timeline</div>
-          <div class="page-sub">Gantt view — task dari Jira</div>
+          <div class="page-sub">Gantt view — tasks from Jira</div>
         </div>
         <!-- 4a. View mode toggle -->
         <div class="pill-group" id="tl-view-toggle">
@@ -861,16 +909,16 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
       <div id="tl-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:16px 32px 0"></div>
       <div class="timeline-controls">
         <select class="select-filter" id="tl-category-filter" onchange="onTlCategoryChange()">
-          <option value="">Semua Kategori</option>
+          <option value="">All Categories</option>
         </select>
         <select class="select-filter" id="tl-project-filter" onchange="loadTimelinePage()">
-          <option value="">Semua Project</option>
+          <option value="">All Projects</option>
         </select>
         <select class="select-filter" id="tl-group-filter" onchange="loadTimelinePage()">
-          <option value="">Semua Grup</option>
+          <option value="">All Groups</option>
         </select>
         <select class="select-filter" id="tl-assignee-filter" onchange="loadTimelinePage()">
-          <option value="">Semua Developer</option>
+          <option value="">All Developers</option>
         </select>
         <span style="margin-left:auto;font-size:11.5px;color:var(--ink-400)" id="tl-meta"></span>
       </div>
@@ -888,7 +936,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
       <div class="page-header">
         <div>
           <div class="page-title">Team Members</div>
-          <div class="page-sub">Atur jabatan &amp; level untuk setiap anggota tim</div>
+          <div class="page-sub">Set position & level for each team member</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <button class="btn btn-ghost" onclick="exportMembersCSV()">
@@ -897,7 +945,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
           </button>
           <button class="btn btn-primary" id="bulk-save-btn" onclick="saveAllProfiles()" style="display:none">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l4 4 6-7"/></svg>
-            Simpan Semua Perubahan
+            Save All Changes
           </button>
         </div>
       </div>
@@ -909,16 +957,16 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
         <div class="sync-stat"><div class="ss-label">BA</div><div class="ss-val" id="stat-BA">—</div></div>
         <div class="sync-stat"><div class="ss-label">QA</div><div class="ss-val" id="stat-QA">—</div></div>
         <div class="sync-stat"><div class="ss-label">Developer</div><div class="ss-val" id="stat-Dev">—</div></div>
-        <div class="sync-stat" style="background:var(--ink-50)"><div class="ss-label" style="color:var(--ink-400)">Belum diatur</div><div class="ss-val" id="stat-unset" style="color:var(--ink-400)">—</div></div>
+        <div class="sync-stat" style="background:var(--ink-50)"><div class="ss-label" style="color:var(--ink-400)">Not set</div><div class="ss-val" id="stat-unset" style="color:var(--ink-400)">—</div></div>
       </div>
 
       <div class="members-toolbar">
         <div class="search-input" style="max-width:260px">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5"/></svg>
-          <input type="text" id="members-search" placeholder="Cari nama atau email…" oninput="filterMembersTable()">
+          <input type="text" id="members-search" placeholder="Search name or email…" oninput="filterMembersTable()">
         </div>
         <select class="select-filter" id="members-group-filter" onchange="filterMembersTable()">
-          <option value="">Semua Grup</option>
+          <option value="">All Groups</option>
           <option>PMO Team</option>
           <option>Cehat Sehat Developer</option>
           <option>Developer</option>
@@ -927,16 +975,16 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
           <option>Waki Developer</option>
         </select>
         <select class="select-filter" id="members-jabatan-filter" onchange="filterMembersTable()">
-          <option value="">Semua Jabatan</option>
+          <option value="">All Positions</option>
           <option>CTO</option><option>PM</option><option>BA</option><option>QA</option><option>Dev</option>
-          <option value="unset">Belum diatur</option>
+          <option value="unset">Not set</option>
         </select>
         <select class="select-filter" id="members-workload-filter" onchange="filterMembersTable()">
-          <option value="">Semua Workload</option>
+          <option value="">All Workloads</option>
           <option value="overloaded">Overloaded (&gt;100%)</option>
           <option value="normal">Normal (70–100%)</option>
           <option value="low">Rendah (30–70%)</option>
-          <option value="idle">Tidak aktif (&lt;30%)</option>
+          <option value="idle">Inactive (&lt;30%)</option>
         </select>
         <span style="font-size:11.5px;color:var(--ink-400);margin-left:auto" id="members-count-label"></span>
       </div>
@@ -946,10 +994,10 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
           <thead>
             <tr>
               <th style="width:44px">#</th>
-              <th style="width:240px">Nama</th>
-              <th>Grup / Team</th>
+              <th style="width:240px">Name</th>
+              <th>Group / Team</th>
               <th>Email</th>
-              <th>Jabatan</th>
+              <th>Position</th>
               <th>Level</th>
               <th style="width:130px">Workload ↓</th>
               <th style="width:110px">Status</th>
@@ -980,7 +1028,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
       <button class="drill-close" onclick="capCloseModal()">✕ Tutup</button>
     </div>
     <div class="ov-modal-list"></div>
-    <div class="ov-modal-foot">Klik project untuk lihat detail epic &amp; task</div>
+    <div class="ov-modal-foot">Click a project to view epic &amp; task detail</div>
   </div>
 </div>
 
@@ -995,7 +1043,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
       <div class="loading-dot"></div>
       <div class="loading-dot"></div>
     </div>
-    <div class="loading-text" id="loading-text">Memuat data dari Jira…</div>
+    <div class="loading-text" id="loading-text">Loading data from Jira…</div>
   </div>
 </div>
 
@@ -1006,8 +1054,8 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
  * istilah baku tim; LABEL AKSI & teks UI memakai Bahasa Indonesia.
  *   • Tetap EN  : To Do, In Progress, In Review, Done, Idle, Sync, Story Points,
  *                 Velocity, Forecast, Backlog, Export CSV (nama fitur/format).
- *   • Jadi ID   : "Sync Now" → "Sinkronkan Sekarang", "Overload" → "Kelebihan beban",
- *                 "Simpan", "Cari…", "Lihat N lainnya", "Tidak ada data", dll.
+ *   • Jadi ID   : "Sync Now" → "Sinkronkan Sekarang", "Overload" → "Overloaded",
+ *                 "Simpan", "Cari…", "View N more", "No data", dll.
  * Jangan campur setengah-setengah — ikuti pembagian di atas saat menambah label baru.
  */
 
@@ -1114,7 +1162,7 @@ function toggleSidebar(open) {
 
 // ——— Loading helpers ———
 function showLoading(msg) {
-  document.getElementById('loading-text').textContent = msg || 'Memuat data dari Jira…';
+  document.getElementById('loading-text').textContent = msg || 'Loading data from Jira…';
   document.getElementById('loading-overlay').classList.add('show');
 }
 function hideLoading() {
@@ -1136,7 +1184,7 @@ async function api(path) {
 
 // ——— INIT ———
 async function init() {
-  showLoading('Memuat projects & members dari Jira…');
+  showLoading('Loading projects & members from Jira…');
   try {
     const [projects, members] = await Promise.all([
       api('/api/projects'),
@@ -1145,15 +1193,15 @@ async function init() {
     STATE.projects = projects;
     STATE.members = members;
 
-    document.getElementById('sync-label').textContent = `Terhubung ke Jira · ${new Date().toLocaleTimeString('id-ID')}`;
+    document.getElementById('sync-label').textContent = `Connected to Jira · ${new Date().toLocaleTimeString('en-GB')}`;
     updatePeriodLabel();
     hideLoading();
 
     // Load capacity (may take a while — don't block UI)
     loadCapacity();
   } catch(e) {
-    showError('Gagal terhubung ke Jira: ' + e.message);
-    document.getElementById('sync-label').textContent = 'Gagal terhubung ke Jira';
+    showError('Failed to connect to Jira: ' + e.message);
+    document.getElementById('sync-label').textContent = 'Failed to connect to Jira';
     document.querySelector('.sync-dot').style.background = 'var(--red-400)';
     hideLoading();
   }
@@ -1161,15 +1209,15 @@ async function init() {
 
 function updatePeriodLabel() {
   const now = new Date();
-  const label = now.toLocaleString('id-ID', { month: 'long', year: 'numeric' });
+  const label = now.toLocaleString('en-GB', { month: 'long', year: 'numeric' });
   document.getElementById('period-label').textContent = label;
   document.getElementById('exec-subtitle').textContent =
-    `${label} · Resource allocation & velocity dari Jira`;
+    `${label} · Resource allocation & velocity from Jira`;
 }
 
 // ——— CAPACITY ———
 async function loadCapacity() {
-  showLoading('Menghitung utilization developer…');
+  showLoading('Calculating developer utilization…');
   try {
     const cap = await api('/api/capacity');
     STATE.capacity = cap;
@@ -1177,10 +1225,10 @@ async function loadCapacity() {
     renderCapacityTable(cap);
 
     const now = new Date();
-    const sub = `${now.toLocaleString('id-ID',{month:'long',year:'numeric'})} · ${cap.period?.workingDays || 22} hari kerja · ${STATE.members?.length || 0} member dari 6 grup`;
+    const sub = `${now.toLocaleString('en-GB',{month:'long',year:'numeric'})} · ${cap.period?.workingDays || 22} working days · ${STATE.members?.length || 0} members across 6 groups`;
     document.getElementById('cap-subtitle').textContent = sub;
   } catch(e) {
-    showError('Gagal load capacity: ' + e.message);
+    showError('Failed to load capacity: ' + e.message);
   } finally {
     hideLoading();
   }
@@ -1198,10 +1246,10 @@ function renderExecutivePage(cap) {
     <div class="alert-banner crit">
       <svg class="ab-icon" viewBox="0 0 16 16" fill="none" stroke-width="1.6"><circle cx="8" cy="8" r="6"/><path d="M8 5v4M8 11v.5"/></svg>
       <div class="ab-body">
-        <div class="ab-title">Tim dalam kondisi kritis — utilisasi rata-rata ${s.avgUtilization}%</div>
-        <div class="ab-sub">${s.overloaded} developer kelebihan beban · ${s.idle} underutilized dan bisa menyerap overflow</div>
+        <div class="ab-title">Team is in critical condition — average utilization ${s.avgUtilization}%</div>
+        <div class="ab-sub">${s.overloaded} developer overloaded · ${s.idle} underutilized and can absorb overflow</div>
       </div>
-      <button class="ab-link" onclick="showPage('capacity',document.querySelectorAll('.nav-item')[1])">Lihat Developer →</button>
+      <button class="ab-link" onclick="showPage('capacity',document.querySelectorAll('.nav-item')[1])">View Developers →</button>
     </div>` : '';
 
   // KPI cards (1b. conditional colour on Avg Utilization & Overloaded)
@@ -1213,7 +1261,7 @@ function renderExecutivePage(cap) {
         Total Members
       </div>
       <div class="kpi-value">${members.length}</div>
-      <div class="kpi-delta info">6 grup aktif</div>
+      <div class="kpi-delta info">6 active groups</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-label">
@@ -1221,7 +1269,7 @@ function renderExecutivePage(cap) {
         Active Projects
       </div>
       <div class="kpi-value">${projects.length}</div>
-      <div class="kpi-delta info">${(STATE.projects?.categories || []).length} kategori</div>
+      <div class="kpi-delta info">${(STATE.projects?.categories || []).length} categories</div>
     </div>
     <div class="kpi-card" style="${critCard}">
       <div class="kpi-label">
@@ -1230,7 +1278,7 @@ function renderExecutivePage(cap) {
       </div>
       <div class="kpi-value" style="${crit ? 'color:var(--red-600)' : ''}">${s.avgUtilization}%</div>
       <div class="kpi-delta ${s.avgUtilization > 100 ? 'down' : s.avgUtilization > 80 ? 'warn' : 'up'}">
-        ${s.avgUtilization > 100 ? 'Tim overloaded' : s.avgUtilization > 80 ? 'Mendekati kapasitas' : 'Normal'}
+        ${s.avgUtilization > 100 ? 'Team overloaded' : s.avgUtilization > 80 ? 'Near capacity' : 'Normal'}
       </div>
     </div>
     <div class="kpi-card" style="${s.overloaded > 0 ? critCard : ''}">
@@ -1263,7 +1311,7 @@ function renderExecutivePage(cap) {
     const avg = st.count ? Math.round(st.total / st.count) : 0;
     const gc = GROUP_COLORS[g] || { bg:'var(--blue-50)',color:'var(--blue-700)' };
 
-    // Status: red only >100. 0% → grey (idle) with explanation. No members → "Tidak ada data".
+    // Status: red only >100. 0% → grey (idle) with explanation. No members → "No data".
     const noData = st.count === 0;
     const status = noData ? 'idle' : utilStatus(avg);
     const fillClass = utilFillClass(noData ? 0 : avg);   // grey for idle/no-data
@@ -1272,11 +1320,11 @@ function renderExecutivePage(cap) {
     // Right-side label + hover hint
     let rightLabel, hint = '';
     if (noData) {
-      rightLabel = `<span style="color:var(--ink-400);font-weight:500">Tidak ada data</span>`;
-      hint = 'Grup ini belum memiliki anggota dengan issue di periode ini.';
+      rightLabel = `<span style="color:var(--ink-400);font-weight:500">No data</span>`;
+      hint = 'This group has no members with issues in this period.';
     } else if (avg === 0) {
       rightLabel = `<span class="tbar-pct" style="color:var(--ink-400)">0%</span>`;
-      hint = 'Grup ini belum memiliki issue aktif di periode ini.';
+      hint = 'This group has no active issues in this period.';
     } else {
       rightLabel = `<span class="tbar-pct ${pctClass}">${avg}%</span>`;
     }
@@ -1309,30 +1357,30 @@ function renderExecutivePage(cap) {
           <div class="mini-pct" style="color:var(--red-500)">${pct}%</div>
         </div>
       </div>`;
-  }).join('') : `<div class="empty-state" style="padding:30px"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l4 4 6-7"/></svg><p>Tidak ada developer yang overloaded</p></div>`;
+  }).join('') : `<div class="empty-state" style="padding:30px"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l4 4 6-7"/></svg><p>No overloaded developers</p></div>`;
 
   // AI bullets
   const idleDevs = cap.developers.filter(d => d.utilization < 30);
   const aiBullets = [
     s.overloaded > 0 ? `<div class="exec-ai-bullet"><svg viewBox="0 0 16 16" fill="none" stroke="var(--red-500)" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v4M8 11v.5"/></svg><span><strong>${s.overloaded} developer overloaded</strong> bulan ini. ${overloaded[0]?.displayName || ''} paling tinggi di ${overloaded[0]?.utilization || 0}%.</span></div>` : '',
-    idleDevs.length > 0 ? `<div class="exec-ai-bullet"><svg viewBox="0 0 16 16" fill="none" stroke="var(--blue-500)" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v4M8 11v.5"/></svg><span><strong>${idleDevs.length} developer underutilized</strong> (&lt;30%) — kapasitas dapat dioptimalkan untuk menyerap overflow dari tim yang overloaded.</span></div>` : '',
-    `<div class="exec-ai-bullet"><svg viewBox="0 0 16 16" fill="none" stroke="var(--green-500)" stroke-width="1.5"><path d="M3 8l4 4 6-7"/></svg><span><strong>Total ${projects.length} project aktif</strong> dari kategori VAS Project, Product OTT, Project, Platform Internal, QA & RnD. ${s.healthy} developer dalam kondisi sehat (70–100%).</span></div>`,
-    `<div class="exec-ai-bullet"><svg viewBox="0 0 16 16" fill="none" stroke="var(--amber-500)" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v4M8 11v.5"/></svg><span>Rata-rata utilization tim <strong>${s.avgUtilization}%</strong>. ${s.avgUtilization > 100 ? 'Perlu redistribusi task segera.' : s.avgUtilization > 85 ? 'Mendekati batas kapasitas, pantau terus.' : 'Kapasitas masih dalam batas normal.'}</span></div>`
+    idleDevs.length > 0 ? `<div class="exec-ai-bullet"><svg viewBox="0 0 16 16" fill="none" stroke="var(--blue-500)" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v4M8 11v.5"/></svg><span><strong>${idleDevs.length} developer underutilized</strong> (&lt;30%) — capacity can be optimized to absorb overflow from overloaded teams.</span></div>` : '',
+    `<div class="exec-ai-bullet"><svg viewBox="0 0 16 16" fill="none" stroke="var(--green-500)" stroke-width="1.5"><path d="M3 8l4 4 6-7"/></svg><span><strong>${projects.length} active projects total</strong> across VAS Project, Product OTT, Project, Platform Internal, QA & RnD. ${s.healthy} developers in healthy condition (70–100%).</span></div>`,
+    `<div class="exec-ai-bullet"><svg viewBox="0 0 16 16" fill="none" stroke="var(--amber-500)" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v4M8 11v.5"/></svg><span>Team average utilization <strong>${s.avgUtilization}%</strong>. ${s.avgUtilization > 100 ? 'Tasks need to be redistributed now.' : s.avgUtilization > 85 ? 'Approaching capacity limit, keep monitoring.' : 'Capacity is still within normal range.'}</span></div>`
   ].filter(Boolean).join('');
 
   const flagCount = s.overloaded + (idleDevs.length > 0 ? 1 : 0);
 
-  // 1c. Action items ("Yang perlu dilakukan") — computed from available data
+  // 1c. Action items ("Action items") — computed from available data
   const actionItems = [];
   cap.developers.filter(d => d.utilization > 100)
     .sort((a,b) => b.utilization - a.utilization).slice(0,2)
-    .forEach(m => actionItems.push({ priority:'kritis', text:`${m.displayName} ${m.utilization}% — redistribusi task segera`, nav:1 }));
+    .forEach(m => actionItems.push({ priority:'kritis', text:`${m.displayName} ${m.utilization}% — redistribute tasks now`, nav:1 }));
   const extCount = STATE.sync?.external || 0;
-  if (extCount > 10) actionItems.push({ priority:'penting', text:`${extCount} issue External di Jira belum terpantau`, nav:6 });
+  if (extCount > 10) actionItems.push({ priority:'penting', text:`${extCount} External issues in Jira not tracked`, nav:6 });
   const noRole = members.length - Object.values(STATE.memberProfiles || {}).filter(p => p.jabatan).length;
   if (Object.keys(STATE.memberProfiles || {}).length && noRole > 5)
-    actionItems.push({ priority:'penting', text:`${noRole} anggota belum diatur jabatan`, nav:5 });
-  if (idleDevs.length > 0) actionItems.push({ priority:'info', text:`${idleDevs.length} developer idle bisa serap overflow`, nav:1 });
+    actionItems.push({ priority:'penting', text:`${noRole} members without a position`, nav:5 });
+  if (idleDevs.length > 0) actionItems.push({ priority:'info', text:`${idleDevs.length} idle developers can absorb overflow`, nav:1 });
 
   const navIdx = { 1:1, 5:5, 6:6 };
   const actionItemsHtml = actionItems.length
@@ -1342,7 +1390,7 @@ function renderExecutivePage(cap) {
           <span class="ai-text">${it.text}</span>
           <svg class="ai-chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4l4 4-4 4"/></svg>
         </div>`).join('')
-    : `<div class="empty-state" style="padding:24px"><div class="es-icon">✅</div><div class="es-desc">Tidak ada tindakan mendesak. Tim dalam kondisi baik.</div></div>`;
+    : `<div class="empty-state" style="padding:24px"><div class="es-icon">✅</div><div class="es-desc">No urgent actions. The team is in good shape.</div></div>`;
 
   document.getElementById('exec-dash-grid').innerHTML = `
     <!-- Gauge -->
@@ -1352,7 +1400,7 @@ function renderExecutivePage(cap) {
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="8" cy="12" r="1.5"/></svg>
           Team Utilization
         </div>
-        <span style="font-size:11px;color:var(--ink-400)">${new Date().toLocaleString('id-ID',{month:'long',year:'numeric'})}</span>
+        <span style="font-size:11px;color:var(--ink-400)">${new Date().toLocaleString('en-GB',{month:'long',year:'numeric'})}</span>
       </div>
       <div class="gauge-wrap">
         <svg width="180" height="110" viewBox="0 0 180 110" style="overflow:visible">
@@ -1361,12 +1409,12 @@ function renderExecutivePage(cap) {
           <line x1="162" y1="100" x2="162" y2="86" stroke="var(--ink-300)" stroke-width="1.5" stroke-dasharray="3 2"/>
           <text x="162" y="82" text-anchor="middle" font-size="9" fill="var(--ink-300)">100%</text>
           <text x="90" y="88" font-family="IBM Plex Sans,sans-serif" font-weight="600" font-size="32" fill="var(--ink-900)" letter-spacing="-2" text-anchor="middle">${s.avgUtilization}%</text>
-          <text x="90" y="104" font-family="IBM Plex Sans,sans-serif" font-size="11" fill="var(--ink-400)" text-anchor="middle">Rata-rata Tim</text>
+          <text x="90" y="104" font-family="IBM Plex Sans,sans-serif" font-size="11" fill="var(--ink-400)" text-anchor="middle">Team Average</text>
         </svg>
       </div>
       <div class="gauge-footer">
         <div class="gauge-stat"><div class="gs-label">Overloaded</div><div class="gs-val" style="color:var(--red-500)">${s.overloaded}</div></div>
-        <div class="gauge-stat"><div class="gs-label">Sehat (70–100%)</div><div class="gs-val" style="color:var(--green-500)">${s.healthy}</div></div>
+        <div class="gauge-stat"><div class="gs-label">Healthy (70–100%)</div><div class="gs-val" style="color:var(--green-500)">${s.healthy}</div></div>
         <div class="gauge-stat"><div class="gs-label">Underutilized</div><div class="gs-val" style="color:var(--amber-500)">${s.idle}</div></div>
         <div class="gauge-stat"><div class="gs-label">High (80–100%)</div><div class="gs-val" style="color:var(--blue-500)">${s.high}</div></div>
       </div>
@@ -1383,12 +1431,12 @@ function renderExecutivePage(cap) {
       <div class="card-body"><div class="team-bars">${groupBars}</div></div>
     </div>
 
-    <!-- Action items: Yang perlu dilakukan -->
+    <!-- Action items: Action items -->
     <div class="card">
       <div class="card-header">
         <div class="card-title">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l3 3 7-7"/><path d="M2 13h12"/></svg>
-          Yang perlu dilakukan
+          Action items
         </div>
         <span class="ai-count-badge ${flagCount > 0 ? 'has-flags' : 'ok'}">${actionItems.length} item</span>
       </div>
@@ -1415,15 +1463,15 @@ function renderExecutivePage(cap) {
         </div>
         <div style="flex:1">
           <div style="font-size:13px;font-weight:600;color:var(--ink-900)">AI Summary</div>
-          <div style="font-size:11px;color:var(--ink-400)">Generated from Jira data · ${new Date().toLocaleTimeString('id-ID')}</div>
+          <div style="font-size:11px;color:var(--ink-400)">Generated from Jira data · ${new Date().toLocaleTimeString('en-GB')}</div>
         </div>
         <span class="ai-count-badge ${flagCount > 0 ? 'has-flags' : 'ok'}">${flagCount > 0 ? flagCount + ' flags' : 'All OK'}</span>
       </div>
       <div class="exec-ai-body">${aiBullets}</div>
       <div class="exec-ai-footer">
-        <span style="font-size:11px;color:var(--ink-400)">Updated ${new Date().toLocaleTimeString('id-ID')}</span>
+        <span style="font-size:11px;color:var(--ink-400)">Updated ${new Date().toLocaleTimeString('en-GB')}</span>
         <button style="font-size:12px;font-weight:500;color:var(--blue-700);cursor:pointer;background:none;border:none;font-family:var(--font-body);display:flex;align-items:center;gap:4px" onclick="showPage('capacity',document.querySelectorAll('.nav-item')[1])">
-          Lihat detail per developer
+          View per-developer detail
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
         </button>
       </div>
@@ -1457,17 +1505,17 @@ function renderCapFilterBar() {
   const hasFilter = CAP_FILTER.group || CAP_FILTER.status || CAP_FILTER.project;
   bar.innerHTML = `
     <select class="select-filter" onchange="setCapFilter('group',this.value)">
-      <option value="">Semua Grup</option>
+      <option value="">All Groups</option>
       ${GROUPS_ORDER.map(g => `<option value="${g}" ${CAP_FILTER.group===g?'selected':''}>${g}</option>`).join('')}
     </select>
     <select class="select-filter" onchange="setCapFilter('status',this.value)">
-      <option value="">Semua Status</option>
-      <option value="overloaded" ${CAP_FILTER.status==='overloaded'?'selected':''}>Kelebihan beban (&gt;100%)</option>
+      <option value="">All Statuses</option>
+      <option value="overloaded" ${CAP_FILTER.status==='overloaded'?'selected':''}>Overloaded (&gt;100%)</option>
       <option value="normal" ${CAP_FILTER.status==='normal'?'selected':''}>Normal (70–100%)</option>
       <option value="idle" ${CAP_FILTER.status==='idle'?'selected':''}>Idle (&lt;30%)</option>
     </select>
     <select class="select-filter" onchange="setCapFilter('project',this.value)">
-      <option value="">Semua Project</option>
+      <option value="">All Projects</option>
       ${projects.map(p => `<option value="${p.key}" ${CAP_FILTER.project===p.key?'selected':''}>${p.name} (${p.key})</option>`).join('')}
     </select>
     ${hasFilter ? `<button class="btn btn-ghost" style="padding:6px 12px;color:var(--red-500);border-color:var(--red-100)" onclick="resetCapFilter()">✕ Reset filter</button>` : ''}`;
@@ -1524,7 +1572,7 @@ function renderCapacityTable(cap) {
         <div style="display:flex;align-items:center;padding:8px 16px;border-bottom:1px solid var(--ink-100);background:var(--ink-50);gap:10px">
           <div class="cap-search">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5"/></svg>
-            <input type="text" placeholder="Cari nama…" oninput="onCapSearch('${group}',this.value)" id="cap-search-${group.replace(/\s+/g,'-')}">
+            <input type="text" placeholder="Search name…" oninput="onCapSearch('${group}',this.value)" id="cap-search-${group.replace(/\s+/g,'-')}">
           </div>
           <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
             <span style="font-size:12px;color:var(--ink-400)">Tampilkan:</span>
@@ -1532,7 +1580,7 @@ function renderCapacityTable(cap) {
               <option value="10">10</option>
               <option value="25">25</option>
               <option value="50">50</option>
-              <option value="all">Semua</option>
+              <option value="all">All</option>
             </select>
           </div>
         </div>
@@ -1541,10 +1589,10 @@ function renderCapacityTable(cap) {
             <tr>
               <th style="width:36px">#</th>
               <th style="width:220px">Developer</th>
-              <th>Utilization<i class="help-icon" data-hint="Utilization% = Σ(weight × active days) ÷ (4 tasks/hari × hari kerja) × 100. Weight: Small≤2d=0.5, Standard 3-5d=1.0, Large 6-10d=2.0, Epic>10d=3.0">i</i></th>
+              <th>Utilization<i class="help-icon" data-hint="Utilization% = Σ(weight × active days) ÷ (4 tasks/day × working days) × 100. Weight: Small≤2d=0.5, Standard 3-5d=1.0, Large 6-10d=2.0, Epic>10d=3.0">i</i></th>
               <th>Available</th>
-              <th>Kelebihan beban</th>
-              <th>Tasks<i class="help-icon" data-hint="Tasks aktif = belum Done dalam periode ini. Jika ada task tapi 0 aktif, beban periode ini = 0.">i</i></th>
+              <th>Overloaded</th>
+              <th>Tasks<i class="help-icon" data-hint="Active tasks = not Done in this period. If there are tasks but 0 active, this period's load = 0.">i</i></th>
               <th>Project Allocation</th>
             </tr>
           </thead>
@@ -1560,8 +1608,8 @@ function renderCapacityTable(cap) {
   if (!anyShown) {
     container.innerHTML = emptyState({
       icon: '🔍',
-      title: 'Tidak ada developer cocok',
-      description: 'Tidak ada developer yang sesuai filter. Coba ubah atau reset filter.',
+      title: 'No matching developers',
+      description: 'No developers match the filter. Try adjusting or resetting the filter.',
       action: { label: 'Reset filter', onClick: 'resetCapFilter()' }
     });
   }
@@ -1624,7 +1672,7 @@ function renderCapGroupRows(group, allMembers) {
         const numClass  = utilNumClass(util);
         const rowBg     = util > 100 ? 'background:var(--status-overload-bg)' : '';
         const flag      = util > 100
-          ? `<span class="row-flag over">Kelebihan beban</span>`
+          ? `<span class="row-flag over">Overloaded</span>`
           : util < 30 ? `<span class="row-flag idle">Idle</span>` : '';
         // 3b + v7/v8. Clickable project pills (drill-down) + overflow button
         const allocs  = d.projectAllocations || [];
@@ -1637,8 +1685,8 @@ function renderCapGroupRows(group, allMembers) {
             ? 'background:var(--red-50);color:var(--red-700);border-color:var(--red-300)'
             : 'background:var(--ink-50);color:var(--ink-600);border-color:var(--ink-300)';
           const fn = hidden.length >= 4 ? `capOverflowModal('${d.accountId}')` : `capOverflowInline('${d.accountId}')`;
-          projPills += `<button class="proj-overflow-btn" style="${sev}" onclick="${fn}" title="Lihat ${hidden.length} project lainnya">
-            +${hidden.length} lainnya${maxUtil > 100 ? '<span class="ov-dot"></span>' : ''}</button>`;
+          projPills += `<button class="proj-overflow-btn" style="${sev}" onclick="${fn}" title="View ${hidden.length} more projects">
+            +${hidden.length} more${maxUtil > 100 ? '<span class="ov-dot"></span>' : ''}</button>`;
         }
 
         // 3a. Available status indicator
@@ -1651,17 +1699,17 @@ function renderCapGroupRows(group, allMembers) {
         // Task breakdown: "X aktif / Y total". Idle = ada task tapi 0 aktif → badge abu.
         let tasksCell;
         if (d.activeTaskCount > 0) {
-          tasksCell = `<span style="color:var(--status-healthy-text);font-weight:600">${d.activeTaskCount} aktif</span>
+          tasksCell = `<span style="color:var(--status-healthy-text);font-weight:600">${d.activeTaskCount} active</span>
             <span style="color:var(--ink-400);font-weight:400;font-size:11px"> / ${d.taskCount} total</span>`;
         } else if (d.taskCount > 0) {
-          tasksCell = `<span class="task-breakdown-idle" title="Tasks ada tapi tidak ada yang aktif dalam periode ini.">Idle · ${d.taskCount} total</span>`;
+          tasksCell = `<span class="task-breakdown-idle" title="Tasks exist but none are active in this period.">Idle · ${d.taskCount} total</span>`;
         } else {
           tasksCell = `<span style="color:var(--ink-300)">—</span>`;
         }
 
         // Tooltip when 0% util but tasks exist
         const utilTitle = (util === 0 && d.taskCount > 0)
-          ? ` title="Tasks ada tapi tidak ada yang aktif dalam periode ini."` : '';
+          ? ` title="Tasks exist but none are active in this period."` : '';
 
         return `<tr id="caprow-${d.accountId}" style="${rowBg}">
           <td style="color:var(--ink-400);font-size:11px">${globalOffset + i + 1}</td>
@@ -1686,7 +1734,7 @@ function renderCapGroupRows(group, allMembers) {
           <td>${projPills||'<span style="color:var(--ink-400);font-size:12px">—</span>'}</td>
         </tr>`;
       }).join('')
-    : `<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--ink-400)">Tidak ada hasil</td></tr>`;
+    : `<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--ink-400)">No results</td></tr>`;
 
   // Render pagination
   const pagingEl = document.getElementById(`cap-paging-${id}`);
@@ -1735,7 +1783,7 @@ function capPill(accountId, p) {
   const active = CAP_DRILL.open[accountId] === p.key;
   const nm = p.name ? `<span style="opacity:.7;font-weight:400;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}</span>` : '';
   return `<button class="project-pill clickable${active?' active':''}" style="background:${c.bg};color:${c.tx};border:1px solid ${c.bd}"
-    onclick="capDrill('${accountId}','${p.key}')" title="${(p.name||p.key)} — ${p.pct}% utilisasi. Klik untuk detail epic & task.">
+    onclick="capDrill('${accountId}','${p.key}')" title="${(p.name||p.key)} — ${p.pct}% utilization. Click for epic & task detail.">
     <span class="pp-dot" style="background:${c.dot}"></span><strong>${p.key}</strong>${nm}<span>${p.pct}%</span>
     <svg class="pp-chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" style="${active?'transform:rotate(180deg)':''}"><path d="M4 6l4 4 4-4"/></svg></button>`;
 }
@@ -1766,7 +1814,7 @@ async function capDrill(accountId, projectKey) {
   }
   CAP_DRILL.open[accountId] = projectKey;
   refreshCapPillStates(accountId);
-  capPanel(accountId, `<div class="cap-drill"><div class="cap-drill-loading"><div class="loading-dots"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div> Memuat data dari Jira…</div></div>`);
+  capPanel(accountId, `<div class="cap-drill"><div class="cap-drill-loading"><div class="loading-dots"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div> Loading data from Jira…</div></div>`);
 
   const ck = accountId + ':' + projectKey;
   try {
@@ -1778,7 +1826,7 @@ async function capDrill(accountId, projectKey) {
     if (CAP_DRILL.open[accountId] !== projectKey) return; // user changed selection
     capPanel(accountId, renderDrill(accountId, data));
   } catch(e) {
-    capPanel(accountId, `<div class="cap-drill"><div style="padding:14px;color:var(--red-600);font-size:12.5px">Gagal memuat: ${e.message}</div></div>`);
+    capPanel(accountId, `<div class="cap-drill"><div style="padding:14px;color:var(--red-600);font-size:12.5px">Failed to load: ${e.message}</div></div>`);
   }
 }
 
@@ -1794,7 +1842,7 @@ function refreshCapPillStates(accountId) {
     const maxUtil = Math.max(...hidden.map(p=>p.pct));
     const sev = maxUtil>100 ? 'background:var(--red-50);color:var(--red-700);border-color:var(--red-300)' : 'background:var(--ink-50);color:var(--ink-600);border-color:var(--ink-300)';
     const fn = hidden.length>=4 ? `capOverflowModal('${accountId}')` : `capOverflowInline('${accountId}')`;
-    html += `<button class="proj-overflow-btn" style="${sev}" onclick="${fn}">+${hidden.length} lainnya${maxUtil>100?'<span class="ov-dot"></span>':''}</button>`;
+    html += `<button class="proj-overflow-btn" style="${sev}" onclick="${fn}">+${hidden.length} more${maxUtil>100?'<span class="ov-dot"></span>':''}</button>`;
   }
   cell.innerHTML = html || '<span style="color:var(--ink-400);font-size:12px">—</span>';
 }
@@ -1836,13 +1884,13 @@ function renderDrill(accountId, data) {
     <div class="cap-drill-hd">
       <span style="width:8px;height:8px;border-radius:50%;background:var(--blue-500)"></span>
       <strong>${data.projectKey} — ${data.projectName}</strong>
-      <span style="font-size:11px;color:var(--ink-400)">${data.totalTasks} task aktif</span>
+      <span style="font-size:11px;color:var(--ink-400)">${data.totalTasks} active tasks</span>
       <button class="drill-close" onclick="capDrill('${accountId}','${data.projectKey}')">✕ Tutup</button>
     </div>
-    <div class="cap-drill-body">${epicBlocks || '<div style="padding:12px;color:var(--ink-400);font-size:12px">Tidak ada task aktif (semua sudah Done).</div>'}</div>
+    <div class="cap-drill-body">${epicBlocks || '<div style="padding:12px;color:var(--ink-400);font-size:12px">No active tasks (all are Done).</div>'}</div>
     <div class="cap-drill-summary">
       <span><strong>${epics.length}</strong> epic</span>
-      <span><strong>${data.totalTasks}</strong> task aktif</span>
+      <span><strong>${data.totalTasks}</strong> active tasks</span>
       <span style="color:var(--blue-700)"><strong>${data.inProgressTasks}</strong> in progress</span>
       ${data.delayTasks>0?`<span style="color:var(--red-600)"><strong>${data.delayTasks}</strong> delay</span>`:''}
       ${data.doneTasks>0?`<span style="color:var(--ink-400)">${data.doneTasks} done (disembunyikan)</span>`:''}
@@ -1867,10 +1915,10 @@ function capOverflowInline(accountId) {
   const dev = capFindDev(accountId); if (!dev) return;
   const pills = (dev.projectAllocations||[]).map(p => capPill(accountId, p)).join('');
   capPanel(accountId, `<div class="cap-drill" style="background:var(--blue-50);border-color:var(--blue-200)">
-    <div class="cap-drill-hd"><strong style="color:var(--blue-800)">Semua project (${dev.projectAllocations.length})</strong>
+    <div class="cap-drill-hd"><strong style="color:var(--blue-800)">All projects (${dev.projectAllocations.length})</strong>
       <button class="drill-close" onclick="capRemovePanelClose('${accountId}')">✕ Tutup</button></div>
     <div style="padding:10px 14px;display:flex;flex-wrap:wrap;gap:6px">${pills}</div>
-    <div style="padding:0 14px 10px;font-size:10.5px;color:var(--blue-600)">Klik project untuk lihat detail epic & task</div>
+    <div style="padding:0 14px 10px;font-size:10.5px;color:var(--blue-600)">Click a project to view epic & task detail</div>
   </div>`);
 }
 function capRemovePanelClose(accountId){ CAP_DRILL.open[accountId]=null; capRemovePanel(accountId); }
@@ -1893,7 +1941,7 @@ function capOverflowModal(accountId) {
     </button>`;
   }).join('');
   const ov = document.getElementById('cap-ov-modal');
-  ov.querySelector('.ov-modal-title').textContent = `Semua project — ${dev.displayName}`;
+  ov.querySelector('.ov-modal-title').textContent = `All projects — ${dev.displayName}`;
   ov.querySelector('.ov-modal-sub').textContent = `${allocs.length} project`;
   ov.querySelector('.ov-modal-list').innerHTML = rows;
   ov.classList.add('show');
@@ -1903,7 +1951,7 @@ function capModalPick(accountId, projectKey){ capCloseModal(); capDrill(accountI
 
 // ——— VELOCITY PAGE ———
 async function loadVelocityPage() {
-  showLoading('Menghitung forecast penyelesaian backlog…');
+  showLoading('Calculating backlog completion forecast…');
   try {
     const [forecast, velocity] = await Promise.all([
       api('/api/forecast'),
@@ -1929,10 +1977,10 @@ async function loadVelocityPage() {
     `;
 
     // Forecast box
-    document.getElementById('f-days').textContent = `${forecast.daysToComplete} hari`;
-    document.getElementById('f-date').textContent = `Estimasi selesai: ${formatDate(forecast.completionDate)}`;
-    const metricLabel = forecast.velocityMetric === 'story_points' ? `${forecast.totalPoints} story points` : forecast.velocityMetric === 'time_estimate' ? `${forecast.totalHours}h estimated` : `${forecast.totalBacklog} issues · ${forecast.issuesPerDay} issues/hari`;
-    document.getElementById('f-sub').textContent = `≈ ${forecast.completionMonths} bulan · ${metricLabel}`;
+    document.getElementById('f-days').textContent = `${forecast.daysToComplete} days`;
+    document.getElementById('f-date').textContent = `Est. completion: ${formatDate(forecast.completionDate)}`;
+    const metricLabel = forecast.velocityMetric === 'story_points' ? `${forecast.totalPoints} story points` : forecast.velocityMetric === 'time_estimate' ? `${forecast.totalHours}h estimated` : `${forecast.totalBacklog} issues · ${forecast.issuesPerDay} issues/day`;
+    document.getElementById('f-sub').textContent = `≈ ${forecast.completionMonths} months · ${metricLabel}`;
     document.getElementById('nav-forecast-badge').textContent = `${forecast.completionMonths}mo`;
     document.getElementById('nav-forecast-badge').style.display = '';
 
@@ -1946,7 +1994,7 @@ async function loadVelocityPage() {
           <td>${c.hours > 0 ? c.hours + 'h' : '<span style="color:var(--ink-300)">—</span>'}</td>
           <td style="font-weight:600;color:var(--blue-700)">${c.estimatedDays} hari</td>
         </tr>`).join('')
-      : `<tr><td colspan="5">${emptyState({icon:'📊',title:'Tidak ada backlog',description:'Tidak ada issue aktif untuk diforecast.'})}</td></tr>`;
+      : `<tr><td colspan="5">${emptyState({icon:'📊',title:'No backlog',description:'No active issues to forecast.'})}</td></tr>`;
 
     // Guidance banner when story points are not configured in Jira (Task 2).
     const banner = document.getElementById('velocity-sp-banner');
@@ -1956,8 +2004,8 @@ async function loadVelocityPage() {
       banner.style.display = 'block';
       banner.innerHTML = emptyState({
         icon: '🎯',
-        title: 'Story points belum dikonfigurasi',
-        description: 'Buka Jira Board → Backlog → set story points per issue agar forecast berbasis velocity bisa dihitung. Saat ini forecast memakai jumlah issue sebagai estimasi.',
+        title: 'Story points not configured',
+        description: 'Open Jira Board → Backlog → set story points per issue so a velocity-based forecast can be calculated. Currently the forecast uses issue count as an estimate.',
         action: { label: 'Buka Jira', href: 'https://linkit360.atlassian.net' }
       });
     }
@@ -1983,12 +2031,12 @@ async function loadVelocityPage() {
     } else {
       document.getElementById('velocity-sprints').innerHTML = emptyState({
         icon: '🏃',
-        title: 'Data sprint tidak tersedia',
-        description: 'Project ini mungkin tidak menggunakan Jira Agile board, atau belum ada sprint yang selesai.'
+        title: 'Sprint data not available',
+        description: 'This project may not use a Jira Agile board, or no sprint has been completed yet.'
       });
     }
   } catch(e) {
-    showError('Gagal load velocity: ' + e.message);
+    showError('Failed to load velocity: ' + e.message);
   } finally {
     hideLoading();
   }
@@ -1996,7 +2044,7 @@ async function loadVelocityPage() {
 
 // ——— TASKS PAGE ———
 async function loadTasksPage() {
-  showLoading('Memuat task allocation dari Jira…');
+  showLoading('Loading task allocation from Jira…');
   try {
     const data = await api('/api/tasks');
     STATE.tasks = data;
@@ -2007,16 +2055,16 @@ async function loadTasksPage() {
     const projects = [...new Set(STATE.allTasks.map(t => t.project).filter(Boolean))].sort();
 
     document.getElementById('task-assignee-filter').innerHTML =
-      `<option value="">Semua Assignee</option>` +
+      `<option value="">All Assignees</option>` +
       assignees.map(a => `<option value="${a}">${a}</option>`).join('');
 
     document.getElementById('task-project-filter').innerHTML =
-      `<option value="">Semua Project</option>` +
+      `<option value="">All Projects</option>` +
       projects.map(p => `<option value="${p}">${p}</option>`).join('');
 
     renderTaskColumns(STATE.allTasks);
   } catch(e) {
-    showError('Gagal load tasks: ' + e.message);
+    showError('Failed to load tasks: ' + e.message);
   } finally {
     hideLoading();
   }
@@ -2063,7 +2111,7 @@ function taskCardHtml(t) {
   let dueHtml = '';
   if (t.dueDate) {
     const od = taskIsOverdue(t);
-    const dueFmt = new Date(t.dueDate).toLocaleDateString('id-ID',{day:'numeric',month:'short'});
+    const dueFmt = new Date(t.dueDate).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
     dueHtml = `<div style="display:flex;align-items:center;gap:4px;font-size:10px;margin-top:5px;${od?'color:var(--red-500);font-weight:600':'color:var(--ink-400)'}">
       <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6h12M5 1.5v3M11 1.5v3"/></svg>
       ${od ? `Terlambat ${taskOverdueDays(t)}h` : dueFmt}</div>`;
@@ -2090,12 +2138,12 @@ function generateTaskAI(tasks) {
   const overloaded = (STATE.capacity?.developers || []).filter(d => d.utilization > 100)
     .sort((a,b)=>b.utilization-a.utilization);
 
-  if (overdue.length > 5) risks.push({ sev:'critical', msg:`${overdue.length} task overdue — indikasi masalah delivery sistemik, perlu review kapasitas.` });
-  if (blocked.length > 3) risks.push({ sev:'high', msg:`${blocked.length} task blocked (On Hold / Waiting telco) — follow up dengan mitra segera.` });
-  if (overloaded.length > 0) risks.push({ sev:'high', msg:`${overloaded.length} developer kelebihan beban — ${overloaded[0].displayName} paling tinggi di ${overloaded[0].utilization}%.` });
+  if (overdue.length > 5) risks.push({ sev:'critical', msg:`${overdue.length} tasks overdue — indicates systemic delivery issues, capacity review needed.` });
+  if (blocked.length > 3) risks.push({ sev:'high', msg:`${blocked.length} tasks blocked (On Hold / Waiting telco) — follow up with partners soon.` });
+  if (overloaded.length > 0) risks.push({ sev:'high', msg:`${overloaded.length} developers overloaded — ${overloaded[0].displayName} highest at ${overloaded[0].utilization}%.` });
 
-  if (overloaded.length > 0) recs.push(`Redistribusi task dari ${overloaded[0].displayName} ke developer idle.`);
-  if (blocked.length > 0) recs.push(`Follow up ${blocked.length} task yang blocked dengan mitra telco/eksternal.`);
+  if (overloaded.length > 0) recs.push(`Redistribute tasks from ${overloaded[0].displayName} to idle developers.`);
+  if (blocked.length > 0) recs.push(`Follow up on ${blocked.length} blocked tasks with telco/external partners.`);
   if (inProgress.length > 10) recs.push(`Batasi WIP: ${inProgress.length} task In Progress terlalu banyak — kurangi paralel per developer.`);
   return { risks, recs };
 }
@@ -2152,7 +2200,7 @@ function renderTaskColumns(tasks) {
     header.appendChild(badge);
 
     if (!items.length) {
-      col.innerHTML = emptyState({ icon:'📋', title:'Tidak ada task', description:'Tidak ada task dengan filter ini.' });
+      col.innerHTML = emptyState({ icon:'📋', title:'No tasks', description:'No tasks with this filter.' });
       return;
     }
 
@@ -2181,7 +2229,7 @@ function renderTaskColumns(tasks) {
 // "Sinkronkan Sekarang" — full re-sync from Jira (clears server + client cache),
 // so the user does NOT need the separate "Refresh Data" button.
 async function syncNow() {
-  showLoading('Sinkronisasi penuh dengan Jira…');
+  showLoading('Full sync with Jira…');
   try {
     await api('/api/refresh');               // clear server-side caches
     // reset client state so everything re-fetches fresh
@@ -2194,9 +2242,9 @@ async function syncNow() {
     updatePeriodLabel();
     await loadCapacity();                     // recompute capacity from fresh data
     await loadSyncData();                     // refresh the sync table
-    document.getElementById('sync-label').textContent = `Tersinkron dari Jira · ${new Date().toLocaleTimeString('id-ID')}`;
+    document.getElementById('sync-label').textContent = `Synced from Jira · ${new Date().toLocaleTimeString('en-GB')}`;
   } catch(e) {
-    showError('Gagal sinkronisasi: ' + e.message);
+    showError('Failed to sync: ' + e.message);
   } finally {
     hideLoading();
   }
@@ -2212,7 +2260,7 @@ async function loadSyncData() {
     const extPct = data.total ? Math.round(data.external / data.total * 100) : 0;
     const extCardStyle = (data.external > 0 && extPct > 30) ? 'background:var(--amber-50);border-color:var(--amber-100)' : '';
     document.getElementById('sync-stats').innerHTML = `
-      <div class="sync-stat"><div class="ss-label">Total Issues (7 hari)</div><div class="ss-val">${data.total}</div></div>
+      <div class="sync-stat"><div class="ss-label">Total Issues (7 days)</div><div class="ss-val">${data.total}</div></div>
       <div class="sync-stat"><div class="ss-label">Assigned to Team</div><div class="ss-val green">${data.synced}</div></div>
       <div class="sync-stat"><div class="ss-label">Unassigned</div><div class="ss-val ${data.unassigned > 0 ? 'red' : ''}">${data.unassigned}</div></div>
       <div class="sync-stat" style="${extCardStyle}">
@@ -2229,9 +2277,9 @@ async function loadSyncData() {
         <svg class="ab-icon" viewBox="0 0 16 16" fill="none" stroke-width="1.6"><path d="M8 2l6 11H2z"/><path d="M8 7v3M8 11.5v.3"/></svg>
         <div class="ab-body">
           <div class="ab-title">${data.external} issue dengan assignee External (${extPct}% dari total)</div>
-          <div class="ab-sub">Orang-orang ini tidak terpantau di Resource Portal — utilisasi mereka tidak dihitung. Tambahkan ke Team Members atau re-assign ke anggota terdaftar.</div>
+          <div class="ab-sub">These people are not tracked in Resource Portal — their utilization is not counted. Add them to Team Members or re-assign to a registered member.</div>
         </div>
-        <button class="ab-link" onclick="showPage('members',document.querySelectorAll('.nav-item')[5])">Kelola Team Members →</button>
+        <button class="ab-link" onclick="showPage('members',document.querySelectorAll('.nav-item')[5])">Manage Team Members →</button>
       </div>` : '';
 
     const badge = document.getElementById('nav-sync-badge');
@@ -2241,9 +2289,9 @@ async function loadSyncData() {
     }
 
     renderSyncTable(STATE.allSyncIssues);
-    document.getElementById('sync-label').textContent = `Jira synced · ${new Date().toLocaleTimeString('id-ID')}`;
+    document.getElementById('sync-label').textContent = `Jira synced · ${new Date().toLocaleTimeString('en-GB')}`;
   } catch(e) {
-    showError('Gagal load sync: ' + e.message);
+    showError('Failed to load sync: ' + e.message);
   } finally {
     hideLoading();
   }
@@ -2272,9 +2320,9 @@ function relativeTime(dateStr) {
   if (sec < 60) rel = 'baru saja';
   else if (sec < 3600) rel = `${Math.floor(sec/60)} menit lalu`;
   else if (sec < 86400) rel = `${Math.floor(sec/3600)} jam lalu`;
-  else if (sec < 2592000) rel = `${Math.floor(sec/86400)} hari lalu`;
-  else rel = d.toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'});
-  const abs = d.toLocaleString('id-ID',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  else if (sec < 2592000) rel = `${Math.floor(sec/86400)} days ago`;
+  else rel = d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+  const abs = d.toLocaleString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
   return { rel, abs };
 }
 // Priority badge with colored dot
@@ -2303,12 +2351,12 @@ function renderSyncTable(issues) {
         <td><span class="sync-badge ${i.syncStatus}">${i.syncStatus === 'synced' ? 'Synced' : i.syncStatus === 'unassigned' ? 'Unassigned' : 'External'}</span></td>
         <td><span style="font-size:11px;color:var(--ink-400);border-bottom:1px dashed var(--ink-200);cursor:help" title="${t.abs}">${t.rel}</span></td>
       </tr>`}).join('')
-    : `<tr><td colspan="9" style="padding:40px;text-align:center;color:var(--ink-400)">Tidak ada data</td></tr>`;
+    : `<tr><td colspan="9" style="padding:40px;text-align:center;color:var(--ink-400)">No data</td></tr>`;
 }
 
 // ——— EXPORT ———
 function exportCapacityCSV() {
-  if (!STATE.capacity) return alert('Data belum tersedia');
+  if (!STATE.capacity) return alert('Data not available yet');
   const devs = STATE.capacity.developers;
   const rows = [['Name','Group','Utilization%','Available%','Overload%','Tasks','Active Tasks']];
   devs.forEach(d => rows.push([d.displayName, d.group, d.utilization, d.available, d.overload, d.taskCount, d.activeTaskCount]));
@@ -2330,7 +2378,7 @@ function populateTlFilters() {
   // Category dropdown
   const catSel = document.getElementById('tl-category-filter');
   const prevCat = catSel.value;
-  catSel.innerHTML = `<option value="">Semua Kategori</option>` +
+  catSel.innerHTML = `<option value="">All Categories</option>` +
     catNames.map(c => `<option value="${c}" ${c===prevCat?'selected':''}>${c}</option>`).join('');
 
   // Project dropdown (filtered by selected category)
@@ -2340,19 +2388,19 @@ function populateTlFilters() {
     : projects;
   const projSel = document.getElementById('tl-project-filter');
   const prevProj = projSel.value;
-  projSel.innerHTML = `<option value="">Semua Project</option>` +
+  projSel.innerHTML = `<option value="">All Projects</option>` +
     filteredProj.map(p => `<option value="${p.key}" ${p.key===prevProj?'selected':''}>[${p.key}] ${p.name}</option>`).join('');
 
   // Group dropdown
   const grpSel = document.getElementById('tl-group-filter');
   const prevGrp = grpSel.value;
-  grpSel.innerHTML = `<option value="">Semua Grup</option>` +
+  grpSel.innerHTML = `<option value="">All Groups</option>` +
     groups.map(g => `<option value="${g}" ${g===prevGrp?'selected':''}>${g}</option>`).join('');
 
   // Assignee dropdown
   const asSel = document.getElementById('tl-assignee-filter');
   const prevAs = asSel.value;
-  asSel.innerHTML = `<option value="">Semua Developer</option>` +
+  asSel.innerHTML = `<option value="">All Developers</option>` +
     members.map(m => `<option value="${m.accountId}" ${m.accountId===prevAs?'selected':''}>${m.displayName}</option>`).join('');
 }
 
@@ -2365,7 +2413,7 @@ function onTlCategoryChange() {
     : projects;
 
   const projSel  = document.getElementById('tl-project-filter');
-  projSel.innerHTML = `<option value="">Semua Project</option>` +
+  projSel.innerHTML = `<option value="">All Projects</option>` +
     filtered.map(p => `<option value="${p.key}">[${p.key}] ${p.name}</option>`).join('');
 
   loadTimelinePage();
@@ -2475,9 +2523,9 @@ function renderTlSummary(items) {
     <div style="font-size:10px;color:${lc};margin-top:3px">${sub}</div></div>`;
   document.getElementById('tl-summary').innerHTML =
     card('var(--ink-50)','var(--ink-100)','var(--ink-400)','Total Task', total, `${projectCount} project`) +
-    card('var(--green-50)','var(--green-100)','var(--green-600)','Completed', completed, `${pct}% selesai`, 'var(--green-700)') +
-    card('var(--red-50)','var(--red-100)','var(--red-500)','Overdue', overdue, 'Perlu tindakan', 'var(--red-600)') +
-    card('var(--amber-50)','var(--amber-100)','var(--amber-600)','Rescheduled', rescheduled, 'Tanggal digeser', 'var(--amber-700)');
+    card('var(--green-50)','var(--green-100)','var(--green-600)','Completed', completed, `${pct}% done`, 'var(--green-700)') +
+    card('var(--red-50)','var(--red-100)','var(--red-500)','Overdue', overdue, 'Action needed', 'var(--red-600)') +
+    card('var(--amber-50)','var(--amber-100)','var(--amber-600)','Rescheduled', rescheduled, 'Dates shifted', 'var(--amber-700)');
 }
 
 // Map raw Jira status → display bucket. Tambah alias di sini bila nama Jira beda.
@@ -2591,9 +2639,9 @@ function renderTlLegend() {
   let html = items.map(i =>
     `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:18px;height:10px;border-radius:3px;${i.style};display:inline-block"></span>${i.label}</div>`
   ).join('');
-  html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:24px;height:10px;border-radius:3px;background:transparent;border:2px dashed var(--red-400);display:inline-block"></span>Tanggal baru</div>`;
-  html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span class="tl-new-badge" style="margin:0">NEW</span>dibuat ≤7 hari</div>`;
-  html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:2px;height:14px;background:var(--blue-400);display:inline-block;border-radius:2px"></span>Hari ini</div>`;
+  html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:24px;height:10px;border-radius:3px;background:transparent;border:2px dashed var(--red-400);display:inline-block"></span>New date</div>`;
+  html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span class="tl-new-badge" style="margin:0">NEW</span>created ≤7 days</div>`;
+  html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:2px;height:14px;background:var(--blue-400);display:inline-block;border-radius:2px"></span>Today</div>`;
   document.getElementById('tl-legend').innerHTML = html;
 }
 
@@ -2612,7 +2660,7 @@ async function loadTimelinePage() {
 
   TL.groupFilter = groupFilter;
 
-  showLoading('Memuat timeline dari Jira…');
+  showLoading('Loading timeline from Jira…');
   try {
     const params = new URLSearchParams();
     if (category)    params.set('category',    category);
@@ -2633,7 +2681,7 @@ async function loadTimelinePage() {
     renderTlLegend();
     renderTimeline(data);
   } catch(e) {
-    showError('Gagal load timeline: ' + e.message);
+    showError('Failed to load timeline: ' + e.message);
   } finally {
     hideLoading();
   }
@@ -2653,8 +2701,8 @@ function renderTimeline(data) {
     const filtered = TL.statusFilter !== 'all';
     wrap.innerHTML = emptyState({
       icon: '📅',
-      title: filtered ? 'Tidak ada task untuk status ini' : 'Tidak ada data timeline',
-      description: filtered ? 'Coba pilih pill status lain atau "All".' : 'Coba ubah filter kategori, project, atau developer.'
+      title: filtered ? 'No tasks for this status' : 'No timeline data',
+      description: filtered ? 'Try another status pill or "All".' : 'Try changing the category, project, or developer filter.'
     });
     return;
   }
@@ -2695,14 +2743,14 @@ function renderTimeline(data) {
   const px  = iso => Math.max(0, Math.round((new Date(iso) - startD) / 86400000)) * DAY_W;
   const wOf = (a, b) => Math.max(8, (Math.round((new Date(b) - new Date(a)) / 86400000) + 1) * DAY_W);
   const esc = v => (v||'').replace(/'/g,'`').replace(/"/g,'&quot;');
-  const fmt = iso => iso ? new Date(iso).toLocaleDateString('id-ID',{day:'numeric',month:'short'}) : '';
+  const fmt = iso => iso ? new Date(iso).toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : '';
 
   // Monthly column headers
   const months = [];
   let mc = new Date(startD.getFullYear(), startD.getMonth(), 1);
   while (mc <= endD) {
     const dim = new Date(mc.getFullYear(), mc.getMonth()+1, 0).getDate();
-    months.push({ label: mc.toLocaleDateString('id-ID',{month:'short'}), w: Math.round(dim * DAY_W) });
+    months.push({ label: mc.toLocaleDateString('en-GB',{month:'short'}), w: Math.round(dim * DAY_W) });
     mc = new Date(mc.getFullYear(), mc.getMonth()+1, 1);
   }
   const headerCols = months.map(mo => `<div class="tl-week-label" style="width:${mo.w}px;min-width:${mo.w}px;text-align:center;padding:10px 0">${mo.label}</div>`).join('');
@@ -2747,8 +2795,8 @@ function renderTimeline(data) {
       </div>
       <div class="tl-grp-track" style="width:${chartW}px">
         ${todayMark}
-        ${gSpan>0 ? `<div class="tl-grp-span" style="left:${gLeft}px;width:${gSpan}px" title="${done}/${total} epic selesai (${pctDone}%)"><div class="tl-grp-span-fill" style="width:${pctDone}%"></div></div>
-        <div class="tl-grp-pct" style="left:${Math.min(gRight + 8, chartW - 42)}px" title="${done}/${total} epic selesai">${pctDone}%</div>` : ''}
+        ${gSpan>0 ? `<div class="tl-grp-span" style="left:${gLeft}px;width:${gSpan}px" title="${done}/${total} epics done (${pctDone}%)"><div class="tl-grp-span-fill" style="width:${pctDone}%"></div></div>
+        <div class="tl-grp-pct" style="left:${Math.min(gRight + 8, chartW - 42)}px" title="${done}/${total} epics done">${pctDone}%</div>` : ''}
       </div>
     </div>`;
 
@@ -2802,7 +2850,7 @@ function renderTimeline(data) {
             subBar = `<div class="tl-sub-bar-loading" style="left:0;top:11px">·····</div>`;
           } else {
             // Fetched, but the subtask has no usable date — show a clear placeholder
-            subBar = `<div class="tl-sub-nodate" style="left:0;top:7px">Tidak ada tanggal</div>`;
+            subBar = `<div class="tl-sub-nodate" style="left:0;top:7px">No date</div>`;
           }
           return `<div class="tl-sub-row" style="min-height:30px">
             <div class="tl-sub-left" style="width:${PERSON_W}px;min-width:${PERSON_W}px">
@@ -2877,7 +2925,7 @@ function showTlTooltipFromEl(e, el) {
 
   const dueHtml = d.due
     ? `<div style="opacity:.85;font-size:10.5px;margin-top:4px">📅 Due date: <strong>${d.due}</strong></div>`
-    : `<div style="opacity:.55;font-size:10.5px;margin-top:4px">📅 Tidak ada due date</div>`;
+    : `<div style="opacity:.55;font-size:10.5px;margin-top:4px">📅 No due date</div>`;
 
   let reschedHtml = '';
   if (d.rescheduled === '1') {
@@ -2946,7 +2994,7 @@ function workloadCell(util) {
 // Workload status badge
 function workloadBadge(util) {
   if (util == null) return `<span class="wl-badge idle">—</span>`;
-  if (util === 0)   return `<span class="wl-badge idle">Tidak aktif</span>`;
+  if (util === 0)   return `<span class="wl-badge idle">Inactive</span>`;
   if (util > 100)   return `<span class="wl-badge over">Overloaded</span>`;
   if (util >= 70)   return `<span class="wl-badge normal">Normal</span>`;
   return `<span class="wl-badge low">Rendah</span>`;
@@ -2954,7 +3002,7 @@ function workloadBadge(util) {
 
 async function loadMembersPage() {
   if (!STATE.members?.length) return;
-  showLoading('Memuat data anggota tim…');
+  showLoading('Loading team members…');
   try {
     const res = await api('/api/member-profiles');
     membersData.profiles    = res.profiles || {};
@@ -2970,7 +3018,7 @@ async function loadMembersPage() {
     updateJabatanStats();
     renderMembersTable(membersData.all);
   } catch(e) {
-    showError('Gagal load members: ' + e.message);
+    showError('Failed to load members: ' + e.message);
   } finally {
     hideLoading();
   }
@@ -2992,7 +3040,7 @@ function updateJabatanStats() {
 }
 
 function renderMembersTable(members) {
-  document.getElementById('members-count-label').textContent = `${members.length} anggota ditampilkan`;
+  document.getElementById('members-count-label').textContent = `${members.length} members shown`;
   const JABATAN_LIST = ['CTO','PM','BA','QA','Dev'];
 
   document.getElementById('members-tbody').innerHTML = members.map((m, i) => {
@@ -3004,7 +3052,7 @@ function renderMembersTable(members) {
 
     const jabBadge = jabatan
       ? `<span class="jabatan-badge j-${jabatan}">${jabatan}</span>`
-      : `<span style="font-size:11px;color:var(--ink-300)">Belum diatur</span>`;
+      : `<span style="font-size:11px;color:var(--ink-300)">Not set</span>`;
 
     return `<tr id="mrow-${m.accountId}">
       <td style="color:var(--ink-400);font-size:12px">${i+1}</td>
@@ -3025,7 +3073,7 @@ function renderMembersTable(members) {
       <td style="font-size:11.5px;color:var(--ink-500)">${m.emailAddress || '—'}</td>
       <td>
         <select class="jabatan-select" data-id="${m.accountId}" onchange="onJabatanChange(this)">
-          <option value="">— Pilih —</option>
+          <option value="">— Select —</option>
           ${JABATAN_LIST.map(j => `<option value="${j}" ${j===jabatan?'selected':''}>${j}</option>`).join('')}
         </select>
       </td>
@@ -3033,7 +3081,7 @@ function renderMembersTable(members) {
         <select class="level-select" id="lvl-${m.accountId}" onchange="onLevelChange('${m.accountId}',this.value)">
           ${levels.length
             ? levels.map(l => `<option ${l===level?'selected':''}>${l}</option>`).join('')
-            : `<option value="">— Pilih jabatan dulu —</option>`}
+            : `<option value="">— Select a position first —</option>`}
         </select>
       </td>
       <td>${workloadCell(m.utilization)}</td>
@@ -3041,7 +3089,7 @@ function renderMembersTable(members) {
       <td>
         <button class="save-btn" id="sbtn-${m.accountId}" onclick="saveSingleProfile('${m.accountId}')">
           <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l4 4 6-7"/></svg>
-          Simpan
+          Save
         </button>
       </td>
     </tr>`;
@@ -3059,7 +3107,7 @@ function onJabatanChange(sel) {
   membersData.dirty[accountId] = true;
   document.getElementById('bulk-save-btn').style.display = '';
   const m0 = membersData.all.find(x => x.accountId === accountId);
-  if (m0) m0.jabatan = jabatan; // empty string when "— Pilih —" → counted as unset
+  if (m0) m0.jabatan = jabatan; // empty string when "— Select —" → counted as unset
   onLevelChange(accountId, levels[0] || '');
 }
 
@@ -3081,7 +3129,7 @@ async function saveSingleProfile(accountId) {
   const lvlSel = document.getElementById('lvl-' + accountId);
   const btn    = document.getElementById('sbtn-' + accountId);
   const m      = membersData.all.find(x => x.accountId === accountId);
-  if (!jabSel?.value) return alert('Pilih jabatan terlebih dahulu');
+  if (!jabSel?.value) return alert('Select a position first');
 
   btn.textContent = 'Menyimpan…'; btn.disabled = true;
   try {
@@ -3095,7 +3143,7 @@ async function saveSingleProfile(accountId) {
     delete membersData.dirty[accountId];
     btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l4 4 6-7"/></svg> Tersimpan`;
     btn.classList.add('saved');
-    setTimeout(() => { btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l4 4 6-7"/></svg> Simpan`; btn.classList.remove('saved'); btn.disabled = false; }, 2000);
+    setTimeout(() => { btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l4 4 6-7"/></svg> Save`; btn.classList.remove('saved'); btn.disabled = false; }, 2000);
     updateJabatanStats();
     // Update the name row subtitle
     const row = document.getElementById('mrow-' + accountId);
@@ -3104,15 +3152,15 @@ async function saveSingleProfile(accountId) {
       if (sub) sub.textContent = lvlSel.value;
     }
   } catch(e) {
-    alert('Gagal simpan: ' + e.message);
-    btn.textContent = 'Simpan'; btn.disabled = false;
+    alert('Failed to save: ' + e.message);
+    btn.textContent = 'Save'; btn.disabled = false;
   }
 }
 
 async function saveAllProfiles() {
   const dirtyIds = Object.keys(membersData.dirty);
   if (!dirtyIds.length) return;
-  showLoading('Menyimpan semua perubahan…');
+  showLoading('Saving all changes…');
   try {
     const updates = dirtyIds.map(id => {
       const jabSel = document.querySelector(`.jabatan-select[data-id="${id}"]`);
@@ -3132,9 +3180,9 @@ async function saveAllProfiles() {
     membersData.dirty = {};
     document.getElementById('bulk-save-btn').style.display = 'none';
     updateJabatanStats();
-    showError('✓ Semua perubahan berhasil disimpan');
+    showError('✓ All changes saved');
   } catch(e) {
-    showError('Gagal simpan bulk: ' + e.message);
+    showError('Failed to bulk save: ' + e.message);
   } finally {
     hideLoading();
   }
@@ -3164,7 +3212,7 @@ function filterMembersTable() {
 }
 
 function exportMembersCSV() {
-  const rows = [['Nama','Email','Grup','Jabatan','Level']];
+  const rows = [['Name','Email','Group','Position','Level']];
   membersData.all.forEach(m => rows.push([m.displayName, m.emailAddress || '', m.groups?.[0] || '', m.jabatan || '', m.level || '']));
   const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
   const a = document.createElement('a');
@@ -3185,7 +3233,7 @@ async function refreshAll() {
 function formatDate(str) {
   if (!str) return '—';
   const d = new Date(str);
-  return d.toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' });
+  return d.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
 }
 
 // ——— AUTO REFRESH every 5 min ———
