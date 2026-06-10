@@ -2936,24 +2936,27 @@ function renderTimeline(data) {
   const sevenAgo = new Date(today); sevenAgo.setDate(today.getDate() - 7);
 
   const PERSON_W = 300;
-  // Adaptive day width: fill a comfortable chart width. Clamped so a huge range
-  // stays compact (≈ old 3.4) and a narrow range doesn't over-stretch.
-  const TARGET_CHART_W = 1180;
-  const DAY_W = Math.max(3.0, Math.min(14, TARGET_CHART_W / totalDays));
+  // Day width fills the available chart area so there's no empty space after the
+  // last month. A minimum keeps very long ranges readable (they scroll instead).
+  const availForChart = Math.max(360, (wrap.clientWidth || 1200) - PERSON_W);
+  const DAY_W = Math.max(3.0, availForChart / totalDays);
   const chartW = Math.round(totalDays * DAY_W);
   const px  = iso => Math.max(0, Math.round((new Date(iso) - startD) / 86400000)) * DAY_W;
   const wOf = (a, b) => Math.max(8, (Math.round((new Date(b) - new Date(a)) / 86400000) + 1) * DAY_W);
   const esc = v => (v||'').replace(/'/g,'`').replace(/"/g,'&quot;');
   const fmt = iso => iso ? new Date(iso).toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : '';
 
-  // Monthly column headers
-  const months = [];
+  // Monthly column headers (last column absorbs rounding so they sum to chartW exactly)
+  const monthStarts = [];
   let mc = new Date(startD.getFullYear(), startD.getMonth(), 1);
-  while (mc <= endD) {
-    const dim = new Date(mc.getFullYear(), mc.getMonth()+1, 0).getDate();
-    months.push({ label: mc.toLocaleDateString('en-GB',{month:'short'}), w: Math.round(dim * DAY_W) });
-    mc = new Date(mc.getFullYear(), mc.getMonth()+1, 1);
-  }
+  while (mc <= endD) { monthStarts.push(new Date(mc)); mc = new Date(mc.getFullYear(), mc.getMonth()+1, 1); }
+  let accW = 0;
+  const months = monthStarts.map((m, i) => {
+    const dim = new Date(m.getFullYear(), m.getMonth()+1, 0).getDate();
+    const w = (i === monthStarts.length - 1) ? Math.max(0, chartW - accW) : Math.round(dim * DAY_W);
+    accW += w;
+    return { label: m.toLocaleDateString('en-GB', { month: 'short' }), w };
+  });
   const headerCols = months.map(mo => `<div class="tl-week-label" style="width:${mo.w}px;min-width:${mo.w}px;text-align:center;padding:10px 0">${mo.label}</div>`).join('');
 
   const todayOffset = Math.round((today - startD) / 86400000);
@@ -3442,6 +3445,16 @@ function formatDate(str) {
   const d = new Date(str);
   return d.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
 }
+
+// Re-render the timeline on window resize so the Gantt keeps filling the width
+let tlResizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(tlResizeTimer);
+  tlResizeTimer = setTimeout(() => {
+    const page = document.getElementById('page-timeline');
+    if (page?.classList.contains('active') && TL.data) renderTimeline(TL.data);
+  }, 150);
+});
 
 // ——— AUTO REFRESH every 5 min (silent: no loading indicator) ———
 setInterval(() => refreshAll({ silent: true }), 5 * 60 * 1000);
