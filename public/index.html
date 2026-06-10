@@ -958,6 +958,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
         <div class="combo" id="combo-project"></div>
         <div class="combo" id="combo-group"></div>
         <div class="combo" id="combo-assignee"></div>
+        <div class="combo" id="combo-country"></div>
         <span style="margin-left:auto;font-size:11.5px;color:var(--ink-400)" id="tl-meta"></span>
       </div>
       <!-- Status filter pills (primary filter) -->
@@ -2399,7 +2400,7 @@ function exportCapacityCSV() {
 // ——— Timeline filters: searchable multi-select comboboxes ———
 // Selected ids per field; empty array = "All" (no filter). Joined with commas
 // into the existing /api/timeline query (server does an IN/OR match).
-const TLF = { category: [], project: [], group: [], assignee: [] };
+const TLF = { category: [], project: [], group: [], assignee: [], country: [] };
 const COMBOS = {};
 const cEsc = v => String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 const COMBO_CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M3 8.5l3.5 3.5L13 4.5"/></svg>';
@@ -2422,15 +2423,55 @@ function populateTlFilters() {
     options: groups.map(g => ({ value: g, label: g, count: memByGrp[g]||0 })), onChange: loadTimelinePage };
   COMBOS.assignee = { el: document.getElementById('combo-assignee'), fieldName: 'Developer', allLabel: 'All Developers',
     options: members.map(m => ({ value: m.accountId, label: m.displayName, sub: (m.groups||[])[0]||'', avatar: initialsOf(m.displayName) })), onChange: loadTimelinePage };
+  // Country: options come from the loaded timeline data; filters client-side (no re-fetch).
+  COMBOS.country = { el: document.getElementById('combo-country'), fieldName: 'Country', allLabel: 'All Countries',
+    options: comboCountryOptions(), onChange: tlApplyCountry };
   comboBuildProjects();
 
   // prune stale selections, then render all triggers
-  ['category','project','group','assignee'].forEach(f => {
+  ['category','project','group','assignee','country'].forEach(f => {
     if (!COMBOS[f]) return;
     const valid = new Set(COMBOS[f].options.map(o => o.value));
     TLF[f] = TLF[f].filter(v => valid.has(v));
     comboRender(f);
   });
+}
+
+// Distinct countries present in the currently loaded timeline data (+ task counts).
+function comboCountryOptions() {
+  const counts = {};
+  for (const p of (TL.raw?.items || [])) for (const t of p.tasks) {
+    if (t.country) counts[t.country] = (counts[t.country] || 0) + 1;
+  }
+  return Object.keys(counts).sort().map(c => ({ value: c, label: c, count: counts[c], dot: 'var(--teal-500)' }));
+}
+
+// Rebuild the country combo options from fresh data (after a server load).
+function comboBuildCountries() {
+  if (!COMBOS.country) return;
+  COMBOS.country.options = comboCountryOptions();
+  const valid = new Set(COMBOS.country.options.map(o => o.value));
+  TLF.country = TLF.country.filter(v => valid.has(v));
+  comboRender('country');
+}
+
+// Apply the (client-side) country filter to TL.raw → TL.data, then re-render
+// meta, pills, and the Gantt. No server round-trip.
+function tlApplyCountry() {
+  if (!TL.raw) return;
+  const sel = TLF.country;
+  let items = TL.raw.items || [];
+  if (sel.length) {
+    items = items
+      .map(p => ({ ...p, tasks: p.tasks.filter(t => sel.includes(t.country)) }))
+      .filter(p => p.tasks.length);
+  }
+  const totalIssues = items.reduce((s, p) => s + p.tasks.length, 0);
+  TL.data = { ...TL.raw, items, totalIssues };
+  document.getElementById('tl-meta').textContent =
+    `${totalIssues} issues · ${items.length} developer`;
+  renderTlStatusPills(items);
+  renderTimeline(TL.data);
 }
 
 // Project options depend on the selected categories (IN match).
@@ -2833,13 +2874,10 @@ async function loadTimelinePage() {
     data.items = (data.items || [])
       .map(p => ({ ...p, tasks: p.tasks.filter(t => displayStatus(t.status) !== 'Dropped') }))
       .filter(p => p.tasks.length);
-    data.totalIssues = data.items.reduce((s,p) => s + p.tasks.length, 0);
-    TL.data = data;
-    document.getElementById('tl-meta').textContent =
-      `${data.totalIssues} issues · ${data.items?.length || 0} developer`;
-    renderTlStatusPills(data.items || []);
+    TL.raw = data;            // full set (server-filtered); country options derive from this
+    comboBuildCountries();    // refresh the Country dropdown from the new data
     renderTlLegend();
-    renderTimeline(data);
+    tlApplyCountry();         // sets TL.data + meta + pills + renders (respects country filter)
   } catch(e) {
     showError('Failed to load timeline: ' + e.message);
   } finally {

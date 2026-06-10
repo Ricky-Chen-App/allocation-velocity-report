@@ -740,6 +740,7 @@ const TL_FIELDS = [
   'customfield_10049',       // New Due Date
   'customfield_10062',       // End date
   'customfield_10008',       // Change start date
+  'customfield_10045',       // Country (option field)
   'subtasks'
 ].join(',');
 
@@ -904,6 +905,7 @@ app.get('/api/timeline', async (req, res) => {
           priority:   f.priority?.name,
           project:    f.project?.name,
           projectKey: f.project?.key,
+          country:    f.customfield_10045?.value || null,
           ...bars,
           // lightweight subtask list; their bar coords are fetched lazily on expand
           subtasks: (f.subtasks || [])
