@@ -7,7 +7,12 @@ const fs = require('fs');
 
 const app = express();
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, filePath) => {
+    // Always revalidate HTML so a new deploy is picked up without a hard refresh
+    if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+  }
+}));
 
 // Running on Vercel (or any serverless) — read-only FS, no persistent process
 const IS_SERVERLESS = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
