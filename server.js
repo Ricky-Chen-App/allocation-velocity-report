@@ -869,7 +869,7 @@ app.get('/api/timeline', async (req, res) => {
     const batchResults = await Promise.all(memberBatches.map(async batch => {
       if (!batch.length || !projectKeys.length) return [];
       const jql = `${projJql} AND assignee in (${batch.map(id => `"${id}"`).join(',')}) AND created >= "${startStr}" ORDER BY assignee, created DESC`;
-      try { return await jiraSearchAll(jql, tlFields, 4000); }
+      try { return await jiraSearchAll(jql, tlFields, 8000); }
       catch (e) { console.warn('Timeline batch error:', e.message); return []; }
     }));
 
@@ -893,8 +893,10 @@ app.get('/api/timeline', async (req, res) => {
           };
         }
 
-        // Limit per person (high cap; groups are collapsible so DOM stays light)
-        if (byAssignee[aid].tasks.length >= 300) continue;
+        // Safety cap per person (groups are collapsible + subtasks lazy, so DOM
+        // stays light). Raised from 300 because real members exceed it (e.g. 384),
+        // which silently dropped their oldest tasks.
+        if (byAssignee[aid].tasks.length >= 1500) continue;
 
         const f = issue.fields;
         const isDone = ['Done','Closed','Resolved'].includes(f.status?.name);
