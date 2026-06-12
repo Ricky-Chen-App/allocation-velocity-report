@@ -46,7 +46,7 @@ app.use('/api', (req, res, next) => {
 // Target project categories — EXACT names (case-insensitive).
 // Jira renames (per 2026): "Product"→"Product OTT", "Project OTT"→"Project". + RnD.
 // "Team Product" sengaja TIDAK disertakan.
-const TARGET_CATEGORIES = ['VAS Project', 'Product OTT', 'Project', 'Platform Internal', 'QA', 'RnD'];
+const TARGET_CATEGORIES = ['VAS Project', 'Product OTT', 'Project', 'Platform Internal', 'QA', 'RnD', 'Pre Sales'];
 
 // Target user groups
 const TARGET_GROUPS = [
