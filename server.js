@@ -350,7 +350,6 @@ async function computeCapacitySprint() {
     jql = `${scope} AND statusCategory = "In Progress" ORDER BY updated DESC`;
   }
   const activeSprintCount = use.length;
-  const workingDays = getWorkingDays(winStart, winEnd) || 1;
 
   let issues = [];
   try { issues = await jiraSearchAll(jql, fields, 5000); }
@@ -363,39 +362,35 @@ async function computeCapacitySprint() {
     (byA[aid] = byA[aid] || []).push(it);
   }
 
-  const weightBySpan = span => span <= 2 ? 0.5 : span <= 5 ? 1.0 : span <= 10 ? 2.0 : 3.0;
+  // Capacity denominator = ONE sprint's working days (median of current sprints,
+  // clamped 5..15). Date-spread per task was unreliable: many sprint tasks have
+  // no start date and/or due dates outside the union window → garbage util.
+  // Robust model: each not-done sprint task contributes its SIZE weight; reschedule
+  // (new due) is honoured implicitly (the task still counts while open).
+  const sprintLens = (use || []).map(w => getWorkingDays(w.start, w.end)).filter(n => n > 0).sort((x,y) => x - y);
+  const capDays = source === 'sprint'
+    ? (sprintLens.length ? Math.min(15, Math.max(5, sprintLens[Math.floor(sprintLens.length/2)])) : 10)
+    : (getWorkingDays(winStart, winEnd) || 10);
 
   const developers = members.map(member => {
     const its = byA[member.accountId] || [];
     let load = 0; const projMap = {};
     for (const it of its) {
-      const f = it.fields;
-      const st = (f.status?.name || '').toLowerCase();
-      if (/done|closed|resolved|complete|production/.test(st)) continue; // not consuming capacity
-      const origStart = f.customfield_10015 ? isoOf(f.customfield_10015) : null;
-      const due       = f.duedate           ? isoOf(f.duedate)           : null;
-      const newStart  = f.customfield_10578 ? isoOf(f.customfield_10578) : null;
-      const newDue    = f.customfield_10049 ? isoOf(f.customfield_10049) : null;
-      const overdue = (due && new Date(due) < today) || /delay/.test(st);
-      let a = (overdue && newStart) ? newStart : (origStart || winStart);
-      let b = (overdue && newDue)   ? newDue   : (due || winEnd);
-      if (b < a) b = a;
-      const span = Math.max(1, getWorkingDays(a, b));
-      const oa = a > winStart ? a : winStart;
-      const ob = b < winEnd ? b : winEnd;
-      const active = (ob < oa) ? 0 : getWorkingDays(oa, ob);
-      if (active <= 0) continue;
-      const contribution = weightBySpan(span) / span * active;
-      load += contribution;
-      const pk = f.project?.key, pn = f.project?.name;
-      if (pk) { if (!projMap[pk]) projMap[pk] = { key: pk, name: pn, load: 0, count: 0 }; projMap[pk].load += contribution; projMap[pk].count++; }
+      const st = (it.fields.status?.name || '').toLowerCase().trim();
+      if (/done|closed|resolved|complete|production/.test(st)) continue;        // finished
+      if (/to ?do|todo|backlog/.test(st) || st === 'open' || st === 'new') continue; // not started
+      if (/on ?hold|hold|block|waiting|telco|pending/.test(st)) continue;       // blocked
+      const w = getIssueWeight(it);
+      load += w;
+      const pk = it.fields.project?.key, pn = it.fields.project?.name;
+      if (pk) { if (!projMap[pk]) projMap[pk] = { key: pk, name: pn, load: 0, count: 0 }; projMap[pk].load += w; projMap[pk].count++; }
     }
-    const utilization = workingDays > 0 ? Math.round((load / workingDays) * 100) : 0;
+    const utilization = capDays > 0 ? Math.round((load / capDays) * 100) : 0;
     const available = Math.max(0, 100 - utilization);
     const overload = utilization > 100 ? utilization - 100 : 0;
     const primaryGroup = TARGET_GROUPS.find(g => member.groups.includes(g)) || member.groups[0] || 'Unknown';
     const projectAllocations = Object.values(projMap)
-      .map(p => ({ key: p.key, name: p.name, pct: workingDays > 0 ? Math.round((p.load / workingDays) * 100) : 0, count: p.count }))
+      .map(p => ({ key: p.key, name: p.name, pct: capDays > 0 ? Math.round((p.load / capDays) * 100) : 0, count: p.count }))
       .sort((a,b) => b.pct - a.pct).slice(0, 20);
     return {
       accountId: member.accountId, displayName: member.displayName, emailAddress: member.emailAddress,
@@ -410,7 +405,7 @@ async function computeCapacitySprint() {
 
   const result = {
     developers: developers.sort((a,b) => b.utilization - a.utilization),
-    period: { start: winStart, end: winEnd, workingDays },
+    period: { start: winStart, end: winEnd, workingDays: capDays },
     summary: buildSummary(developers),
     mode: 'sprint',
     source,
