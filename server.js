@@ -746,6 +746,7 @@ const TL_FIELDS = [
   'customfield_10062',       // End date
   'customfield_10008',       // Change start date
   'customfield_10045',       // Country (option field)
+  'parent',                  // epic (for "Per Epic" grouping)
   'subtasks'
 ].join(',');
 
@@ -915,6 +916,8 @@ app.get('/api/timeline', async (req, res) => {
           project:    f.project?.name,
           projectKey: f.project?.key,
           country:    f.customfield_10045?.value || null,
+          epicKey:    f.parent?.key || null,
+          epicTitle:  f.parent?.fields?.summary || null,
           ...bars,
           // lightweight subtask list; their bar coords are fetched lazily on expand
           subtasks: (f.subtasks || [])
