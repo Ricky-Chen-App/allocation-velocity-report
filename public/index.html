@@ -351,7 +351,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .paging-btn.active{background:var(--blue-700);border-color:var(--blue-700);color:white}
 .paging-label{font-size:12px;color:var(--ink-500);min-width:80px;text-align:center}
 .perpage-select{padding:4px 8px;border:1px solid var(--ink-200);border-radius:var(--radius-sm);font-size:11.5px;font-family:var(--font-body);color:var(--ink-700);background:var(--ink-0);outline:none;cursor:pointer}
-.cap-search{display:flex;align-items:center;gap:7px;background:var(--ink-0);border:1px solid var(--ink-200);border-radius:var(--radius-sm);padding:5px 10px;max-width:200px;margin-left:auto}
+.cap-search{display:flex;align-items:center;gap:7px;background:var(--ink-0);border:1px solid var(--ink-200);border-radius:var(--radius-sm);padding:5px 10px;max-width:200px;margin-right:auto}
 .cap-search svg{width:12px;height:12px;color:var(--ink-400);flex-shrink:0}
 .cap-search input{border:none;outline:none;font-size:12px;font-family:var(--font-body);color:var(--ink-800);background:transparent;width:100%}
 
@@ -789,11 +789,18 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
           Export CSV
         </button>
       </div>
+      <!-- Grouping toggle: All Task vs Sprint Active -->
+      <div style="padding:14px 32px 0">
+        <div class="pill-group" id="cap-mode-toggle">
+          <button class="pill active" onclick="setCapMode('all',this)">All Task</button>
+          <button class="pill" onclick="setCapMode('sprint',this)">Sprint Active</button>
+        </div>
+      </div>
       <!-- Formula banner -->
       <div style="margin:14px 32px 0">
         <div class="formula-banner" style="border-radius:var(--radius-md);border:1px solid var(--ink-100)">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 7v5M8 5.5v.5"/></svg>
-          <div class="formula-text">
+          <div class="formula-text" id="cap-formula">
             weight(task): Small≤2d → 0.5 · Standard 3-5d → 1.0 · Large 6-10d → 2.0 · Epic>10d → 3.0
             &nbsp;|&nbsp; Utilization% = Σ(weight × active days) ÷ (4 tasks/day × working days) × 100
             &nbsp;|&nbsp; Available% = max(0, 100 − Utilization%)
@@ -1264,6 +1271,9 @@ function updatePeriodLabel() {
 
 // ——— CAPACITY ———
 async function loadCapacity() {
+  CAP_MODE = 'all';
+  const tg = document.getElementById('cap-mode-toggle');
+  if (tg) tg.querySelectorAll('.pill').forEach((p,i) => p.classList.toggle('active', i === 0));
   showLoading('Calculating developer utilization…');
   try {
     const cap = await api('/api/capacity');
@@ -1278,6 +1288,43 @@ async function loadCapacity() {
     showError('Failed to load capacity: ' + e.message);
   } finally {
     hideLoading();
+  }
+}
+
+// Developer Capacity grouping: 'all' (current month, all tasks) | 'sprint' (active sprint)
+let CAP_MODE = 'all';
+function capData() { return CAP_MODE === 'sprint' ? STATE.capacitySprint : STATE.capacity; }
+
+async function setCapMode(mode, btn) {
+  CAP_MODE = mode;
+  document.querySelectorAll('#cap-mode-toggle .pill').forEach(p => p.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  const f = document.getElementById('cap-formula');
+  if (f) f.innerHTML = mode === 'sprint'
+    ? `weight(span): ≤2d → 0.5 · 3-5d → 1.0 · 6-10d → 2.0 · &gt;10d → 3.0`
+      + `&nbsp;|&nbsp; span = working days start→due (new start/due when overdue/Delay)`
+      + `&nbsp;|&nbsp; load(task) = weight ÷ span × active-in-sprint`
+      + `&nbsp;|&nbsp; Utilization% = Σload ÷ sprint working days × 100`
+    : `weight(task): Small≤2d → 0.5 · Standard 3-5d → 1.0 · Large 6-10d → 2.0 · Epic&gt;10d → 3.0`
+      + `&nbsp;|&nbsp; Utilization% = Σ(weight × active days) ÷ (4 tasks/day × working days) × 100`
+      + `&nbsp;|&nbsp; Available% = max(0, 100 − Utilization%)`
+      + `&nbsp;·&nbsp; Overloaded% = max(0, Utilization% − 100)`;
+
+  if (mode === 'sprint' && !STATE.capacitySprint) {
+    showLoading('Calculating sprint capacity…');
+    try { STATE.capacitySprint = await api('/api/capacity?mode=sprint'); }
+    catch(e) { showError('Failed to load sprint capacity: ' + e.message); }
+    finally { hideLoading(); }
+  }
+
+  const cap = capData();
+  if (cap) {
+    renderCapacityTable(cap);
+    const p = cap.period || {};
+    document.getElementById('cap-subtitle').textContent = mode === 'sprint'
+      ? `Active sprint · ${p.start || ''} → ${p.end || ''} · ${p.workingDays || 0} working days · ${cap.activeSprints || 0} active sprint(s)`
+      : `${new Date().toLocaleString('en-GB',{month:'long',year:'numeric'})} · ${p.workingDays || 22} working days · ${STATE.members?.length || 0} members across 6 groups`;
   }
 }
 
@@ -1547,7 +1594,7 @@ function capApplyFilters(members) {
 
 function renderCapFilterBar() {
   const bar = document.getElementById('cap-filter-bar');
-  if (!bar || !STATE.capacity) return;
+  if (!bar || !capData()) return;
   const projects = STATE.projects?.projects || [];
   const hasFilter = CAP_FILTER.group || CAP_FILTER.status || CAP_FILTER.project;
   bar.innerHTML = `
@@ -1568,8 +1615,8 @@ function renderCapFilterBar() {
     ${hasFilter ? `<button class="btn btn-ghost" style="padding:6px 12px;color:var(--red-500);border-color:var(--red-100)" onclick="resetCapFilter()">✕ Reset filter</button>` : ''}`;
 }
 
-function setCapFilter(key, val) { CAP_FILTER[key] = val; renderCapacityTable(STATE.capacity); }
-function resetCapFilter() { CAP_FILTER.group=''; CAP_FILTER.status=''; CAP_FILTER.project=''; renderCapacityTable(STATE.capacity); }
+function setCapFilter(key, val) { CAP_FILTER[key] = val; renderCapacityTable(capData()); }
+function resetCapFilter() { CAP_FILTER.group=''; CAP_FILTER.status=''; CAP_FILTER.project=''; renderCapacityTable(capData()); }
 
 function renderCapacityTable(cap) {
   renderCapFilterBar();
@@ -1671,20 +1718,20 @@ function toggleCapSection(group) {
 function onCapSearch(group, query) {
   CAP_PAGING[group].query = query.toLowerCase();
   CAP_PAGING[group].page  = 0;
-  const members = capApplyFilters(STATE.capacity.developers.filter(d => d.groups.includes(group)));
+  const members = capApplyFilters(capData().developers.filter(d => d.groups.includes(group)));
   renderCapGroupRows(group, members);
 }
 
 function setCapPerPage(group, val) {
   CAP_PAGING[group].perPage = val === 'all' ? 9999 : parseInt(val);
   CAP_PAGING[group].page    = 0;
-  const members = capApplyFilters(STATE.capacity.developers.filter(d => d.groups.includes(group)));
+  const members = capApplyFilters(capData().developers.filter(d => d.groups.includes(group)));
   renderCapGroupRows(group, members);
 }
 
 function capGoPage(group, page) {
   CAP_PAGING[group].page = page;
-  const members = capApplyFilters(STATE.capacity.developers.filter(d => d.groups.includes(group)));
+  const members = capApplyFilters(capData().developers.filter(d => d.groups.includes(group)));
   renderCapGroupRows(group, members);
 }
 
@@ -1836,7 +1883,7 @@ function capPill(accountId, p) {
 }
 
 function capFindDev(accountId) {
-  return (STATE.capacity?.developers || []).find(d => d.accountId === accountId);
+  return (capData()?.developers || []).find(d => d.accountId === accountId);
 }
 // Insert/replace a panel row right after the developer row
 function capPanel(accountId, html) {
@@ -2280,7 +2327,7 @@ async function syncNow() {
   try {
     await api('/api/refresh');               // clear server-side caches
     // reset client state so everything re-fetches fresh
-    STATE.projects = null; STATE.members = null; STATE.capacity = null;
+    STATE.projects = null; STATE.members = null; STATE.capacity = null; STATE.capacitySprint = null;
     STATE.forecast = null; STATE.velocity = null; STATE.sync = null; STATE.tasks = null;
     if (typeof TL !== 'undefined') TL.data = null;
     if (typeof CAP_DRILL !== 'undefined') CAP_DRILL.cache = {};
@@ -2403,8 +2450,8 @@ function renderSyncTable(issues) {
 
 // ——— EXPORT ———
 function exportCapacityCSV() {
-  if (!STATE.capacity) return alert('Data not available yet');
-  const devs = STATE.capacity.developers;
+  if (!capData()) return alert('Data not available yet');
+  const devs = capData().developers;
   const rows = [['Name','Group','Utilization%','Available%','Overload%','Tasks','Active Tasks']];
   devs.forEach(d => rows.push([d.displayName, d.group, d.utilization, d.available, d.overload, d.taskCount, d.activeTaskCount]));
   const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
@@ -3279,7 +3326,7 @@ let membersData = { all: [], profiles: {}, jabatanLevels: {}, dirty: {} };
 
 // Utilization per member from capacity data (null if not loaded yet)
 function getMemberUtil(accountId) {
-  const d = STATE.capacity?.developers?.find(x => x.accountId === accountId);
+  const d = capData()?.developers?.find(x => x.accountId === accountId);
   return d ? d.utilization : null;
 }
 // Workload mini-bar cell
@@ -3528,7 +3575,7 @@ async function refreshAll(opts) {
   SILENT_LOAD = silent;
   try {
     STATE.projects = null; STATE.members = null;
-    STATE.capacity = null; STATE.forecast = null;
+    STATE.capacity = null; STATE.capacitySprint = null; STATE.forecast = null;
     STATE.velocity = null; STATE.sync = null; STATE.tasks = null;
     await init();
   } finally {
