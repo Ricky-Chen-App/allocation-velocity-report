@@ -1323,7 +1323,9 @@ async function setCapMode(mode, btn) {
     renderCapacityTable(cap);
     const p = cap.period || {};
     document.getElementById('cap-subtitle').textContent = mode === 'sprint'
-      ? `Active sprint · ${p.start || ''} → ${p.end || ''} · ${p.workingDays || 0} working days · ${cap.activeSprints || 0} active sprint(s)`
+      ? (cap.source === 'inprogress'
+          ? `No active sprint → In Progress tasks · ${p.start || ''} → ${p.end || ''} · ${p.workingDays || 0} working days`
+          : `Active sprint · ${p.start || ''} → ${p.end || ''} · ${p.workingDays || 0} working days · ${cap.activeSprints || 0} active sprint(s)`)
       : `${new Date().toLocaleString('en-GB',{month:'long',year:'numeric'})} · ${p.workingDays || 22} working days · ${STATE.members?.length || 0} members across 6 groups`;
   }
 }

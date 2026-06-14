@@ -318,34 +318,40 @@ async function computeCapacitySprint() {
   const wins = [];
   try {
     const boardData = await jiraGet(`/rest/agile/1.0/board?maxResults=50`);
-    for (const b of (boardData.values || []).slice(0, 14)) {
-      try {
-        const s = await jiraGet(`/rest/agile/1.0/board/${b.id}/sprint?state=active&maxResults=10`);
-        for (const sp of (s.values || [])) if (sp.startDate && sp.endDate) wins.push({ start: isoOf(sp.startDate), end: isoOf(sp.endDate) });
-      } catch (e) { /* board has no sprints */ }
-    }
+    const boards = boardData.values || [];
+    // Scan ALL boards (parallel) for their active sprint(s)
+    const perBoard = await Promise.all(boards.map(async b => {
+      try { const s = await jiraGet(`/rest/agile/1.0/board/${b.id}/sprint?state=active&maxResults=10`); return s.values || []; }
+      catch (e) { return []; }
+    }));
+    for (const arr of perBoard) for (const sp of arr) if (sp.startDate && sp.endDate) wins.push({ start: isoOf(sp.startDate), end: isoOf(sp.endDate) });
   } catch (e) { /* no agile */ }
 
-  // Keep only real current sprints: normal length (≤45 calendar days) and not
-  // already ended. Drops stale "active" sprints left open for years.
-  const todayStr = isoOf(today.toISOString());
+  // Keep real current sprints: normal length (≤45d) and recent — includes sprints
+  // that just ended but aren't closed yet. Drops stale sprints left open for years.
   const lenDays = w => (new Date(w.end) - new Date(w.start)) / 86400000;
-  let use = wins.filter(w => lenDays(w) <= 45 && w.end >= todayStr && w.start <= todayStr); // contains today
-  if (!use.length) use = wins.filter(w => lenDays(w) <= 45 && w.end >= todayStr);           // upcoming/ongoing
-  let winStart, winEnd;
+  const recentCut = isoOf(new Date(today.getTime() - 21 * 86400000).toISOString());
+  const use = wins.filter(w => lenDays(w) <= 45 && w.end >= recentCut);
+
+  const scope = `project in (${projectKeys.slice(0,50).map(k => `"${k}"`).join(',')}) AND assignee in (${memberIds.slice(0,50).map(id => `"${id}"`).join(',')})`;
+  const fields = 'assignee,summary,status,priority,customfield_10016,timeoriginalestimate,duedate,customfield_10015,customfield_10578,customfield_10049,customfield_10062,resolutiondate,project,issuetype';
+
+  let winStart, winEnd, source, jql;
   if (use.length) {
+    source = 'sprint';
     winStart = use.map(w => w.start).sort()[0];
     winEnd   = use.map(w => w.end).sort().slice(-1)[0];
+    jql = `${scope} AND sprint in openSprints() ORDER BY updated DESC`;
   } else {
-    winStart = todayStr;
-    const e = new Date(today); e.setDate(e.getDate() + 13); winEnd = isoOf(e.toISOString());
+    // No active sprint at all → fall back to In Progress tasks over current month
+    source = 'inprogress';
+    winStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+    winEnd   = new Date(today.getFullYear(), today.getMonth()+1, 0).toISOString().split('T')[0];
+    jql = `${scope} AND statusCategory = "In Progress" ORDER BY updated DESC`;
   }
   const activeSprintCount = use.length;
   const workingDays = getWorkingDays(winStart, winEnd) || 1;
 
-  // 2) issues in active sprints
-  const fields = 'assignee,summary,status,priority,customfield_10016,timeoriginalestimate,duedate,customfield_10015,customfield_10578,customfield_10049,customfield_10062,resolutiondate,project,issuetype';
-  const jql = `project in (${projectKeys.slice(0,50).map(k => `"${k}"`).join(',')}) AND assignee in (${memberIds.slice(0,50).map(id => `"${id}"`).join(',')}) AND sprint in openSprints() ORDER BY updated DESC`;
   let issues = [];
   try { issues = await jiraSearchAll(jql, fields, 5000); }
   catch (e) { console.warn('Sprint capacity JQL error:', e.message); }
@@ -407,6 +413,7 @@ async function computeCapacitySprint() {
     period: { start: winStart, end: winEnd, workingDays },
     summary: buildSummary(developers),
     mode: 'sprint',
+    source,
     activeSprints: activeSprintCount
   };
   cache.capacitySprint = result;
