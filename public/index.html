@@ -484,6 +484,19 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .tl-sub-key{font-size:9.5px;font-family:var(--font-mono);color:var(--ink-300);flex-shrink:0}
 .tl-sub-name{font-size:10.5px;color:var(--ink-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tl-sub-bars{flex:1}
+/* Epic sub-group header (Project → Epic → Task hierarchy) */
+.tl-epic-row{display:flex;align-items:stretch;border-bottom:1px solid var(--ink-50);background:var(--amber-50);cursor:pointer;min-height:34px;position:relative}
+.tl-epic-row:hover{background:var(--amber-100)}
+.tl-epic-left{display:flex;align-items:center;gap:7px;padding:5px 14px 5px 30px;border-right:1px solid var(--ink-100);position:sticky;left:0;background:var(--amber-50);z-index:3}
+.tl-epic-row:hover .tl-epic-left{background:var(--amber-100)}
+.tl-epic-chev{width:12px;height:12px;color:var(--amber-600);flex-shrink:0;transition:transform var(--transition)}
+.tl-epic-chev.open{transform:rotate(90deg)}
+.tl-epic-key{font-family:var(--font-mono);font-size:9.5px;font-weight:600;color:var(--amber-600);flex-shrink:0}
+.tl-epic-name{font-size:12px;font-weight:600;color:var(--ink-800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-epic-sub{font-size:9.5px;color:var(--ink-400);flex-shrink:0;font-family:var(--font-mono)}
+.tl-epic-track{position:relative;flex-shrink:0}
+.tl-epic-span{position:absolute;top:50%;transform:translateY(-50%);height:10px;border-radius:5px;background:var(--amber-100);overflow:hidden}
+.tl-epic-span-fill{height:100%;background:var(--amber-400);opacity:.6}
 .tl-sub-bar-loading{position:absolute;font-size:11px;letter-spacing:2px;color:var(--ink-300);padding-left:8px}
 .tl-sub-nodate{position:absolute;height:16px;display:inline-flex;align-items:center;padding:0 8px;font-size:9px;color:var(--ink-400);border:1px dashed var(--ink-200);border-radius:4px;background:var(--ink-50);white-space:nowrap}
 .tl-task-bars{position:relative;flex-shrink:0}
@@ -2621,11 +2634,17 @@ function comboKey(field, ev) {
 document.addEventListener('click', e => { if (!e.target.closest('.combo')) comboCloseAll(); });
 
 // ======== TIMELINE ========
-let TL = { data: null, statusFilter: 'all', viewMode: 'developer', expanded: new Set(), expandedTasks: new Set(), subBars: {} };
+let TL = { data: null, statusFilter: 'all', viewMode: 'developer', expanded: new Set(), expandedEpics: new Set(), expandedTasks: new Set(), subBars: {} };
 
 // Toggle a project/developer group (collapse/expand); default = collapsed
 function toggleTlGroup(id) {
   if (TL.expanded.has(id)) TL.expanded.delete(id); else TL.expanded.add(id);
+  if (TL.data) renderTimeline(TL.data);
+}
+// Toggle an epic sub-group within a project/developer group (Project → Epic → Task)
+function toggleTlEpic(id, ev) {
+  if (ev) ev.stopPropagation();
+  if (TL.expandedEpics.has(id)) TL.expandedEpics.delete(id); else TL.expandedEpics.add(id);
   if (TL.data) renderTimeline(TL.data);
 }
 // Find a task by key in the loaded timeline data (raw developer-keyed items)
@@ -2656,12 +2675,15 @@ function tlToggleTask(key, ev) {
 }
 function tlExpandAll(open) {
   TL.expanded = new Set();
+  TL.expandedEpics = new Set();
   TL.expandedTasks = new Set();
   const subKeys = [];
   if (open) {
     tlBuildItems(TL.data).forEach(g => {
       TL.expanded.add(g.accountId);
       g.tasks.forEach(t => {
+        // expand the epic sub-group this task belongs to (Project/Developer views)
+        if (!g.isEpic) TL.expandedEpics.add(g.accountId + '::' + (t.epicKey || 'NO_EPIC'));
         const subs = t.subtasks || [];
         if (subs.length) { TL.expandedTasks.add(t.key); subs.forEach(s => subKeys.push(s.key)); }
       });
@@ -3036,8 +3058,8 @@ function renderTimeline(data) {
     </div>`;
 
     if (expanded) {
-      const sorted = [...grp.tasks].sort((a,b) => (a.origBarStart||a.barStart).localeCompare(b.origBarStart||b.barStart));
-      html += sorted.map(task => {
+      const byStart = (a,b) => (a.origBarStart||a.barStart).localeCompare(b.origBarStart||b.barStart);
+      const renderTaskRow = (task, extraIndent = 0) => {
         const oStart = task.origBarStart || task.barStart;
         const oEnd   = task.origBarEnd   || task.barEnd;
         const left = px(oStart), width = wOf(oStart, oEnd);
@@ -3088,7 +3110,7 @@ function renderTimeline(data) {
             subBar = `<div class="tl-sub-nodate" style="left:0;top:7px">No date</div>`;
           }
           return `<div class="tl-sub-row" style="min-height:30px">
-            <div class="tl-sub-left" style="width:${PERSON_W}px;min-width:${PERSON_W}px">
+            <div class="tl-sub-left" style="width:${PERSON_W}px;min-width:${PERSON_W}px;padding-left:${52+extraIndent}px">
               <span style="width:7px;height:7px;border-radius:2px;background:${sStyle.bg};flex-shrink:0"></span>
               <span class="tl-sub-key">${s.key}</span>
               <span class="tl-sub-name" title="${esc(s.summary||'')}">${s.summary || ''}</span>
@@ -3099,7 +3121,7 @@ function renderTimeline(data) {
         }).join('') : '');
 
         return `<div class="tl-task-row" style="height:${rowH}px">
-          <div class="tl-task-left" style="width:${PERSON_W}px;min-width:${PERSON_W}px">
+          <div class="tl-task-left" style="width:${PERSON_W}px;min-width:${PERSON_W}px;padding-left:${30+extraIndent}px">
             ${chev}
             <span style="width:9px;height:9px;border-radius:2px;background:${style.bg};flex-shrink:0"></span>
             <span class="tl-task-key">${task.key}</span>
@@ -3109,7 +3131,49 @@ function renderTimeline(data) {
           </div>
           <div class="tl-task-bars" style="width:${chartW}px">${bars}</div>
         </div>${subRows}`;
-      }).join('');
+      };  // end renderTaskRow
+
+      if (grp.isEpic) {
+        // Per Epic view: the group already IS the epic → tasks render directly
+        html += [...grp.tasks].sort(byStart).map(t => renderTaskRow(t, 0)).join('');
+      } else {
+        // Per Project / Per Developer: nest tasks under their parent epic
+        const epicMap = {};
+        for (const t of grp.tasks) {
+          const ek = t.epicKey || 'NO_EPIC';
+          if (!epicMap[ek]) epicMap[ek] = { key: ek === 'NO_EPIC' ? '' : ek, title: t.epicTitle || (ek === 'NO_EPIC' ? 'No Epic' : ek), tasks: [] };
+          epicMap[ek].tasks.push(t);
+        }
+        const epics = Object.values(epicMap).sort((a,b) => {
+          if (!a.key !== !b.key) return a.key ? -1 : 1;  // "No Epic" last
+          return b.tasks.length - a.tasks.length;
+        });
+        html += epics.map(epic => {
+          const ekId = gid + '::' + (epic.key || 'NO_EPIC');
+          const epicOpen = TL.expandedEpics.has(ekId);
+          const eTotal = epic.tasks.length, eDone = epic.tasks.filter(t => t.isDone).length;
+          const ePct = eTotal ? Math.round(eDone / eTotal * 100) : 0;
+          const eStarts = epic.tasks.map(t => t.origBarStart||t.barStart).filter(Boolean).sort();
+          const eEnds   = epic.tasks.map(t => t.origBarEnd||t.barEnd).filter(Boolean).sort();
+          const eLeft  = eStarts.length ? px(eStarts[0]) : 0;
+          const eRight = eEnds.length ? px(eEnds[eEnds.length-1]) + DAY_W*2 : 0;
+          const eSpan  = Math.max(0, eRight - eLeft);
+          let h = `<div class="tl-epic-row" onclick="toggleTlEpic('${esc(ekId)}',event)">
+            <div class="tl-epic-left" style="width:${PERSON_W}px;min-width:${PERSON_W}px">
+              <svg class="tl-epic-chev${epicOpen?' open':''}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4l4 4-4 4"/></svg>
+              ${epic.key ? `<span class="tl-epic-key">${epic.key}</span>` : ''}
+              <span class="tl-epic-name" title="${esc(epic.title)}">${epic.title}</span>
+              <span class="tl-epic-sub">${eTotal}t · ${ePct}%</span>
+            </div>
+            <div class="tl-epic-track" style="width:${chartW}px">
+              ${todayMark}
+              ${eSpan>0 ? `<div class="tl-epic-span" style="left:${eLeft}px;width:${eSpan}px"><div class="tl-epic-span-fill" style="width:${ePct}%"></div></div>` : ''}
+            </div>
+          </div>`;
+          if (epicOpen) h += [...epic.tasks].sort(byStart).map(t => renderTaskRow(t, 18)).join('');
+          return h;
+        }).join('');
+      }
     }
     return html;
   }).join('');
