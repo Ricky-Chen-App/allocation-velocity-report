@@ -857,8 +857,10 @@ app.get('/api/timeline', async (req, res) => {
     const yr = now.getFullYear();
     const startDate = new Date(yr, 0, 1);
     const endDate   = new Date(yr, 11, 31);
-    const startStr  = startDate.toISOString().split('T')[0];
-    const endStr    = endDate.toISOString().split('T')[0];
+    // Local date strings (toISOString would shift to UTC and roll back a day in
+    // +TZ offsets, producing a spurious extra month at the start of the axis).
+    const startStr  = `${yr}-01-01`;
+    const endStr    = `${yr}-12-31`;
 
     const byAssignee = {};
 

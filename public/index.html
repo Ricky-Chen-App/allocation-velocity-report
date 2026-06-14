@@ -2936,11 +2936,15 @@ function renderTimeline(data) {
   const sevenAgo = new Date(today); sevenAgo.setDate(today.getDate() - 7);
 
   const PERSON_W = 300;
-  // Day width fills the available chart area so there's no empty space after the
-  // last month. A minimum keeps very long ranges readable (they scroll instead).
+  // Fill the available chart area exactly so the months span the full width with
+  // no empty space after the last month and no spurious horizontal scroll. The
+  // axis is always ≤ 1 year (clamped to the display window). A minimum day width
+  // only kicks in on very narrow viewports, where the chart then scrolls.
   const availForChart = Math.max(360, (wrap.clientWidth || 1200) - PERSON_W);
-  const DAY_W = Math.max(3.0, availForChart / totalDays);
-  const chartW = Math.round(totalDays * DAY_W);
+  const MIN_DAY_W = 2.0;
+  const fillW = availForChart / totalDays;
+  const DAY_W = Math.max(MIN_DAY_W, fillW);
+  const chartW = (fillW >= MIN_DAY_W) ? availForChart : Math.round(totalDays * DAY_W);
   const px  = iso => Math.max(0, Math.round((new Date(iso) - startD) / 86400000)) * DAY_W;
   const wOf = (a, b) => Math.max(8, (Math.round((new Date(b) - new Date(a)) / 86400000) + 1) * DAY_W);
   const esc = v => (v||'').replace(/'/g,'`').replace(/"/g,'&quot;');
