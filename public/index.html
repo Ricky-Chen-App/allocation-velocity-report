@@ -1031,7 +1031,9 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
         <select class="select-filter" id="members-group-filter" onchange="filterMembersTable()">
           <option value="">All Groups</option>
           <option>PMO Team</option>
+          <option>AI Specialist</option>
           <option>Cehat Sehat Developer</option>
+          <option>Data Analyst</option>
           <option>Developer</option>
           <option>Lumos Developer</option>
           <option>Matainja Developer</option>
@@ -1129,9 +1131,11 @@ const STATE = {
 const GROUP_COLORS = {
   'PMO Team':               { bg:'var(--amber-50)', color:'var(--amber-700)', border:'var(--amber-200)' },
   'Cehat Sehat Developer':  { bg:'var(--teal-50)',  color:'var(--teal-700)',  border:'var(--teal-200)'  },
-  'Developer':              { bg:'var(--blue-50)',  color:'var(--blue-700)',  border:'var(--blue-200)'  },
-  'Lumos Developer':        { bg:'var(--teal-50)',  color:'var(--teal-600)',  border:'var(--teal-200)'  },
-  'Matainja Developer':     { bg:'var(--violet-50)',color:'var(--violet-700)',border:'var(--violet-200)'},
+  'AI Specialist':          { bg:'var(--violet-50)',color:'var(--violet-600)',border:'var(--violet-200)'},
+  'Data Analyst':           { bg:'var(--blue-50)',  color:'var(--blue-600)',  border:'var(--blue-200)'  },
+  'Developer':              { bg:'var(--teal-50)',  color:'var(--teal-700)',  border:'var(--teal-200)'  },
+  'Lumos Developer':        { bg:'var(--green-50)', color:'var(--green-600)', border:'var(--green-200)' },
+  'Matainja Developer':     { bg:'var(--ink-50)',   color:'var(--ink-600)',   border:'var(--ink-200)'   },
   'PPOB Developer':         { bg:'var(--green-50)', color:'var(--green-700)', border:'var(--green-200)' },
   'Waki Developer':         { bg:'var(--red-50)',   color:'var(--red-700)',   border:'var(--red-200)'   }
 };
@@ -1578,7 +1582,7 @@ function renderExecutivePage(cap) {
 }
 
 // ——— CAPACITY — SECTIONS PER GROUP WITH PAGING ———
-const GROUPS_ORDER = ['PMO Team','Cehat Sehat Developer','Developer','Lumos Developer','Matainja Developer','PPOB Developer','Waki Developer'];
+const GROUPS_ORDER = ['PMO Team','AI Specialist','Cehat Sehat Developer','Data Analyst','Developer','Lumos Developer','Matainja Developer','PPOB Developer','Waki Developer'];
 
 // paging state per group: { page, perPage, query }
 const CAP_PAGING = {};

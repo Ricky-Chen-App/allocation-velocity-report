@@ -51,7 +51,9 @@ const TARGET_CATEGORIES = ['VAS Project', 'Product OTT', 'Project', 'Platform In
 // Target user groups
 const TARGET_GROUPS = [
   'PMO Team',
+  'AI Specialist',
   'Cehat Sehat Developer',
+  'Data Analyst',
   'Developer',
   'Lumos Developer',
   'Matainja Developer',
