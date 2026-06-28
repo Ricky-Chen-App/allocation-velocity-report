@@ -1033,6 +1033,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
           <option>PMO Team</option>
           <option>Cehat Sehat Developer</option>
           <option>Developer</option>
+          <option>Lumos Developer</option>
           <option>Matainja Developer</option>
           <option>PPOB Developer</option>
           <option>Waki Developer</option>
@@ -1129,6 +1130,7 @@ const GROUP_COLORS = {
   'PMO Team':               { bg:'var(--amber-50)', color:'var(--amber-700)', border:'var(--amber-200)' },
   'Cehat Sehat Developer':  { bg:'var(--teal-50)',  color:'var(--teal-700)',  border:'var(--teal-200)'  },
   'Developer':              { bg:'var(--blue-50)',  color:'var(--blue-700)',  border:'var(--blue-200)'  },
+  'Lumos Developer':        { bg:'var(--teal-50)',  color:'var(--teal-600)',  border:'var(--teal-200)'  },
   'Matainja Developer':     { bg:'var(--violet-50)',color:'var(--violet-700)',border:'var(--violet-200)'},
   'PPOB Developer':         { bg:'var(--green-50)', color:'var(--green-700)', border:'var(--green-200)' },
   'Waki Developer':         { bg:'var(--red-50)',   color:'var(--red-700)',   border:'var(--red-200)'   }
@@ -1576,7 +1578,7 @@ function renderExecutivePage(cap) {
 }
 
 // ——— CAPACITY — SECTIONS PER GROUP WITH PAGING ———
-const GROUPS_ORDER = ['PMO Team','Cehat Sehat Developer','Developer','Matainja Developer','PPOB Developer','Waki Developer'];
+const GROUPS_ORDER = ['PMO Team','Cehat Sehat Developer','Developer','Lumos Developer','Matainja Developer','PPOB Developer','Waki Developer'];
 
 // paging state per group: { page, perPage, query }
 const CAP_PAGING = {};

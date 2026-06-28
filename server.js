@@ -53,6 +53,7 @@ const TARGET_GROUPS = [
   'PMO Team',
   'Cehat Sehat Developer',
   'Developer',
+  'Lumos Developer',
   'Matainja Developer',
   'PPOB Developer',
   'Waki Developer'
