@@ -212,7 +212,9 @@ async function computeCapacity() {
     const BASE_CAPACITY = 4 * workingDays; // 4 tasks/day × working days
 
     // JQL: issues assigned to our members in our projects, active this month
-    const jql = `project in (${projectKeys.slice(0, 50).map(k => `"${k}"`).join(',')}) AND assignee in (${memberIds.slice(0, 50).map(id => `"${id}"`).join(',')}) AND (status != Done OR updated >= "${startOfMonth}") ORDER BY updated DESC`;
+    // No slice cap here — Jira's JQL "IN" clause has no ~50-item limit; a cap
+    // silently dropped whole projects/members once counts grew past it.
+    const jql = `project in (${projectKeys.map(k => `"${k}"`).join(',')}) AND assignee in (${memberIds.map(id => `"${id}"`).join(',')}) AND (status != Done OR updated >= "${startOfMonth}") ORDER BY updated DESC`;
     const allIssues = await jiraSearchAll(jql, 'assignee,summary,status,priority,customfield_10016,timeoriginalestimate,timeestimate,timespent,created,resolutiondate,updated,project,issuetype', 5000);
 
     // Group issues by assignee
@@ -336,7 +338,7 @@ async function computeCapacitySprint() {
   const recentCut = isoOf(new Date(today.getTime() - 21 * 86400000).toISOString());
   const use = wins.filter(w => lenDays(w) <= 45 && w.end >= recentCut);
 
-  const scope = `project in (${projectKeys.slice(0,50).map(k => `"${k}"`).join(',')}) AND assignee in (${memberIds.slice(0,50).map(id => `"${id}"`).join(',')})`;
+  const scope = `project in (${projectKeys.map(k => `"${k}"`).join(',')}) AND assignee in (${memberIds.map(id => `"${id}"`).join(',')})`;
   const fields = 'assignee,summary,status,priority,customfield_10016,timeoriginalestimate,duedate,customfield_10015,customfield_10578,customfield_10049,customfield_10062,resolutiondate,project,issuetype';
 
   let winStart, winEnd, source, jql;
