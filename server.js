@@ -74,6 +74,14 @@ function isDropped(status) {
   return /drop|cancel/i.test(status || '');
 }
 
+// Single source of truth for "done" across the app. Substring match (not exact
+// equality) so variant Jira status names like "Done Production" count as done —
+// matches the client's displayStatus() bucketing, which already treats them as
+// Done (green bar) while the old exact-match list silently left them at 0%.
+function isDoneStatus(status) {
+  return /done|closed|resolved|complete|production/i.test(status || '');
+}
+
 async function jiraGet(path) {
   const res = await fetch(`${JIRA_BASE}${path}`, { headers: HEADERS });
   if (!res.ok) {
@@ -283,7 +291,7 @@ async function computeCapacity() {
         available,
         overload,
         taskCount: issues.length,
-        activeTaskCount: issues.filter(i => !['Done', 'Closed', 'Resolved'].includes(i.fields.status?.name)).length,
+        activeTaskCount: issues.filter(i => !isDoneStatus(i.fields.status?.name)).length,
         projectAllocations,
         status: utilization > 100 ? 'overload' : utilization >= 80 ? 'high' : utilization >= 30 ? 'ok' : 'idle'
       };
@@ -465,9 +473,7 @@ app.get('/api/velocity', async (req, res) => {
         for (const sprint of sprints) {
           try {
             const issueData = await jiraGet(`/rest/agile/1.0/sprint/${sprint.id}/issue?maxResults=200&fields=story_points,customfield_10016,timeoriginalestimate,status,resolutiondate`);
-            const done = (issueData.issues || []).filter(i =>
-              ['Done', 'Closed', 'Resolved'].includes(i.fields.status?.name)
-            );
+            const done = (issueData.issues || []).filter(i => isDoneStatus(i.fields.status?.name));
             const points = done.reduce((sum, i) => {
               const sp = i.fields.customfield_10016 || i.fields.story_points;
               return sum + (sp || 0);
@@ -1028,7 +1034,7 @@ app.get('/api/timeline', async (req, res) => {
         if (byAssignee[aid].tasks.length >= 1500) continue;
 
         const f = issue.fields;
-        const isDone = ['Done','Closed','Resolved'].includes(f.status?.name);
+        const isDone = isDoneStatus(f.status?.name);
 
         const bars = computeTaskBars(f, startDate, endDate);
         if (!bars) continue; // outside display window
@@ -1052,7 +1058,7 @@ app.get('/api/timeline', async (req, res) => {
               key:     s.key,
               summary: s.fields?.summary,
               status:  s.fields?.status?.name,
-              isDone:  ['Done','Closed','Resolved'].includes(s.fields?.status?.name)
+              isDone:  isDoneStatus(s.fields?.status?.name)
             }))
         });
       }
@@ -1099,7 +1105,7 @@ app.get('/api/timeline-subtasks', async (req, res) => {
       out[issue.key] = {
         summary: f.summary,
         status:  f.status?.name,
-        isDone:  ['Done','Closed','Resolved'].includes(f.status?.name),
+        isDone:  isDoneStatus(f.status?.name),
         ...bars
       };
     }
