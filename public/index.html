@@ -658,6 +658,30 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .combo-clear{color:var(--ink-500);background:none}
 .combo-clear:hover{background:var(--ink-100)}
 .combo-done{color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent-2))}
+
+/* ===== Structure Organization / Structure Project Team (draw.io-style canvas) ===== */
+.oc-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:14px 32px 0}
+.oc-toolbar .btn.active{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent}
+.oc-canvas-wrap{margin:14px 32px 32px;border:1px solid var(--ink-100);border-radius:var(--radius-lg);overflow:auto;background:var(--ink-0);box-shadow:var(--shadow-xs);height:calc(100vh - 230px);min-height:420px}
+.oc-canvas{position:relative;width:2600px;height:1600px;
+  background-image:radial-gradient(var(--ink-100) 1.4px, transparent 1.4px);background-size:22px 22px;background-color:var(--ink-50)}
+.oc-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.oc-nodes-layer{position:absolute;inset:0}
+.oc-node{position:absolute;width:180px;background:var(--ink-0);border:1.5px solid var(--ink-100);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);padding:9px 10px;cursor:grab;touch-action:none;transition:box-shadow .12s,border-color .12s}
+.oc-node:hover{border-color:var(--ink-200)}
+.oc-node.dragging{cursor:grabbing;box-shadow:var(--shadow-lg);z-index:80}
+.oc-node.connect-source{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
+.oc-node-del{position:absolute;top:-8px;right:-8px;width:18px;height:18px;border-radius:50%;background:var(--red-500);color:#fff;border:2px solid var(--ink-0);font-size:11px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.oc-node-head{display:flex;align-items:center;gap:8px}
+.oc-node-name{font-size:12.5px;font-weight:600;color:var(--ink-800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.oc-title-input{width:100%;margin-top:7px;border:1px solid var(--ink-100);border-radius:var(--radius-sm);background:var(--ink-50);font-size:11px;font-family:var(--font-body);color:var(--ink-600);padding:4px 7px;outline:none}
+.oc-title-input:focus{border-color:var(--accent);background:var(--ink-0)}
+.oc-node.kind-category{background:var(--amber-50);border-color:var(--amber-200)}
+.oc-node.kind-category .oc-node-name{color:var(--amber-700);font-weight:700}
+.oc-node.kind-project{background:var(--violet-50);border-color:var(--violet-200)}
+.oc-node.kind-project .oc-node-key{font-family:var(--font-mono);font-size:9.5px;color:var(--violet-600);font-weight:600}
+.oc-node.kind-person .oc-node-sub{font-size:10px;color:var(--ink-400)}
+.oc-empty-hint{position:absolute;top:24px;left:32px;font-size:12px;color:var(--ink-300);pointer-events:none}
 </style>
 </head>
 <body>
@@ -717,6 +741,18 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1l2 5h5l-4 3 1.5 5L8 11l-4.5 3L5 9 1 6h5z"/></svg>
       Jira Sync
       <span class="nav-badge red" id="nav-sync-badge" style="display:none"></span>
+    </button>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Org Design</div>
+    <button class="nav-item" onclick="showPage('orgchart',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="1" width="4" height="4" rx="1"/><rect x="1" y="11" width="4" height="4" rx="1"/><rect x="11" y="11" width="4" height="4" rx="1"/><path d="M8 5v3M8 8H3v3M8 8h5v3"/></svg>
+      Structure Organization
+    </button>
+    <button class="nav-item" onclick="showPage('projectteam',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="7" height="5" rx="1"/><circle cx="12" cy="4" r="2.3"/><path d="M9.5 14c0-2.2 1.6-3.3 3-3.3s3 1.1 3 3.3"/><path d="M1 11h6M1 14h4"/></svg>
+      Structure Project Team
     </button>
   </div>
 
@@ -1077,6 +1113,66 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
       </div>
     </div>
 
+    <!-- ======== STRUCTURE ORGANIZATION ======== -->
+    <div class="page" id="page-orgchart">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Structure Organization</div>
+          <div class="page-sub">Drag people to build the org chart — connect two people to set who reports to whom</div>
+        </div>
+      </div>
+      <div class="oc-toolbar">
+        <select class="select-filter" id="org-add-select" style="min-width:220px"></select>
+        <button class="btn btn-ghost" onclick="orgAddPerson()">+ Add Person</button>
+        <button class="btn btn-ghost" id="org-connect-btn" onclick="orgToggleConnect()">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="3" cy="3" r="2"/><circle cx="13" cy="13" r="2"/><path d="M4.5 4.5l7 7"/></svg>
+          Connect
+        </button>
+        <span id="org-connect-hint" style="font-size:11.5px;color:var(--accent);display:none">Click a person, then click who they report to…</span>
+        <span style="margin-left:auto;font-size:11.5px;color:var(--ink-400)" id="org-save-status"></span>
+        <button class="btn btn-ghost" onclick="orgClearCanvas()">Clear canvas</button>
+      </div>
+      <div class="oc-canvas-wrap" id="orgchart-wrap">
+        <div class="oc-canvas" id="orgchart-canvas">
+          <svg class="oc-svg" id="orgchart-svg"></svg>
+          <div class="oc-nodes-layer" id="orgchart-nodes"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== STRUCTURE PROJECT TEAM ======== -->
+    <div class="page" id="page-projectteam">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Structure Project Team</div>
+          <div class="page-sub">Map categories, projects and developers — connect a person to a project to assign them</div>
+        </div>
+      </div>
+      <div class="oc-toolbar">
+        <select class="select-filter" id="pt-add-category-select" style="min-width:170px"></select>
+        <button class="btn btn-ghost" onclick="ptAddCategory()">+ Category</button>
+        <select class="select-filter" id="pt-add-project-select" style="min-width:200px"></select>
+        <button class="btn btn-ghost" onclick="ptAddProject()">+ Project</button>
+        <select class="select-filter" id="pt-add-person-select" style="min-width:200px"></select>
+        <button class="btn btn-ghost" onclick="ptAddPerson()">+ Person</button>
+        <button class="btn btn-ghost" id="pt-connect-btn" onclick="ptToggleConnect()">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="3" cy="3" r="2"/><circle cx="13" cy="13" r="2"/><path d="M4.5 4.5l7 7"/></svg>
+          Connect
+        </button>
+        <span id="pt-connect-hint" style="font-size:11.5px;color:var(--accent);display:none">Click a person, then click the project they work on…</span>
+      </div>
+      <div class="oc-toolbar" style="padding-top:0">
+        <span style="margin-left:auto;font-size:11.5px;color:var(--ink-400)" id="pt-save-status"></span>
+        <button class="btn btn-ghost" onclick="ptClearCanvas()">Clear canvas</button>
+      </div>
+      <div class="oc-canvas-wrap" id="projectteam-wrap">
+        <div class="oc-canvas" id="projectteam-canvas">
+          <svg class="oc-svg" id="projectteam-svg"></svg>
+          <div class="oc-nodes-layer" id="projectteam-nodes"></div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -1204,6 +1300,8 @@ function showPage(id, btn) {
   if (id === 'jirasync' && !STATE.sync) loadSyncData();
   if (id === 'timeline') { populateTlFilters(); if (!TL.data) loadTimelinePage(); }
   if (id === 'members') loadMembersPage();
+  if (id === 'orgchart') loadOrgChartPage();
+  if (id === 'projectteam') loadProjectTeamPage();
 
   toggleSidebar(false); // close mobile drawer after navigating
 }
@@ -3618,6 +3716,317 @@ setInterval(() => {
     renderSyncTable(STATE.allSyncIssues);
   }
 }, 60 * 1000);
+
+// ======== STRUCTURE ORGANIZATION / STRUCTURE PROJECT TEAM ========
+// Shared draw.io-style node+edge canvas engine: drag to reposition, a
+// "Connect" mode where click-node-A then click-node-B draws a directed
+// arrow, debounced autosave to the server (org-chart.json / project-team.json).
+
+const ORG = { nodes: [], edges: [], connect: false, connectFrom: null, drag: null, saveTimer: null, apiPath: '/api/org-chart', statusEl: 'org-save-status', _bound: false };
+const PT  = { nodes: [], edges: [], connect: false, connectFrom: null, drag: null, saveTimer: null, apiPath: '/api/project-team', statusEl: 'pt-save-status',  _bound: false };
+
+const OC_NODE_W = 180;
+function ocNodeHeight(node) { return node.kind === 'person' ? 78 : 54; }
+function ocMakeId(prefix) { return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+function ocScheduleSave(state) {
+  clearTimeout(state.saveTimer);
+  const statusEl = document.getElementById(state.statusEl);
+  if (statusEl) statusEl.textContent = 'Saving…';
+  state.saveTimer = setTimeout(async () => {
+    try {
+      await fetch(state.apiPath, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nodes: state.nodes, edges: state.edges })
+      });
+      if (statusEl) statusEl.textContent = 'Saved ✓ ' + new Date().toLocaleTimeString('en-GB');
+    } catch (e) {
+      if (statusEl) statusEl.textContent = 'Save failed — will retry on next change';
+    }
+  }, 700);
+}
+
+function ocRenderEdges(state, prefix) {
+  const svg = document.getElementById(prefix + '-svg');
+  if (!svg) return;
+  const markerId = prefix + '-arrow';
+  const defs = `<defs><marker id="${markerId}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--accent)"/></marker></defs>`;
+  const lines = state.edges.map(e => {
+    const a = state.nodes.find(n => n.id === e.from), b = state.nodes.find(n => n.id === e.to);
+    if (!a || !b) return '';
+    const ah = ocNodeHeight(a), bh = ocNodeHeight(b);
+    const ax = a.x + OC_NODE_W / 2, ay = a.y + ah / 2, bx = b.x + OC_NODE_W / 2, by = b.y + bh / 2;
+    const dx = bx - ax, dy = by - ay, dist = Math.hypot(dx, dy) || 1, ux = dx / dist, uy = dy / dist;
+    const sx = ax + ux * (OC_NODE_W / 2), sy = ay + uy * (ah / 2);
+    const ex = bx - ux * (OC_NODE_W / 2), ey = by - uy * (bh / 2);
+    return `<line x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}" stroke="var(--accent)" stroke-width="2" marker-end="url(#${markerId})"/>`;
+  }).join('');
+  svg.innerHTML = defs + lines;
+}
+
+function ocHighlightSource(state, prefix) {
+  document.querySelectorAll(`#${prefix}-nodes .oc-node`).forEach(n => n.classList.toggle('connect-source', n.dataset.id === state.connectFrom));
+}
+
+function ocHandleConnect(state, prefix, id) {
+  if (!state.connectFrom) { state.connectFrom = id; ocHighlightSource(state, prefix); return; }
+  if (state.connectFrom === id) { state.connectFrom = null; ocHighlightSource(state, prefix); return; }
+  const exists = state.edges.some(e => e.from === state.connectFrom && e.to === id);
+  if (!exists) state.edges.push({ id: ocMakeId('e'), from: state.connectFrom, to: id });
+  state.connectFrom = null;
+  ocHighlightSource(state, prefix);
+  ocRenderEdges(state, prefix);
+  ocScheduleSave(state);
+}
+
+function ocBindCanvas(state, prefix) {
+  if (state._bound) return;
+  state._bound = true;
+  const nodesEl = document.getElementById(prefix + '-nodes');
+  nodesEl.addEventListener('pointerdown', e => {
+    const nodeEl = e.target.closest('.oc-node');
+    if (!nodeEl) return;
+    if (e.target.closest('.oc-node-del') || e.target.closest('.oc-title-input')) return;
+    const id = nodeEl.dataset.id;
+    if (state.connect) { ocHandleConnect(state, prefix, id); return; }
+    const canvas = document.getElementById(prefix + '-canvas');
+    const rect = canvas.getBoundingClientRect();
+    const node = state.nodes.find(n => n.id === id);
+    if (!node) return;
+    state.drag = { id, offX: e.clientX - rect.left - node.x, offY: e.clientY - rect.top - node.y };
+    nodeEl.classList.add('dragging');
+    e.preventDefault();
+  });
+  document.addEventListener('pointermove', e => {
+    if (!state.drag) return;
+    const canvas = document.getElementById(prefix + '-canvas');
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const node = state.nodes.find(n => n.id === state.drag.id);
+    if (!node) return;
+    node.x = Math.max(0, e.clientX - rect.left - state.drag.offX);
+    node.y = Math.max(0, e.clientY - rect.top - state.drag.offY);
+    const el = nodesEl.querySelector(`.oc-node[data-id="${node.id}"]`);
+    if (el) { el.style.left = node.x + 'px'; el.style.top = node.y + 'px'; }
+    ocRenderEdges(state, prefix);
+  });
+  document.addEventListener('pointerup', () => {
+    if (state.drag) {
+      state.drag = null;
+      document.querySelectorAll(`#${prefix}-nodes .oc-node.dragging`).forEach(n => n.classList.remove('dragging'));
+      ocScheduleSave(state);
+    }
+  });
+}
+
+function ocRemoveNode(state, prefix, id) {
+  state.nodes = state.nodes.filter(n => n.id !== id);
+  state.edges = state.edges.filter(e => e.from !== id && e.to !== id);
+  if (prefix === 'orgchart') orgRender(); else ptRender();
+  ocScheduleSave(state);
+}
+
+function ocInitials(name) { return (name || '').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase(); }
+
+// ——— Structure Organization ———
+async function loadOrgChartPage() {
+  try {
+    const data = await api('/api/org-chart');
+    ORG.nodes = data.nodes || [];
+    ORG.edges = data.edges || [];
+  } catch (e) { showError('Failed to load org chart: ' + e.message); }
+  orgPopulateAddSelect();
+  orgRender();
+  ocBindCanvas(ORG, 'orgchart');
+}
+
+function orgPopulateAddSelect() {
+  const sel = document.getElementById('org-add-select');
+  if (!sel) return;
+  const placed = new Set(ORG.nodes.map(n => n.accountId));
+  const members = (STATE.members || []).filter(m => !placed.has(m.accountId)).sort((a, b) => a.displayName.localeCompare(b.displayName));
+  sel.innerHTML = members.length
+    ? members.map(m => `<option value="${cEsc(m.accountId)}">${cEsc(m.displayName)}</option>`).join('')
+    : `<option value="">All members already placed</option>`;
+}
+
+function orgAddPerson() {
+  const sel = document.getElementById('org-add-select');
+  const accountId = sel.value;
+  if (!accountId) return;
+  const member = (STATE.members || []).find(m => m.accountId === accountId);
+  if (!member) return;
+  const profile = STATE.memberProfiles?.[accountId];
+  ORG.nodes.push({
+    id: ocMakeId('n'), kind: 'person', accountId,
+    label: member.displayName, title: profile?.jabatan || '',
+    x: 40 + (ORG.nodes.length % 5) * 200, y: 40 + Math.floor(ORG.nodes.length / 5) * 110
+  });
+  orgPopulateAddSelect();
+  orgRender();
+  ocScheduleSave(ORG);
+}
+
+function orgSetTitle(id, value) {
+  const n = ORG.nodes.find(x => x.id === id);
+  if (n) { n.title = value; ocScheduleSave(ORG); }
+}
+
+function orgToggleConnect() {
+  ORG.connect = !ORG.connect;
+  ORG.connectFrom = null;
+  document.getElementById('org-connect-btn').classList.toggle('active', ORG.connect);
+  document.getElementById('org-connect-hint').style.display = ORG.connect ? '' : 'none';
+  ocHighlightSource(ORG, 'orgchart');
+}
+
+function orgClearCanvas() {
+  if (!confirm('Clear the whole org chart? This removes every person and connection from this canvas (does not affect Team Members data).')) return;
+  ORG.nodes = []; ORG.edges = [];
+  orgPopulateAddSelect();
+  orgRender();
+  ocScheduleSave(ORG);
+}
+
+function orgNodeHtml(n) {
+  return `<div class="oc-node kind-person" data-id="${n.id}" style="left:${n.x}px;top:${n.y}px">
+    <button class="oc-node-del" onclick="ocRemoveNode(ORG,'orgchart','${n.id}')" title="Remove from chart">✕</button>
+    <div class="oc-node-head">
+      <div class="dev-init" style="width:26px;height:26px;font-size:10px;background:var(--blue-50);color:var(--blue-700);flex-shrink:0">${ocInitials(n.label)}</div>
+      <div class="oc-node-name" title="${cEsc(n.label)}">${cEsc(n.label)}</div>
+    </div>
+    <input class="oc-title-input" value="${cEsc(n.title || '')}" placeholder="Job title…"
+      onpointerdown="event.stopPropagation()" onchange="orgSetTitle('${n.id}', this.value)">
+  </div>`;
+}
+
+function orgRender() {
+  const nodesEl = document.getElementById('orgchart-nodes');
+  if (!nodesEl) return;
+  nodesEl.innerHTML = ORG.nodes.map(orgNodeHtml).join('') ||
+    `<div class="oc-empty-hint">No one on this chart yet — pick a person above and click "+ Add Person".</div>`;
+  ocRenderEdges(ORG, 'orgchart');
+}
+
+// ——— Structure Project Team ———
+async function loadProjectTeamPage() {
+  try {
+    const data = await api('/api/project-team');
+    PT.nodes = data.nodes || [];
+    PT.edges = data.edges || [];
+  } catch (e) { showError('Failed to load project team: ' + e.message); }
+  ptPopulateAddSelects();
+  ptRender();
+  ocBindCanvas(PT, 'projectteam');
+}
+
+function ptPopulateAddSelects() {
+  const catSel = document.getElementById('pt-add-category-select');
+  const projSel = document.getElementById('pt-add-project-select');
+  const personSel = document.getElementById('pt-add-person-select');
+  if (!catSel) return;
+
+  const placedCats = new Set(PT.nodes.filter(n => n.kind === 'category').map(n => n.label));
+  const catNames = [...new Set((STATE.projects?.categories || []).map(c => c.name || c).filter(Boolean))]
+    .filter(c => !placedCats.has(c));
+  catSel.innerHTML = catNames.length
+    ? catNames.map(c => `<option value="${cEsc(c)}">${cEsc(c)}</option>`).join('')
+    : `<option value="">All categories placed</option>`;
+
+  const placedProj = new Set(PT.nodes.filter(n => n.kind === 'project').map(n => n.key));
+  const projects = (STATE.projects?.projects || []).filter(p => !placedProj.has(p.key)).sort((a, b) => a.name.localeCompare(b.name));
+  projSel.innerHTML = projects.length
+    ? projects.map(p => `<option value="${cEsc(p.key)}">[${cEsc(p.key)}] ${cEsc(p.name)}</option>`).join('')
+    : `<option value="">All projects placed</option>`;
+
+  const placedPeople = new Set(PT.nodes.filter(n => n.kind === 'person').map(n => n.accountId));
+  const members = (STATE.members || []).filter(m => !placedPeople.has(m.accountId)).sort((a, b) => a.displayName.localeCompare(b.displayName));
+  personSel.innerHTML = members.length
+    ? members.map(m => `<option value="${cEsc(m.accountId)}">${cEsc(m.displayName)}</option>`).join('')
+    : `<option value="">All members placed</option>`;
+}
+
+function ptNextPos() {
+  const n = PT.nodes.length;
+  return { x: 40 + (n % 6) * 210, y: 40 + Math.floor(n / 6) * 100 };
+}
+
+function ptAddCategory() {
+  const sel = document.getElementById('pt-add-category-select');
+  const name = sel.value;
+  if (!name) return;
+  const p = ptNextPos();
+  PT.nodes.push({ id: ocMakeId('n'), kind: 'category', label: name, ...p });
+  ptPopulateAddSelects(); ptRender(); ocScheduleSave(PT);
+}
+
+function ptAddProject() {
+  const sel = document.getElementById('pt-add-project-select');
+  const key = sel.value;
+  if (!key) return;
+  const proj = (STATE.projects?.projects || []).find(p => p.key === key);
+  if (!proj) return;
+  const p = ptNextPos();
+  PT.nodes.push({ id: ocMakeId('n'), kind: 'project', key: proj.key, label: proj.name, ...p });
+  ptPopulateAddSelects(); ptRender(); ocScheduleSave(PT);
+}
+
+function ptAddPerson() {
+  const sel = document.getElementById('pt-add-person-select');
+  const accountId = sel.value;
+  if (!accountId) return;
+  const member = (STATE.members || []).find(m => m.accountId === accountId);
+  if (!member) return;
+  const p = ptNextPos();
+  PT.nodes.push({ id: ocMakeId('n'), kind: 'person', accountId, label: member.displayName, ...p });
+  ptPopulateAddSelects(); ptRender(); ocScheduleSave(PT);
+}
+
+function ptToggleConnect() {
+  PT.connect = !PT.connect;
+  PT.connectFrom = null;
+  document.getElementById('pt-connect-btn').classList.toggle('active', PT.connect);
+  document.getElementById('pt-connect-hint').style.display = PT.connect ? '' : 'none';
+  ocHighlightSource(PT, 'projectteam');
+}
+
+function ptClearCanvas() {
+  if (!confirm('Clear the whole project team map? This removes every category, project, person and connection from this canvas.')) return;
+  PT.nodes = []; PT.edges = [];
+  ptPopulateAddSelects(); ptRender(); ocScheduleSave(PT);
+}
+
+function ptNodeHtml(n) {
+  if (n.kind === 'category') {
+    return `<div class="oc-node kind-category" data-id="${n.id}" style="left:${n.x}px;top:${n.y}px">
+      <button class="oc-node-del" onclick="ocRemoveNode(PT,'projectteam','${n.id}')" title="Remove from map">✕</button>
+      <div class="oc-node-name" title="${cEsc(n.label)}">${cEsc(n.label)}</div>
+    </div>`;
+  }
+  if (n.kind === 'project') {
+    return `<div class="oc-node kind-project" data-id="${n.id}" style="left:${n.x}px;top:${n.y}px">
+      <button class="oc-node-del" onclick="ocRemoveNode(PT,'projectteam','${n.id}')" title="Remove from map">✕</button>
+      <div class="oc-node-key">${cEsc(n.key)}</div>
+      <div class="oc-node-name" title="${cEsc(n.label)}">${cEsc(n.label)}</div>
+    </div>`;
+  }
+  return `<div class="oc-node kind-person" data-id="${n.id}" style="left:${n.x}px;top:${n.y}px">
+    <button class="oc-node-del" onclick="ocRemoveNode(PT,'projectteam','${n.id}')" title="Remove from map">✕</button>
+    <div class="oc-node-head">
+      <div class="dev-init" style="width:26px;height:26px;font-size:10px;background:var(--blue-50);color:var(--blue-700);flex-shrink:0">${ocInitials(n.label)}</div>
+      <div class="oc-node-name" title="${cEsc(n.label)}">${cEsc(n.label)}</div>
+    </div>
+  </div>`;
+}
+
+function ptRender() {
+  const nodesEl = document.getElementById('projectteam-nodes');
+  if (!nodesEl) return;
+  nodesEl.innerHTML = PT.nodes.map(ptNodeHtml).join('') ||
+    `<div class="oc-empty-hint">Nothing mapped yet — add a category, project, or person above.</div>`;
+  ocRenderEdges(PT, 'projectteam');
+}
 
 // ——— START ———
 init();

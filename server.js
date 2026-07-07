@@ -810,6 +810,52 @@ app.post('/api/member-profiles/bulk', (req, res) => {
   res.json({ updated: Object.keys(profiles).length });
 });
 
+// ——— Generic node/edge canvas store (Structure Organization + Structure Project Team) ———
+// Same serverless-safe pattern as member-profiles: seed from data/, write to /tmp on Vercel.
+function makeCanvasStore(name) {
+  const seedPath = path.join(__dirname, 'data', `${name}.json`);
+  const writePath = IS_SERVERLESS ? path.join('/tmp', `${name}.json`) : seedPath;
+  let mem = null;
+  return {
+    read() {
+      if (mem) return mem;
+      for (const p of [writePath, seedPath]) {
+        try { mem = JSON.parse(fs.readFileSync(p, 'utf8')); return mem; }
+        catch { /* try next */ }
+      }
+      mem = { nodes: [], edges: [] };
+      return mem;
+    },
+    write(data) {
+      mem = data;
+      try {
+        fs.mkdirSync(path.dirname(writePath), { recursive: true });
+        fs.writeFileSync(writePath, JSON.stringify(data, null, 2), 'utf8');
+      } catch (e) {
+        console.warn(`${name} store: could not persist to disk:`, e.message);
+      }
+    }
+  };
+}
+const orgChartStore = makeCanvasStore('org-chart');
+const projectTeamStore = makeCanvasStore('project-team');
+
+app.get('/api/org-chart', (req, res) => res.json(orgChartStore.read()));
+app.put('/api/org-chart', (req, res) => {
+  const { nodes, edges } = req.body || {};
+  if (!Array.isArray(nodes) || !Array.isArray(edges)) return res.status(400).json({ error: 'nodes and edges must be arrays' });
+  orgChartStore.write({ nodes, edges, updatedAt: new Date().toISOString() });
+  res.json({ ok: true });
+});
+
+app.get('/api/project-team', (req, res) => res.json(projectTeamStore.read()));
+app.put('/api/project-team', (req, res) => {
+  const { nodes, edges } = req.body || {};
+  if (!Array.isArray(nodes) || !Array.isArray(edges)) return res.status(400).json({ error: 'nodes and edges must be arrays' });
+  projectTeamStore.write({ nodes, edges, updatedAt: new Date().toISOString() });
+  res.json({ ok: true });
+});
+
 // ——— GET /api/drilldown?assigneeId=&projectKey= ———
 // Epics → tasks → subtasks for one developer in one project (Developer Capacity drill-down)
 app.get('/api/drilldown', async (req, res) => {
