@@ -600,6 +600,10 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .sidebar>div[style*="margin-top"]{border-top-color:oklch(1 0 0/.08)!important}
 .sidebar .btn-ghost{color:var(--side-ink);border-color:oklch(1 0 0/.16);background:oklch(1 0 0/.05)}
 .sidebar .btn-ghost:hover{background:oklch(1 0 0/.10);border-color:oklch(1 0 0/.24)}
+#menu-customizer-panel{padding:4px 10px 10px}
+.nav-cust-row{display:flex;align-items:center;gap:9px;padding:6px 4px;font-size:12px;color:var(--side-muted);cursor:pointer;border-radius:6px}
+.nav-cust-row:hover{background:oklch(1 0 0/.06);color:var(--side-ink)}
+.nav-cust-row input{width:14px;height:14px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
 
 /* Translucent blurred topbar */
 .topbar{background:oklch(0.995 0.004 75/.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom-color:var(--ink-100)}
@@ -708,24 +712,24 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 
   <div class="nav-section">
     <div class="nav-label">Dashboards</div>
-    <button class="nav-item active" onclick="showPage('executive',this)">
+    <button class="nav-item active" data-navid="executive" onclick="showPage('executive',this)">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
       Executive
     </button>
-    <button class="nav-item" onclick="showPage('capacity',this)">
+    <button class="nav-item" data-navid="capacity" onclick="showPage('capacity',this)">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 4v4l3 2"/></svg>
       Developer Capacity
     </button>
-    <button class="nav-item" onclick="showPage('velocity',this)">
+    <button class="nav-item" data-navid="velocity" onclick="showPage('velocity',this)">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l4-4 3 3 5-6"/><path d="M12 5h3v3"/></svg>
       Velocity & Forecast
       <span class="nav-badge" id="nav-forecast-badge" style="display:none"></span>
     </button>
-    <button class="nav-item" onclick="showPage('tasks',this)">
+    <button class="nav-item" data-navid="tasks" onclick="showPage('tasks',this)">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="11" rx="1.5"/><path d="M1 7h14"/><path d="M5 1v4M11 1v4"/></svg>
       Task Allocation
     </button>
-    <button class="nav-item" onclick="showPage('timeline',this)">
+    <button class="nav-item" data-navid="timeline" onclick="showPage('timeline',this)">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="14" height="2" rx="1"/><rect x="1" y="8" width="10" height="2" rx="1"/><rect x="1" y="12" width="12" height="2" rx="1"/></svg>
       Timeline
     </button>
@@ -733,11 +737,11 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 
   <div class="nav-section">
     <div class="nav-label">Admin</div>
-    <button class="nav-item" onclick="showPage('members',this)">
+    <button class="nav-item" data-navid="members" onclick="showPage('members',this)">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="5" r="3"/><path d="M1 14c0-3 2-4 5-4s5 1 5 4"/><path d="M12 7l1.5 1.5L16 6"/></svg>
       Team Members
     </button>
-    <button class="nav-item" onclick="showPage('jirasync',this)">
+    <button class="nav-item" data-navid="jirasync" onclick="showPage('jirasync',this)">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1l2 5h5l-4 3 1.5 5L8 11l-4.5 3L5 9 1 6h5z"/></svg>
       Jira Sync
       <span class="nav-badge red" id="nav-sync-badge" style="display:none"></span>
@@ -746,17 +750,25 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 
   <div class="nav-section">
     <div class="nav-label">Org Design</div>
-    <button class="nav-item" onclick="showPage('orgchart',this)">
+    <button class="nav-item" data-navid="orgchart" onclick="showPage('orgchart',this)">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="1" width="4" height="4" rx="1"/><rect x="1" y="11" width="4" height="4" rx="1"/><rect x="11" y="11" width="4" height="4" rx="1"/><path d="M8 5v3M8 8H3v3M8 8h5v3"/></svg>
       Structure Organization
     </button>
-    <button class="nav-item" onclick="showPage('projectteam',this)">
+    <button class="nav-item" data-navid="projectteam" onclick="showPage('projectteam',this)">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="7" height="5" rx="1"/><circle cx="12" cy="4" r="2.3"/><path d="M9.5 14c0-2.2 1.6-3.3 3-3.3s3 1.1 3 3.3"/><path d="M1 11h6M1 14h4"/></svg>
       Structure Project Team
     </button>
   </div>
 
-  <div style="margin-top:auto;padding:16px 12px;border-top:1px solid var(--ink-100)">
+  <div class="nav-section" style="margin-top:auto">
+    <button class="nav-item" onclick="toggleMenuCustomizer()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2"/><path d="M8 1.5v1.6M8 12.9v1.6M14.5 8h-1.6M3.1 8H1.5M12.5 3.5l-1.1 1.1M4.6 11.4l-1.1 1.1M12.5 12.5l-1.1-1.1M4.6 4.6L3.5 3.5"/></svg>
+      Customize Menu
+    </button>
+    <div id="menu-customizer-panel" style="display:none"></div>
+  </div>
+
+  <div style="padding:16px 12px;border-top:1px solid var(--ink-100)">
     <button class="btn btn-ghost" style="width:100%;justify-content:center;" onclick="refreshAll()">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8A6 6 0 0114 8M14 8a6 6 0 01-12 0"/><path d="M14 4v4h-4"/></svg>
       Refresh Data
@@ -1129,6 +1141,11 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
         </button>
         <span id="org-connect-hint" style="font-size:11.5px;color:var(--accent);display:none">Click a person, then click who they report to…</span>
         <span style="margin-left:auto;font-size:11.5px;color:var(--ink-400)" id="org-save-status"></span>
+        <button class="btn btn-ghost" onclick="ocExportSVG(ORG,'org-chart')">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v9M4 8l4 4 4-4"/><path d="M2 14h12"/></svg>
+          Export SVG
+        </button>
+        <button class="btn btn-ghost" onclick="ocExportPNG(ORG,'org-chart')">Export PNG</button>
         <button class="btn btn-ghost" onclick="orgClearCanvas()">Clear canvas</button>
       </div>
       <div class="oc-canvas-wrap" id="orgchart-wrap">
@@ -1159,6 +1176,11 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
       </div>
       <div class="oc-toolbar" style="padding-top:0">
         <span style="margin-left:auto;font-size:11.5px;color:var(--ink-400)" id="pt-save-status"></span>
+        <button class="btn btn-ghost" onclick="ocExportSVG(PT,'project-team')">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v9M4 8l4 4 4-4"/><path d="M2 14h12"/></svg>
+          Export SVG
+        </button>
+        <button class="btn btn-ghost" onclick="ocExportPNG(PT,'project-team')">Export PNG</button>
         <button class="btn btn-ghost" onclick="ptClearCanvas()">Clear canvas</button>
       </div>
       <div class="oc-canvas-wrap" id="projectteam-wrap">
@@ -1300,6 +1322,60 @@ function showPage(id, btn) {
   if (id === 'projectteam') loadProjectTeamPage();
 
   toggleSidebar(false); // close mobile drawer after navigating
+}
+
+// ——— Customize Menu: hide/show individual sidebar nav items ———
+// Purely a client-side UI preference (localStorage) — nothing server-side to sync.
+const NAV_ITEMS = [
+  { id: 'executive',   label: 'Executive' },
+  { id: 'capacity',    label: 'Developer Capacity' },
+  { id: 'velocity',    label: 'Velocity & Forecast' },
+  { id: 'tasks',       label: 'Task Allocation' },
+  { id: 'timeline',    label: 'Timeline' },
+  { id: 'members',     label: 'Team Members' },
+  { id: 'jirasync',    label: 'Jira Sync' },
+  { id: 'orgchart',    label: 'Structure Organization' },
+  { id: 'projectteam', label: 'Structure Project Team' }
+];
+
+function getHiddenNav() {
+  try { return JSON.parse(localStorage.getItem('navHidden') || '[]'); }
+  catch (e) { return []; }
+}
+function setHiddenNav(arr) {
+  try { localStorage.setItem('navHidden', JSON.stringify(arr)); } catch (e) { /* storage unavailable — ignore */ }
+}
+
+function applyNavVisibility() {
+  const hidden = new Set(getHiddenNav());
+  document.querySelectorAll('.nav-item[data-navid]').forEach(btn => {
+    btn.style.display = hidden.has(btn.dataset.navid) ? 'none' : '';
+  });
+}
+
+function toggleMenuCustomizer() {
+  const panel = document.getElementById('menu-customizer-panel');
+  const isOpen = panel.style.display !== 'none';
+  if (isOpen) { panel.style.display = 'none'; return; }
+  renderMenuCustomizer();
+  panel.style.display = 'block';
+}
+
+function renderMenuCustomizer() {
+  const hidden = new Set(getHiddenNav());
+  const panel = document.getElementById('menu-customizer-panel');
+  panel.innerHTML = NAV_ITEMS.map(it => `
+    <label class="nav-cust-row">
+      <input type="checkbox" ${hidden.has(it.id) ? '' : 'checked'} onchange="onNavVisToggle('${it.id}', this.checked)">
+      <span>${it.label}</span>
+    </label>`).join('');
+}
+
+function onNavVisToggle(id, checked) {
+  const hidden = new Set(getHiddenNav());
+  if (checked) hidden.delete(id); else hidden.add(id);
+  setHiddenNav([...hidden]);
+  applyNavVisibility();
 }
 
 // Mobile sidebar drawer toggle
@@ -3725,6 +3801,108 @@ const OC_NODE_W = 180;
 function ocNodeHeight(node) { return node.kind === 'person' ? 78 : 54; }
 function ocMakeId(prefix) { return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
+// ——— Export the canvas (SVG / PNG) ———
+// Hand-built (no external lib, matches this app's dependency-free convention):
+// walk nodes+edges into a standalone SVG string with real color values inlined
+// (a downloaded file has no access to this page's CSS variables), then either
+// download it directly or rasterize it client-side onto a <canvas> for PNG.
+const OC_EXPORT_COLORS = {
+  bg: 'oklch(0.984 0.012 75)',
+  person: { bg: 'oklch(0.95 0.035 285)', border: 'oklch(0.90 0.06 285)', text: 'oklch(0.45 0.20 282)' },
+  category: { bg: 'oklch(0.965 0.035 82)', border: 'oklch(0.92 0.08 80)', text: 'oklch(0.60 0.12 70)' },
+  project: { bg: 'oklch(0.96 0.03 300)', border: 'oklch(0.91 0.06 300)', text: 'oklch(0.48 0.18 300)' },
+  ink800: 'oklch(0.26 0.03 290)', ink400: 'oklch(0.60 0.02 290)', accent: 'oklch(0.55 0.19 278)'
+};
+function ocExportEsc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+function ocBuildExportSVG(state) {
+  if (!state.nodes.length) return null;
+  const W = OC_NODE_W, PAD = 24, C = OC_EXPORT_COLORS;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  state.nodes.forEach(n => {
+    const h = ocNodeHeight(n);
+    minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
+    maxX = Math.max(maxX, n.x + W); maxY = Math.max(maxY, n.y + h);
+  });
+  const w = Math.round(maxX - minX + PAD * 2), h = Math.round(maxY - minY + PAD * 2);
+  const ox = -minX + PAD, oy = -minY + PAD;
+
+  const edgesSvg = state.edges.map(e => {
+    const a = state.nodes.find(n => n.id === e.from), b = state.nodes.find(n => n.id === e.to);
+    if (!a || !b) return '';
+    const ah = ocNodeHeight(a), bh = ocNodeHeight(b);
+    const ax = a.x + ox + W / 2, ay = a.y + oy + ah / 2, bx = b.x + ox + W / 2, by = b.y + oy + bh / 2;
+    const dx = bx - ax, dy = by - ay, dist = Math.hypot(dx, dy) || 1, ux = dx / dist, uy = dy / dist;
+    const sx = ax + ux * (W / 2), sy = ay + uy * (ah / 2), ex = bx - ux * (W / 2), ey = by - uy * (bh / 2);
+    return `<line x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}" stroke="${C.accent}" stroke-width="2" marker-end="url(#ocExportArrow)"/>`;
+  }).join('');
+
+  const nodesSvg = state.nodes.map(n => {
+    const nh = ocNodeHeight(n), x = n.x + ox, y = n.y + oy;
+    const palette = C[n.kind] || C.person;
+    let inner;
+    if (n.kind === 'project') {
+      inner = `<text x="${x + 10}" y="${y + 16}" font-family="monospace" font-size="9" font-weight="700" fill="${palette.text}">${ocExportEsc(n.key)}</text>
+        <text x="${x + 10}" y="${y + 31}" font-family="sans-serif" font-size="12.5" font-weight="600" fill="${C.ink800}">${ocExportEsc((n.label || '').slice(0, 26))}</text>`;
+    } else if (n.kind === 'category') {
+      inner = `<text x="${x + 10}" y="${y + nh / 2 + 4}" font-family="sans-serif" font-size="12.5" font-weight="700" fill="${palette.text}">${ocExportEsc(n.label)}</text>`;
+    } else {
+      inner = `<circle cx="${x + 22}" cy="${y + 21}" r="13" fill="${palette.bg}"/>
+        <text x="${x + 22}" y="${y + 25}" font-family="sans-serif" font-size="10" font-weight="700" fill="${palette.text}" text-anchor="middle">${ocExportEsc(ocInitials(n.label))}</text>
+        <text x="${x + 41}" y="${y + 25}" font-family="sans-serif" font-size="12.5" font-weight="600" fill="${C.ink800}">${ocExportEsc((n.label || '').slice(0, 20))}</text>
+        ${n.title ? `<text x="${x + 10}" y="${y + 45}" font-family="sans-serif" font-size="10.5" fill="${C.ink400}">${ocExportEsc(n.title.slice(0, 26))}</text>` : ''}`;
+    }
+    return `<rect x="${x}" y="${y}" width="${W}" height="${nh}" rx="10" fill="${palette.bg}" stroke="${palette.border}" stroke-width="1.5"/>${inner}`;
+  }).join('');
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+    <defs><marker id="ocExportArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${C.accent}"/></marker></defs>
+    <rect x="0" y="0" width="${w}" height="${h}" fill="${C.bg}"/>
+    ${edgesSvg}
+    ${nodesSvg}
+  </svg>`;
+}
+
+function ocDownloadBlob(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+}
+
+function ocExportSVG(state, filenameBase) {
+  const svg = ocBuildExportSVG(state);
+  if (!svg) { alert('Nothing to export yet — add some nodes first.'); return; }
+  ocDownloadBlob(svg, `${filenameBase}.svg`, 'image/svg+xml');
+}
+
+function ocExportPNG(state, filenameBase) {
+  const svgStr = ocBuildExportSVG(state);
+  if (!svgStr) { alert('Nothing to export yet — add some nodes first.'); return; }
+  const url = URL.createObjectURL(new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' }));
+  const img = new Image();
+  img.onload = () => {
+    const scale = 2; // retina-ish for crisp text when pasted into docs/slides
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth * scale; canvas.height = img.naturalHeight * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+    ctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(url);
+    canvas.toBlob(blob => {
+      const pngUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = pngUrl; a.download = `${filenameBase}.png`;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(pngUrl); }, 100);
+    }, 'image/png');
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); alert('PNG export failed — try Export SVG instead.'); };
+  img.src = url;
+}
+
 function ocScheduleSave(state) {
   clearTimeout(state.saveTimer);
   const statusEl = document.getElementById(state.statusEl);
@@ -4166,6 +4344,7 @@ function ptRender() {
 }
 
 // ——— START ———
+applyNavVisibility();
 init();
 </script>
 </body>
