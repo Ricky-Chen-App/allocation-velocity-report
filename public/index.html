@@ -1122,8 +1122,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
         </div>
       </div>
       <div class="oc-toolbar">
-        <select class="select-filter" id="org-add-select" style="min-width:220px"></select>
-        <button class="btn btn-ghost" onclick="orgAddPerson()">+ Add Person</button>
+        <div class="combo" id="ap-org-person"></div>
         <button class="btn btn-ghost" id="org-connect-btn" onclick="orgToggleConnect()">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="3" cy="3" r="2"/><circle cx="13" cy="13" r="2"/><path d="M4.5 4.5l7 7"/></svg>
           Connect
@@ -1149,12 +1148,9 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
         </div>
       </div>
       <div class="oc-toolbar">
-        <select class="select-filter" id="pt-add-category-select" style="min-width:170px"></select>
-        <button class="btn btn-ghost" onclick="ptAddCategory()">+ Category</button>
-        <select class="select-filter" id="pt-add-project-select" style="min-width:200px"></select>
-        <button class="btn btn-ghost" onclick="ptAddProject()">+ Project</button>
-        <select class="select-filter" id="pt-add-person-select" style="min-width:200px"></select>
-        <button class="btn btn-ghost" onclick="ptAddPerson()">+ Person</button>
+        <div class="combo" id="ap-pt-category"></div>
+        <div class="combo" id="ap-pt-project"></div>
+        <div class="combo" id="ap-pt-person"></div>
         <button class="btn btn-ghost" id="pt-connect-btn" onclick="ptToggleConnect()">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="3" cy="3" r="2"/><circle cx="13" cy="13" r="2"/><path d="M4.5 4.5l7 7"/></svg>
           Connect
@@ -2784,7 +2780,7 @@ function comboKey(field, ev) {
 }
 
 // Click outside closes any open combo (registered once).
-document.addEventListener('click', e => { if (!e.target.closest('.combo')) comboCloseAll(); });
+document.addEventListener('click', e => { if (!e.target.closest('.combo')) { comboCloseAll(); apCloseAll(); } });
 
 // ======== TIMELINE ========
 let TL = { data: null, statusFilter: 'all', viewMode: 'developer', expanded: new Set(), expandedEpics: new Set(), expandedTasks: new Set(), subBars: {} };
@@ -3829,6 +3825,160 @@ function ocRemoveNode(state, prefix, id) {
 
 function ocInitials(name) { return (name || '').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase(); }
 
+// ——— Generic searchable multi-select "Add" picker (reuses the Timeline combo CSS) ———
+// Unlike the Timeline filter combos, this one doesn't apply continuously — pick as
+// many as you like, then hit "Add (N)" to commit them all to the canvas at once.
+const APICKERS = {};
+
+function apCreate(elId, cfg) {
+  APICKERS[elId] = { selected: new Set(), cfg };
+  apRenderTrigger(elId);
+}
+
+function apLabel(elId) {
+  const p = APICKERS[elId];
+  const n = p.selected.size;
+  if (!n) return `Add ${p.cfg.label}`;
+  if (n === 1) return '1 selected';
+  return `${n} selected`;
+}
+
+function apOptionsHtml(elId, query) {
+  const p = APICKERS[elId];
+  const opts = p.cfg.getOptions();
+  const q = (query || '').toLowerCase().trim();
+  const filtered = opts.filter(o => !q || o.label.toLowerCase().includes(q) || (o.sub || '').toLowerCase().includes(q));
+  if (!opts.length) return `<div class="combo-empty">Nothing left to add</div>`;
+  if (!filtered.length) return `<div class="combo-empty">No matches</div>`;
+  return filtered.map(o => {
+    const on = p.selected.has(o.value);
+    const lead = o.dot ? `<span class="combo-dot" style="background:${o.dot}"></span>`
+               : o.avatar ? `<span class="combo-avatar">${cEsc(o.avatar)}</span>` : '';
+    const sub = o.sub ? `<span class="combo-opt-sub">${cEsc(o.sub)}</span>` : '';
+    return `<div class="combo-opt" role="option" aria-selected="${on}" data-v="${cEsc(o.value)}" onclick="apPick('${elId}','${cEsc(o.value)}')">
+      <span class="combo-check">${COMBO_CHECK}</span>${lead}<div class="combo-opt-main"><span class="combo-opt-label">${cEsc(o.label)}</span>${sub}</div></div>`;
+  }).join('');
+}
+
+function apRenderTrigger(elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const p = APICKERS[elId];
+  const n = p.selected.size;
+  el.innerHTML = `
+    <button type="button" class="combo-trigger${n ? ' active' : ''}" role="combobox" aria-haspopup="listbox" aria-expanded="false" onclick="apToggle('${elId}',event)">
+      <span class="combo-trigger-label"><span class="combo-field">${cEsc(p.cfg.label)}</span><span class="combo-value">${cEsc(apLabel(elId))}</span></span>
+      ${n > 1 ? `<span class="combo-count">${n}</span>` : ''}
+      <svg class="combo-chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l4 4 4-4"/></svg>
+    </button>
+    <div class="combo-panel" role="listbox" style="display:none">
+      <div class="combo-search"><input type="text" placeholder="Search ${cEsc(p.cfg.label.toLowerCase())}…" oninput="apFilter('${elId}',this.value)" onkeydown="apKey('${elId}',event)"></div>
+      <div class="combo-options">${apOptionsHtml(elId, '')}</div>
+      <div class="combo-footer"><span class="combo-counter">${n} selected</span><div style="display:flex;gap:8px"><button type="button" class="combo-clear" onclick="apClear('${elId}')">Clear</button><button type="button" class="combo-done" onclick="apCommit('${elId}')">Add${n ? ` (${n})` : ''}</button></div></div>
+    </div>`;
+}
+
+function apCloseAll() {
+  Object.keys(APICKERS).forEach(elId => {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.classList.remove('open');
+    const panel = el.querySelector('.combo-panel');
+    if (panel) panel.style.display = 'none';
+    const trig = el.querySelector('.combo-trigger');
+    if (trig) trig.setAttribute('aria-expanded', 'false');
+  });
+}
+
+function apToggle(elId, ev) {
+  ev.stopPropagation();
+  const el = document.getElementById(elId);
+  const isOpen = el.classList.contains('open');
+  apCloseAll();
+  comboCloseAll();
+  if (isOpen) return;
+  apRenderTrigger(elId); // options may be stale (canvas changed) — recompute before opening
+  const el2 = document.getElementById(elId);
+  el2.classList.add('open');
+  el2.querySelector('.combo-panel').style.display = 'block';
+  el2.querySelector('.combo-trigger').setAttribute('aria-expanded', 'true');
+  setTimeout(() => el2.querySelector('.combo-search input')?.focus(), 0);
+}
+
+function apFilter(elId, q) {
+  const el = document.getElementById(elId);
+  const optsEl = el?.querySelector('.combo-options');
+  if (optsEl) optsEl.innerHTML = apOptionsHtml(elId, q);
+}
+
+function apPick(elId, value) {
+  const p = APICKERS[elId];
+  if (p.selected.has(value)) p.selected.delete(value); else p.selected.add(value);
+  const el = document.getElementById(elId);
+  const searchVal = el.querySelector('.combo-search input')?.value || '';
+  const optsEl = el.querySelector('.combo-options');
+  if (optsEl) optsEl.innerHTML = apOptionsHtml(elId, searchVal);
+  const valEl = el.querySelector('.combo-value'); if (valEl) valEl.textContent = apLabel(elId);
+  const trig = el.querySelector('.combo-trigger'); if (trig) trig.classList.toggle('active', p.selected.size > 0);
+  let cnt = el.querySelector('.combo-count');
+  if (p.selected.size > 1) {
+    if (!cnt) { cnt = document.createElement('span'); cnt.className = 'combo-count'; trig.insertBefore(cnt, trig.querySelector('.combo-chev')); }
+    cnt.textContent = p.selected.size;
+  } else if (cnt) cnt.remove();
+  const counter = el.querySelector('.combo-counter'); if (counter) counter.textContent = `${p.selected.size} selected`;
+  const doneBtn = el.querySelector('.combo-done'); if (doneBtn) doneBtn.textContent = `Add${p.selected.size ? ` (${p.selected.size})` : ''}`;
+}
+
+function apClear(elId) {
+  APICKERS[elId].selected.clear();
+  const el = document.getElementById(elId);
+  const searchVal = el.querySelector('.combo-search input')?.value || '';
+  el.querySelector('.combo-options').innerHTML = apOptionsHtml(elId, searchVal);
+  apRenderTriggerBits(elId);
+}
+
+function apRenderTriggerBits(elId) {
+  const el = document.getElementById(elId);
+  const p = APICKERS[elId];
+  const valEl = el.querySelector('.combo-value'); if (valEl) valEl.textContent = apLabel(elId);
+  const trig = el.querySelector('.combo-trigger'); if (trig) trig.classList.toggle('active', p.selected.size > 0);
+  const cnt = el.querySelector('.combo-count'); if (cnt) cnt.remove();
+  const counter = el.querySelector('.combo-counter'); if (counter) counter.textContent = `${p.selected.size} selected`;
+  const doneBtn = el.querySelector('.combo-done'); if (doneBtn) doneBtn.textContent = 'Add';
+}
+
+function apCommit(elId) {
+  const p = APICKERS[elId];
+  if (!p.selected.size) { apCloseAll(); return; }
+  const ids = [...p.selected];
+  p.selected.clear();
+  p.cfg.onAdd(ids);
+  apCloseAll();
+  apRenderTrigger(elId); // refresh trigger label + drop just-added options
+}
+
+function apKey(elId, ev) {
+  const el = document.getElementById(elId);
+  const rows = [...el.querySelectorAll('.combo-opt')];
+  const cur = rows.findIndex(r => r.classList.contains('focused'));
+  if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+    ev.preventDefault();
+    if (!rows.length) return;
+    let n = cur + (ev.key === 'ArrowDown' ? 1 : -1);
+    if (n < 0) n = rows.length - 1; if (n >= rows.length) n = 0;
+    rows.forEach(r => r.classList.remove('focused'));
+    rows[n].classList.add('focused');
+    rows[n].scrollIntoView({ block: 'nearest' });
+  } else if (ev.key === 'Enter') {
+    ev.preventDefault();
+    if (cur >= 0) apPick(elId, rows[cur].dataset.v);
+  } else if (ev.key === 'Escape') {
+    ev.preventDefault();
+    apCloseAll();
+    el.querySelector('.combo-trigger')?.focus();
+  }
+}
+
 // ——— Structure Organization ———
 async function loadOrgChartPage() {
   try {
@@ -3836,36 +3986,31 @@ async function loadOrgChartPage() {
     ORG.nodes = data.nodes || [];
     ORG.edges = data.edges || [];
   } catch (e) { showError('Failed to load org chart: ' + e.message); }
-  orgPopulateAddSelect();
+  apCreate('ap-org-person', {
+    label: 'Person',
+    getOptions() {
+      const placed = new Set(ORG.nodes.map(n => n.accountId));
+      return (STATE.members || []).filter(m => !placed.has(m.accountId))
+        .sort((a, b) => a.displayName.localeCompare(b.displayName))
+        .map(m => ({ value: m.accountId, label: m.displayName, avatar: ocInitials(m.displayName) }));
+    },
+    onAdd(ids) {
+      ids.forEach(accountId => {
+        const member = (STATE.members || []).find(m => m.accountId === accountId);
+        if (!member) return;
+        const profile = STATE.memberProfiles?.[accountId];
+        ORG.nodes.push({
+          id: ocMakeId('n'), kind: 'person', accountId,
+          label: member.displayName, title: profile?.jabatan || '',
+          x: 40 + (ORG.nodes.length % 5) * 200, y: 40 + Math.floor(ORG.nodes.length / 5) * 110
+        });
+      });
+      orgRender();
+      ocScheduleSave(ORG);
+    }
+  });
   orgRender();
   ocBindCanvas(ORG, 'orgchart');
-}
-
-function orgPopulateAddSelect() {
-  const sel = document.getElementById('org-add-select');
-  if (!sel) return;
-  const placed = new Set(ORG.nodes.map(n => n.accountId));
-  const members = (STATE.members || []).filter(m => !placed.has(m.accountId)).sort((a, b) => a.displayName.localeCompare(b.displayName));
-  sel.innerHTML = members.length
-    ? members.map(m => `<option value="${cEsc(m.accountId)}">${cEsc(m.displayName)}</option>`).join('')
-    : `<option value="">All members already placed</option>`;
-}
-
-function orgAddPerson() {
-  const sel = document.getElementById('org-add-select');
-  const accountId = sel.value;
-  if (!accountId) return;
-  const member = (STATE.members || []).find(m => m.accountId === accountId);
-  if (!member) return;
-  const profile = STATE.memberProfiles?.[accountId];
-  ORG.nodes.push({
-    id: ocMakeId('n'), kind: 'person', accountId,
-    label: member.displayName, title: profile?.jabatan || '',
-    x: 40 + (ORG.nodes.length % 5) * 200, y: 40 + Math.floor(ORG.nodes.length / 5) * 110
-  });
-  orgPopulateAddSelect();
-  orgRender();
-  ocScheduleSave(ORG);
 }
 
 function orgSetTitle(id, value) {
@@ -3884,7 +4029,6 @@ function orgToggleConnect() {
 function orgClearCanvas() {
   if (!confirm('Clear the whole org chart? This removes every person and connection from this canvas (does not affect Team Members data).')) return;
   ORG.nodes = []; ORG.edges = [];
-  orgPopulateAddSelect();
   orgRender();
   ocScheduleSave(ORG);
 }
@@ -3916,71 +4060,64 @@ async function loadProjectTeamPage() {
     PT.nodes = data.nodes || [];
     PT.edges = data.edges || [];
   } catch (e) { showError('Failed to load project team: ' + e.message); }
-  ptPopulateAddSelects();
+
+  apCreate('ap-pt-category', {
+    label: 'Category',
+    getOptions() {
+      const placed = new Set(PT.nodes.filter(n => n.kind === 'category').map(n => n.label));
+      return [...new Set((STATE.projects?.categories || []).map(c => c.name || c).filter(Boolean))]
+        .filter(c => !placed.has(c))
+        .map(c => ({ value: c, label: c, dot: 'var(--amber-500)' }));
+    },
+    onAdd(names) {
+      names.forEach(name => { const p = ptNextPos(); PT.nodes.push({ id: ocMakeId('n'), kind: 'category', label: name, ...p }); });
+      ptRender(); ocScheduleSave(PT);
+    }
+  });
+  apCreate('ap-pt-project', {
+    label: 'Project',
+    getOptions() {
+      const placed = new Set(PT.nodes.filter(n => n.kind === 'project').map(n => n.key));
+      return (STATE.projects?.projects || []).filter(p => !placed.has(p.key))
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(p => ({ value: p.key, label: p.name, sub: `[${p.key}]`, dot: 'var(--violet-500)' }));
+    },
+    onAdd(keys) {
+      keys.forEach(key => {
+        const proj = (STATE.projects?.projects || []).find(p => p.key === key);
+        if (!proj) return;
+        const p = ptNextPos();
+        PT.nodes.push({ id: ocMakeId('n'), kind: 'project', key: proj.key, label: proj.name, ...p });
+      });
+      ptRender(); ocScheduleSave(PT);
+    }
+  });
+  apCreate('ap-pt-person', {
+    label: 'Person',
+    getOptions() {
+      const placed = new Set(PT.nodes.filter(n => n.kind === 'person').map(n => n.accountId));
+      return (STATE.members || []).filter(m => !placed.has(m.accountId))
+        .sort((a, b) => a.displayName.localeCompare(b.displayName))
+        .map(m => ({ value: m.accountId, label: m.displayName, avatar: ocInitials(m.displayName) }));
+    },
+    onAdd(ids) {
+      ids.forEach(accountId => {
+        const member = (STATE.members || []).find(m => m.accountId === accountId);
+        if (!member) return;
+        const p = ptNextPos();
+        PT.nodes.push({ id: ocMakeId('n'), kind: 'person', accountId, label: member.displayName, ...p });
+      });
+      ptRender(); ocScheduleSave(PT);
+    }
+  });
+
   ptRender();
   ocBindCanvas(PT, 'projectteam');
-}
-
-function ptPopulateAddSelects() {
-  const catSel = document.getElementById('pt-add-category-select');
-  const projSel = document.getElementById('pt-add-project-select');
-  const personSel = document.getElementById('pt-add-person-select');
-  if (!catSel) return;
-
-  const placedCats = new Set(PT.nodes.filter(n => n.kind === 'category').map(n => n.label));
-  const catNames = [...new Set((STATE.projects?.categories || []).map(c => c.name || c).filter(Boolean))]
-    .filter(c => !placedCats.has(c));
-  catSel.innerHTML = catNames.length
-    ? catNames.map(c => `<option value="${cEsc(c)}">${cEsc(c)}</option>`).join('')
-    : `<option value="">All categories placed</option>`;
-
-  const placedProj = new Set(PT.nodes.filter(n => n.kind === 'project').map(n => n.key));
-  const projects = (STATE.projects?.projects || []).filter(p => !placedProj.has(p.key)).sort((a, b) => a.name.localeCompare(b.name));
-  projSel.innerHTML = projects.length
-    ? projects.map(p => `<option value="${cEsc(p.key)}">[${cEsc(p.key)}] ${cEsc(p.name)}</option>`).join('')
-    : `<option value="">All projects placed</option>`;
-
-  const placedPeople = new Set(PT.nodes.filter(n => n.kind === 'person').map(n => n.accountId));
-  const members = (STATE.members || []).filter(m => !placedPeople.has(m.accountId)).sort((a, b) => a.displayName.localeCompare(b.displayName));
-  personSel.innerHTML = members.length
-    ? members.map(m => `<option value="${cEsc(m.accountId)}">${cEsc(m.displayName)}</option>`).join('')
-    : `<option value="">All members placed</option>`;
 }
 
 function ptNextPos() {
   const n = PT.nodes.length;
   return { x: 40 + (n % 6) * 210, y: 40 + Math.floor(n / 6) * 100 };
-}
-
-function ptAddCategory() {
-  const sel = document.getElementById('pt-add-category-select');
-  const name = sel.value;
-  if (!name) return;
-  const p = ptNextPos();
-  PT.nodes.push({ id: ocMakeId('n'), kind: 'category', label: name, ...p });
-  ptPopulateAddSelects(); ptRender(); ocScheduleSave(PT);
-}
-
-function ptAddProject() {
-  const sel = document.getElementById('pt-add-project-select');
-  const key = sel.value;
-  if (!key) return;
-  const proj = (STATE.projects?.projects || []).find(p => p.key === key);
-  if (!proj) return;
-  const p = ptNextPos();
-  PT.nodes.push({ id: ocMakeId('n'), kind: 'project', key: proj.key, label: proj.name, ...p });
-  ptPopulateAddSelects(); ptRender(); ocScheduleSave(PT);
-}
-
-function ptAddPerson() {
-  const sel = document.getElementById('pt-add-person-select');
-  const accountId = sel.value;
-  if (!accountId) return;
-  const member = (STATE.members || []).find(m => m.accountId === accountId);
-  if (!member) return;
-  const p = ptNextPos();
-  PT.nodes.push({ id: ocMakeId('n'), kind: 'person', accountId, label: member.displayName, ...p });
-  ptPopulateAddSelects(); ptRender(); ocScheduleSave(PT);
 }
 
 function ptToggleConnect() {
@@ -3994,7 +4131,7 @@ function ptToggleConnect() {
 function ptClearCanvas() {
   if (!confirm('Clear the whole project team map? This removes every category, project, person and connection from this canvas.')) return;
   PT.nodes = []; PT.edges = [];
-  ptPopulateAddSelects(); ptRender(); ocScheduleSave(PT);
+  ptRender(); ocScheduleSave(PT);
 }
 
 function ptNodeHtml(n) {
