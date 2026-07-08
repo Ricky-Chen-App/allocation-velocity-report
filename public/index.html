@@ -4273,8 +4273,9 @@ async function loadProjectTeamPage() {
   apCreate('ap-pt-person', {
     label: 'Person',
     getOptions() {
-      const placed = new Set(PT.nodes.filter(n => n.kind === 'person').map(n => n.accountId));
-      return (STATE.members || []).filter(m => !placed.has(m.accountId))
+      // No "already placed" exclusion here (unlike category/project): a person
+      // can work on multiple projects, so re-adding them creates another node.
+      return (STATE.members || [])
         .sort((a, b) => a.displayName.localeCompare(b.displayName))
         .map(m => ({ value: m.accountId, label: m.displayName, avatar: ocInitials(m.displayName) }));
     },
