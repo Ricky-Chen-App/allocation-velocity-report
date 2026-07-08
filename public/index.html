@@ -665,6 +665,13 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 
 /* ===== Structure Organization / Structure Project Team (draw.io-style canvas) ===== */
 .oc-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:14px 32px 0}
+.oc-tabs{display:flex;align-items:flex-end;gap:5px;padding:12px 32px 0;flex-wrap:wrap}
+.oc-tab{display:flex;align-items:center;gap:7px;padding:7px 13px;border-radius:var(--radius-sm) var(--radius-sm) 0 0;background:var(--ink-50);border:1px solid var(--ink-100);border-bottom:none;font-size:12px;font-weight:500;color:var(--ink-500);cursor:pointer;font-family:var(--font-body)}
+.oc-tab.active{background:var(--ink-0);color:var(--ink-800);font-weight:700}
+.oc-tab:hover{color:var(--ink-800)}
+.oc-tab-del{width:15px;height:15px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--ink-400);flex-shrink:0}
+.oc-tab-del:hover{background:var(--red-100);color:var(--red-600)}
+.oc-tab-add{color:var(--accent);font-weight:700;background:transparent;border-style:dashed}
 .oc-toolbar .btn.active{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent}
 .oc-canvas-wrap{margin:14px 32px 32px;border:1px solid var(--ink-100);border-radius:var(--radius-lg);overflow:auto;background:var(--ink-0);box-shadow:var(--shadow-xs);height:calc(100vh - 230px);min-height:420px}
 .oc-canvas{position:relative;width:2600px;height:1600px;
@@ -1175,14 +1182,20 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
         <span id="pt-connect-hint" style="font-size:11.5px;color:var(--accent);display:none">Click a person, then click the project they work on…</span>
       </div>
       <div class="oc-toolbar" style="padding-top:0">
+        <input type="file" id="pt-import-input" accept=".svg,.png,image/svg+xml,image/png" style="display:none" onchange="ptImportFile(this)">
+        <button class="btn btn-ghost" onclick="document.getElementById('pt-import-input').click()">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 11V2M4 6l4-4 4 4"/><path d="M2 14h12"/></svg>
+          Import
+        </button>
         <span style="margin-left:auto;font-size:11.5px;color:var(--ink-400)" id="pt-save-status"></span>
-        <button class="btn btn-ghost" onclick="ocExportSVG(PT,'project-team')">
+        <button class="btn btn-ghost" onclick="ocExportSVG(PT,ptCanvasFileBase())">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v9M4 8l4 4 4-4"/><path d="M2 14h12"/></svg>
           Export SVG
         </button>
-        <button class="btn btn-ghost" onclick="ocExportPNG(PT,'project-team')">Export PNG</button>
+        <button class="btn btn-ghost" onclick="ocExportPNG(PT,ptCanvasFileBase())">Export PNG</button>
         <button class="btn btn-ghost" onclick="ptClearCanvas()">Clear canvas</button>
       </div>
+      <div class="oc-tabs" id="pt-canvas-tabs"></div>
       <div class="oc-canvas-wrap" id="projectteam-wrap">
         <div class="oc-canvas" id="projectteam-canvas">
           <svg class="oc-svg" id="projectteam-svg"></svg>
@@ -3797,6 +3810,16 @@ setInterval(() => {
 const ORG = { nodes: [], edges: [], connect: false, connectFrom: null, drag: null, saveTimer: null, apiPath: '/api/org-chart', statusEl: 'org-save-status', _bound: false };
 const PT  = { nodes: [], edges: [], connect: false, connectFrom: null, drag: null, saveTimer: null, apiPath: '/api/project-team', statusEl: 'pt-save-status',  _bound: false };
 
+// Project Team supports multiple canvases. PT.nodes/edges always mirror the
+// ACTIVE canvas's live working arrays (so the shared drag/connect/export engine
+// above needs zero changes); PT_CANVASES is the full saved list.
+let PT_CANVASES = [{ id: 'default', name: 'Main', nodes: [], edges: [] }];
+PT.buildPayload = () => {
+  const cv = PT_CANVASES.find(c => c.id === PT.activeCanvasId);
+  if (cv) { cv.nodes = PT.nodes; cv.edges = PT.edges; }
+  return { canvases: PT_CANVASES, activeCanvasId: PT.activeCanvasId };
+};
+
 const OC_NODE_W = 180;
 function ocNodeHeight(node) { return node.kind === 'person' ? 78 : 54; }
 function ocMakeId(prefix) { return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
@@ -3814,6 +3837,10 @@ const OC_EXPORT_COLORS = {
   ink800: 'oklch(0.26 0.03 290)', ink400: 'oklch(0.60 0.02 290)', accent: 'oklch(0.55 0.19 278)'
 };
 function ocExportEsc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+// UTF-8-safe base64 (btoa/atob only handle Latin-1) — used to embed the
+// nodes/edges JSON inside exported files so Import can restore full state.
+function ocB64Encode(str) { return btoa(unescape(encodeURIComponent(str))); }
+function ocB64Decode(b64) { return decodeURIComponent(escape(atob(b64))); }
 
 function ocBuildExportSVG(state) {
   if (!state.nodes.length) return null;
@@ -3855,7 +3882,13 @@ function ocBuildExportSVG(state) {
     return `<rect x="${x}" y="${y}" width="${W}" height="${nh}" rx="10" fill="${palette.bg}" stroke="${palette.border}" stroke-width="1.5"/>${inner}`;
   }).join('');
 
+  // Embed the raw nodes/edges JSON as SVG <metadata> (spec-built-in element for
+  // non-visual data) so a re-imported copy of this exact file restores full
+  // editable state, not just pixels.
+  const dataB64 = ocB64Encode(JSON.stringify({ nodes: state.nodes, edges: state.edges }));
+
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+    <metadata id="ocdata">${dataB64}</metadata>
     <defs><marker id="ocExportArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${C.accent}"/></marker></defs>
     <rect x="0" y="0" width="${w}" height="${h}" fill="${C.bg}"/>
     ${edgesSvg}
@@ -3878,6 +3911,70 @@ function ocExportSVG(state, filenameBase) {
   ocDownloadBlob(svg, `${filenameBase}.svg`, 'image/svg+xml');
 }
 
+// ——— Hand-rolled PNG tEXt chunk read/write (no library) ———
+// Lets an exported PNG carry the same nodes/edges JSON an exported SVG does,
+// so Import works from either file type — the PNG is both a picture AND data.
+let OC_CRC_TABLE = null;
+function ocCrc32(bytes) {
+  if (!OC_CRC_TABLE) {
+    OC_CRC_TABLE = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      OC_CRC_TABLE[n] = c >>> 0;
+    }
+  }
+  let crc = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) crc = OC_CRC_TABLE[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+function ocPngBuildTextChunk(keyword, text) {
+  const enc = new TextEncoder();
+  const kw = enc.encode(keyword), txt = enc.encode(text), type = enc.encode('tEXt');
+  const data = new Uint8Array(kw.length + 1 + txt.length);
+  data.set(kw, 0); data[kw.length] = 0; data.set(txt, kw.length + 1);
+  const typeAndData = new Uint8Array(type.length + data.length);
+  typeAndData.set(type, 0); typeAndData.set(data, type.length);
+  const crc = ocCrc32(typeAndData);
+  const chunk = new Uint8Array(4 + 4 + data.length + 4);
+  const dv = new DataView(chunk.buffer);
+  dv.setUint32(0, data.length);
+  chunk.set(type, 4);
+  chunk.set(data, 8);
+  dv.setUint32(8 + data.length, crc);
+  return chunk;
+}
+function ocPngEmbedText(pngBytes, keyword, text) {
+  const dv = new DataView(pngBytes.buffer, pngBytes.byteOffset, pngBytes.byteLength);
+  const ihdrDataLen = dv.getUint32(8); // first chunk after the 8-byte signature is always IHDR
+  const insertAt = 8 + 4 + 4 + ihdrDataLen + 4; // signature + len + type + data + crc
+  const chunk = ocPngBuildTextChunk(keyword, text);
+  const out = new Uint8Array(pngBytes.length + chunk.length);
+  out.set(pngBytes.subarray(0, insertAt), 0);
+  out.set(chunk, insertAt);
+  out.set(pngBytes.subarray(insertAt), insertAt + chunk.length);
+  return out;
+}
+function ocPngExtractText(pngBytes, keyword) {
+  const dv = new DataView(pngBytes.buffer, pngBytes.byteOffset, pngBytes.byteLength);
+  let offset = 8;
+  while (offset + 8 <= pngBytes.length) {
+    const len = dv.getUint32(offset);
+    const type = String.fromCharCode(pngBytes[offset + 4], pngBytes[offset + 5], pngBytes[offset + 6], pngBytes[offset + 7]);
+    if (type === 'tEXt') {
+      const chunkBytes = pngBytes.subarray(offset + 8, offset + 8 + len);
+      const nullIdx = chunkBytes.indexOf(0);
+      if (nullIdx >= 0) {
+        const kw = new TextDecoder().decode(chunkBytes.subarray(0, nullIdx));
+        if (kw === keyword) return new TextDecoder().decode(chunkBytes.subarray(nullIdx + 1));
+      }
+    }
+    if (type === 'IEND') break;
+    offset += 4 + 4 + len + 4;
+  }
+  return null;
+}
+
 function ocExportPNG(state, filenameBase) {
   const svgStr = ocBuildExportSVG(state);
   if (!svgStr) { alert('Nothing to export yet — add some nodes first.'); return; }
@@ -3891,8 +3988,14 @@ function ocExportPNG(state, filenameBase) {
     ctx.scale(scale, scale);
     ctx.drawImage(img, 0, 0);
     URL.revokeObjectURL(url);
-    canvas.toBlob(blob => {
-      const pngUrl = URL.createObjectURL(blob);
+    canvas.toBlob(async blob => {
+      let outBlob = blob;
+      try {
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        const dataB64 = ocB64Encode(JSON.stringify({ nodes: state.nodes, edges: state.edges }));
+        outBlob = new Blob([ocPngEmbedText(bytes, 'ocdata', dataB64)], { type: 'image/png' });
+      } catch (e) { /* embedding failed — still download a plain (non-editable) PNG */ }
+      const pngUrl = URL.createObjectURL(outBlob);
       const a = document.createElement('a');
       a.href = pngUrl; a.download = `${filenameBase}.png`;
       document.body.appendChild(a); a.click();
@@ -3903,16 +4006,48 @@ function ocExportPNG(state, filenameBase) {
   img.src = url;
 }
 
+// ——— Import: read nodes/edges back out of a previously exported SVG or PNG ———
+function ocParseImportedFile(file, onLoaded) {
+  const isSvg = /\.svg$/i.test(file.name) || file.type === 'image/svg+xml';
+  const reader = new FileReader();
+  reader.onerror = () => alert('Could not read that file.');
+  if (isSvg) {
+    reader.onload = () => {
+      try {
+        const m = String(reader.result).match(/<metadata id="ocdata">([^<]*)<\/metadata>/);
+        if (!m) { alert('This SVG has no editable data embedded — it must be exported from this page.'); return; }
+        const data = JSON.parse(ocB64Decode(m[1]));
+        if (!Array.isArray(data.nodes) || !Array.isArray(data.edges)) throw new Error('unexpected file contents');
+        onLoaded(data);
+      } catch (e) { alert('Could not read this SVG file: ' + e.message); }
+    };
+    reader.readAsText(file);
+  } else {
+    reader.onload = () => {
+      try {
+        const bytes = new Uint8Array(reader.result);
+        const b64 = ocPngExtractText(bytes, 'ocdata');
+        if (!b64) { alert('This PNG has no editable data embedded — it must be exported from this page.'); return; }
+        const data = JSON.parse(ocB64Decode(b64));
+        if (!Array.isArray(data.nodes) || !Array.isArray(data.edges)) throw new Error('unexpected file contents');
+        onLoaded(data);
+      } catch (e) { alert('Could not read this PNG file: ' + e.message); }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+}
+
 function ocScheduleSave(state) {
   clearTimeout(state.saveTimer);
   const statusEl = document.getElementById(state.statusEl);
   if (statusEl) statusEl.textContent = 'Saving…';
   state.saveTimer = setTimeout(async () => {
     try {
+      const payload = state.buildPayload ? state.buildPayload() : { nodes: state.nodes, edges: state.edges };
       await fetch(state.apiPath, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nodes: state.nodes, edges: state.edges })
+        body: JSON.stringify(payload)
       });
       if (statusEl) statusEl.textContent = 'Saved ✓ ' + new Date().toLocaleTimeString('en-GB');
     } catch (e) {
@@ -4235,8 +4370,17 @@ function orgRender() {
 async function loadProjectTeamPage() {
   try {
     const data = await api('/api/project-team');
-    PT.nodes = data.nodes || [];
-    PT.edges = data.edges || [];
+    if (Array.isArray(data.canvases) && data.canvases.length) {
+      PT_CANVASES = data.canvases;
+    } else if (Array.isArray(data.nodes)) {
+      // Migrate the old single-canvas shape { nodes, edges } into canvas #1.
+      PT_CANVASES = [{ id: 'default', name: 'Main', nodes: data.nodes, edges: data.edges || [] }];
+    } else {
+      PT_CANVASES = [{ id: 'default', name: 'Main', nodes: [], edges: [] }];
+    }
+    PT.activeCanvasId = (data.activeCanvasId && PT_CANVASES.some(c => c.id === data.activeCanvasId))
+      ? data.activeCanvasId : PT_CANVASES[0].id;
+    ptLoadActiveCanvas();
   } catch (e) { showError('Failed to load project team: ' + e.message); }
 
   apCreate('ap-pt-category', {
@@ -4290,6 +4434,7 @@ async function loadProjectTeamPage() {
     }
   });
 
+  ptRenderTabs();
   ptRender();
   ocBindCanvas(PT, 'projectteam');
 }
@@ -4297,6 +4442,94 @@ async function loadProjectTeamPage() {
 function ptNextPos() {
   const n = PT.nodes.length;
   return { x: 40 + (n % 6) * 210, y: 40 + Math.floor(n / 6) * 100 };
+}
+
+// ——— Multiple canvases: switch/add/delete, each with its own nodes+edges ———
+function ptLoadActiveCanvas() {
+  const cv = PT_CANVASES.find(c => c.id === PT.activeCanvasId) || PT_CANVASES[0];
+  PT.activeCanvasId = cv.id;
+  PT.nodes = cv.nodes || [];
+  PT.edges = cv.edges || [];
+}
+
+function ptSyncActiveCanvas() {
+  const cv = PT_CANVASES.find(c => c.id === PT.activeCanvasId);
+  if (cv) { cv.nodes = PT.nodes; cv.edges = PT.edges; }
+}
+
+function ptRenderTabs() {
+  const el = document.getElementById('pt-canvas-tabs');
+  if (!el) return;
+  el.innerHTML = PT_CANVASES.map(c => `
+    <button class="oc-tab${c.id === PT.activeCanvasId ? ' active' : ''}" onclick="ptSwitchCanvas('${c.id}')">
+      ${cEsc(c.name)}
+      ${PT_CANVASES.length > 1 ? `<span class="oc-tab-del" onclick="event.stopPropagation();ptDeleteCanvas('${c.id}')" title="Delete this canvas">✕</span>` : ''}
+    </button>`).join('') + `<button class="oc-tab oc-tab-add" onclick="ptAddCanvas()">+ New Canvas</button>`;
+}
+
+function ptSwitchCanvas(id) {
+  if (id === PT.activeCanvasId) return;
+  ptSyncActiveCanvas();
+  PT.activeCanvasId = id;
+  PT.connect = false; PT.connectFrom = null;
+  ptLoadActiveCanvas();
+  ptRenderTabs();
+  ptRender();
+  ocScheduleSave(PT);
+}
+
+function ptAddCanvas() {
+  const name = prompt('Name this canvas:', `Canvas ${PT_CANVASES.length + 1}`);
+  if (!name) return;
+  ptSyncActiveCanvas();
+  const id = ocMakeId('cv');
+  PT_CANVASES.push({ id, name, nodes: [], edges: [] });
+  PT.activeCanvasId = id;
+  PT.connect = false; PT.connectFrom = null;
+  ptLoadActiveCanvas();
+  ptRenderTabs();
+  ptRender();
+  ocScheduleSave(PT);
+}
+
+function ptDeleteCanvas(id) {
+  if (PT_CANVASES.length <= 1) { alert('At least one canvas must remain.'); return; }
+  const cv = PT_CANVASES.find(c => c.id === id);
+  if (!confirm(`Delete canvas "${cv ? cv.name : id}"? This removes everything on it.`)) return;
+  PT_CANVASES = PT_CANVASES.filter(c => c.id !== id);
+  if (PT.activeCanvasId === id) {
+    PT.activeCanvasId = PT_CANVASES[0].id;
+    PT.connect = false; PT.connectFrom = null;
+    ptLoadActiveCanvas();
+  }
+  ptRenderTabs();
+  ptRender();
+  ocScheduleSave(PT);
+}
+
+// Import a previously exported SVG/PNG (with embedded data) as a new canvas —
+// never overwrites the canvas the user currently has open.
+function ptImportFile(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  ocParseImportedFile(file, data => {
+    ptSyncActiveCanvas();
+    const name = file.name.replace(/\.(svg|png)$/i, '') || `Imported ${PT_CANVASES.length + 1}`;
+    const id = ocMakeId('cv');
+    PT_CANVASES.push({ id, name, nodes: data.nodes, edges: data.edges });
+    PT.activeCanvasId = id;
+    PT.connect = false; PT.connectFrom = null;
+    ptLoadActiveCanvas();
+    ptRenderTabs();
+    ptRender();
+    ocScheduleSave(PT);
+  });
+  input.value = ''; // allow importing the same file again later
+}
+
+function ptCanvasFileBase() {
+  const cv = PT_CANVASES.find(c => c.id === PT.activeCanvasId);
+  return 'project-team-' + (cv ? cv.name : 'canvas').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
 function ptToggleConnect() {
