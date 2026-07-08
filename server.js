@@ -842,9 +842,11 @@ const projectTeamStore = makeCanvasStore('project-team');
 
 app.get('/api/org-chart', (req, res) => res.json(orgChartStore.read()));
 app.put('/api/org-chart', (req, res) => {
-  const { nodes, edges } = req.body || {};
-  if (!Array.isArray(nodes) || !Array.isArray(edges)) return res.status(400).json({ error: 'nodes and edges must be arrays' });
-  orgChartStore.write({ nodes, edges, updatedAt: new Date().toISOString() });
+  // Multi-canvas shape: { canvases:[{id,name,nodes,edges}], activeCanvasId }.
+  // Server stays a dumb store — no shape opinions beyond "canvases is an array".
+  const { canvases, activeCanvasId } = req.body || {};
+  if (!Array.isArray(canvases)) return res.status(400).json({ error: 'canvases must be an array' });
+  orgChartStore.write({ canvases, activeCanvasId, updatedAt: new Date().toISOString() });
   res.json({ ok: true });
 });
 
