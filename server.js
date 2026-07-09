@@ -861,7 +861,7 @@ async function computeForecast(filters = {}) {
       dailyCapacity: 0, capacityStatus: 'no-capacity-data',
       estHariKerja: null, estKalender: null, completionDate: null,
       completionDateOptimistic: null, completionDatePessimistic: null, overallTargetDate: null,
-      byCategory: [], totalPoints: 0, totalHours: 0,
+      byCategory: [], byTeam: [], totalPoints: 0, totalHours: 0,
       timelineHealth: { totalWarnings: 0, groups: [] },
       developerLoad: { period: {}, rows: [] },
       recommendations: [], burndown: { actual: [], ideal: [] },
@@ -953,6 +953,30 @@ async function computeForecast(filters = {}) {
     estimatedDays: dailyCapacity > 0 ? Math.ceil(data.mandays / dailyCapacity) : null
   })).sort((a, b) => b.mandays - a.mandays);
 
+  // Mandays per Team — breaks the same remaining_mandays total down by the Jira group
+  // (team) of each issue's assignee, so "out of all mandays, how many per person in
+  // that team" is explicit. Informational only — does NOT feed daily_capacity/
+  // est_completion above (those stay a single cross-team pool, per product decision).
+  const memberGroupMap = {};
+  for (const m of allMembers) memberGroupMap[m.accountId] = (m.groups || [])[0] || 'No Group';
+  const byTeamMap = {};
+  for (const r of issueRows) {
+    const team = r.assigneeId ? (memberGroupMap[r.assigneeId] || 'No Group') : 'Unassigned';
+    if (!byTeamMap[team]) byTeamMap[team] = { mandays: 0, count: 0, devIds: new Set() };
+    byTeamMap[team].mandays += r.mandays;
+    byTeamMap[team].count++;
+    if (r.assigneeId) byTeamMap[team].devIds.add(r.assigneeId);
+  }
+  const byTeam = Object.entries(byTeamMap).map(([team, data]) => {
+    const devCount = data.devIds.size;
+    return {
+      team, count: data.count,
+      mandays: Math.round(data.mandays * 10) / 10,
+      devCount,
+      mandaysPerDev: devCount > 0 ? Math.round((data.mandays / devCount) * 10) / 10 : null
+    };
+  }).sort((a, b) => b.mandays - a.mandays);
+
   // Target/deadline = furthest effective_due already set on the remaining issues themselves
   // (not Jira's "Target End" field — see plan notes: rarely populated, stale).
   const dueDates = issueRows.filter(r => r.due).map(r => new Date(r.due));
@@ -990,6 +1014,7 @@ async function computeForecast(filters = {}) {
     completionDatePessimistic: completionDatePessimistic ? toIso(completionDatePessimistic) : null,
     overallTargetDate: overallTargetDate ? toIso(overallTargetDate) : null,
     byCategory,
+    byTeam,
     // Legacy story-point fields — kept for rollback / other consumers, no longer drive this page's UI.
     totalPoints, totalHours: Math.round(totalHours),
     timelineHealth,

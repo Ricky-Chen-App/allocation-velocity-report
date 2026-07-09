@@ -2524,6 +2524,28 @@ function renderDeveloperLoad(f) {
     <div class="devload-grid">${cards}</div>`;
 }
 
+// Breaks total remaining_mandays down by the Jira group (team) of each issue's
+// assignee — informational only, doesn't feed the headline est_completion above
+// (which stays one cross-team pool, per product decision).
+function renderTeamBreakdown(f) {
+  const rows = f.byTeam || [];
+  if (!rows.length) return emptyState({ icon: '🧑‍🤝‍🧑', title: 'Belum ada data team', description: 'Tidak ada issue dengan assignee yang terdeteksi.' });
+  return `
+    <table class="cat-table">
+      <thead><tr><th>Team</th><th>Issues</th><th>Mandays</th><th>Dev Aktif</th><th>Mandays/Dev<i class="help-icon" data-hint="Total mandays team ini ÷ jumlah dev aktif di team ini — makin besar, makin berat beban rata-rata per orang.">i</i></th></tr></thead>
+      <tbody>
+        ${rows.map(t => `
+          <tr>
+            <td><strong>${cEsc(t.team)}</strong></td>
+            <td>${fmtNum(t.count)}</td>
+            <td>${fmtNum(t.mandays)}</td>
+            <td>${t.devCount > 0 ? fmtNum(t.devCount) : '<span style="color:var(--ink-300)">—</span>'}</td>
+            <td style="font-weight:600;color:var(--blue-700)">${t.mandaysPerDev != null ? fmtNum(t.mandaysPerDev) : '<span style="color:var(--ink-300)">—</span>'}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
 function renderBurndownChart(burndown) {
   if (!burndown.actual.length) return emptyState({ icon: '📉', title: 'Belum ada data burndown', description: 'Data historis tidak cukup untuk direkonstruksi.' });
   return svgLineChart(burndown.actual, burndown.ideal);
@@ -2922,6 +2944,11 @@ async function loadVelocityPage() {
         id: 'coll-devload', title: '👥 Beban Developer (bulan berjalan)',
         caption: 'Rasio beban vs kapasitas tiap developer bulan ini. Merah = overload, hijau = sesuai, kuning = idle, abu = tidak ada data.',
         bodyHtml: renderDeveloperLoad(forecast), defaultOpen: false
+      }),
+      collapsibleSection({
+        id: 'coll-team-breakdown', title: '🧑‍🤝‍🧑 Mandays per Team',
+        caption: 'Total remaining_mandays dipecah per team (grup Jira dari assignee) — Mandays/Dev = mandays team ÷ jumlah dev aktif di team itu, biar jelas beban rata-rata per orang. Tidak mengubah est_completion di atas (itu tetap satu pool lintas-team).',
+        bodyHtml: renderTeamBreakdown(forecast), defaultOpen: false
       }),
       // 5 charts in a 2-column grid on desktop (≥901px) so this stack doesn't force
       // excessive scrolling — see .chart-grid.
