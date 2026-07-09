@@ -223,6 +223,7 @@ app.get('/api/refresh', (req, res) => {
   cache.capacity = null;
   cache.capacitySprint = null;
   cache.forecast = null;
+  cache.forecastByFilter = {};
   cache.timeline = {};
   cache.ts = {};
   console.log('↻ Cache cleared — next requests re-fetch fresh from Jira');
@@ -592,7 +593,7 @@ function computeTimelineHealth(issueRows, today) {
       continue; // other date checks are meaningless once the range itself is inverted
     }
     if (!hasStart || !hasDue) {
-      groups.noEstimate.push({ key: r.key, url: link(r.key),
+      groups.noEstimate.push({ key: r.key, url: link(r.key), summary: r.summary,
         message: `${r.key} belum punya ${!hasStart && !hasDue ? 'tanggal start & due' : !hasStart ? 'tanggal start' : 'tanggal due'} — forecast untuk issue ini tidak akurat.` });
       continue;
     }
@@ -786,14 +787,15 @@ function computeRecommendations(ctx) {
 // currently-open issue is treated as if it had been open for the whole
 // lookback window; only issues resolved within the window are "subtracted
 // back in" for the days before their resolution date.
-async function computeBurndownSeries(projectKeys, issueRows, fieldIds, today) {
+async function computeBurndownSeries(projectKeys, issueRows, fieldIds, today, assigneeIds = null) {
   const lookbackDays = val('BURNDOWN_LOOKBACK_DAYS');
   const startWindow = new Date(today);
   startWindow.setDate(startWindow.getDate() - lookbackDays);
 
   let resolvedRows = [];
   try {
-    const jql = `project in (${projectKeys.map(k => `"${k}"`).join(',')}) AND status in (Done, Closed, Resolved) AND resolutiondate >= -${lookbackDays}d ORDER BY resolutiondate DESC`;
+    const assigneeClause = assigneeIds && assigneeIds.length ? ` AND assignee in (${assigneeIds.map(id => `"${id}"`).join(',')})` : '';
+    const jql = `project in (${projectKeys.map(k => `"${k}"`).join(',')}) AND status in (Done, Closed, Resolved) AND resolutiondate >= -${lookbackDays}d${assigneeClause} ORDER BY resolutiondate DESC`;
     const fields = ['status', 'resolutiondate', fieldIds.start, fieldIds.newStart, fieldIds.due, fieldIds.newDue]
       .filter((v, i, a) => a.indexOf(v) === i).join(',');
     const resolved = await jiraSearchAll(jql, fields, 2000);
@@ -839,12 +841,20 @@ function computeIdealLine(actualSeries, estCompletionDate) {
   return points;
 }
 
-async function computeForecast() {
-  if (isFresh('forecast') && cache.forecast) return cache.forecast;
+async function computeForecast(filters = {}) {
+  const projectKeysFilter = filters.projectKeys || [];
+  const categoriesFilter = filters.categories || [];
+  const groupsFilter = filters.groups || [];
+  const cacheKey = `${projectKeysFilter.slice().sort().join(',')}|${categoriesFilter.slice().sort().join(',')}|${groupsFilter.slice().sort().join(',')}`;
+  cache.forecastByFilter = cache.forecastByFilter || {};
+  if (isFresh('forecast:' + cacheKey) && cache.forecastByFilter[cacheKey]) return cache.forecastByFilter[cacheKey];
 
   // Auto-warm cache if needed (direct loaders — serverless-safe)
   await Promise.all([ensureProjects(), ensureMembers()]);
-  const projects = cache.projects?.projects || [];
+  const allProjects = cache.projects?.projects || [];
+  let projects = allProjects;
+  if (categoriesFilter.length) projects = projects.filter(p => categoriesFilter.includes(p.category));
+  if (projectKeysFilter.length) projects = projects.filter(p => projectKeysFilter.includes(p.key));
   if (!projects.length) {
     return {
       totalBacklog: 0, remainingMandays: 0, remainingHours: 0, activeDevCount: 0,
@@ -879,24 +889,33 @@ async function computeForecast() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  // Group filter: scope both the member roster (for developer-load rows/activeDevCount)
+  // and the issue set (drop issues assigned outside the selected group(s), and unassigned
+  // ones — group filter means "only this team's work").
+  const allMembers = cache.members || [];
+  const scopedMembers = groupsFilter.length ? allMembers.filter(m => (m.groups || []).some(g => groupsFilter.includes(g))) : allMembers;
+  const scopedMemberIds = groupsFilter.length ? new Set(scopedMembers.map(m => m.accountId)) : null;
+
   // Single pass: derive effective dates + mandays per issue (mandays_per_issue = businessDays(effective_start, effective_due))
   let totalPoints = 0, totalHours = 0;
-  const issueRows = backlog.map(issue => {
-    const f = issue.fields;
-    const { start, due } = getEffectiveDates(f, fieldIds);
-    const mandays = businessDaysBetween(start, due); // null = no estimate / reversed range
-    const sp = f.customfield_10016 || 0;
-    const hrs = (f.timeoriginalestimate || 0) / 3600;
-    totalPoints += sp; totalHours += hrs;
-    return {
-      key: issue.key, summary: f.summary, status: f.status?.name,
-      projectKey: f.project?.key, category: projectCategoryMap[f.project?.key] || 'Other',
-      assigneeId: f.assignee?.accountId || null, assigneeName: f.assignee?.displayName || null,
-      subtaskCount: (f.subtasks || []).length,
-      start, due, mandays: mandays || 0, hasEstimate: mandays !== null,
-      inProgress: /progress|develop|coding|review/i.test(f.status?.name || '')
-    };
-  });
+  const issueRows = backlog
+    .map(issue => {
+      const f = issue.fields;
+      const { start, due } = getEffectiveDates(f, fieldIds);
+      const mandays = businessDaysBetween(start, due); // null = no estimate / reversed range
+      const sp = f.customfield_10016 || 0;
+      const hrs = (f.timeoriginalestimate || 0) / 3600;
+      totalPoints += sp; totalHours += hrs;
+      return {
+        key: issue.key, summary: f.summary, status: f.status?.name,
+        projectKey: f.project?.key, category: projectCategoryMap[f.project?.key] || 'Other',
+        assigneeId: f.assignee?.accountId || null, assigneeName: f.assignee?.displayName || null,
+        subtaskCount: (f.subtasks || []).length,
+        start, due, mandays: mandays || 0, hasEstimate: mandays !== null,
+        inProgress: /progress|develop|coding|review/i.test(f.status?.name || '')
+      };
+    })
+    .filter(r => !scopedMemberIds || (r.assigneeId && scopedMemberIds.has(r.assigneeId)));
 
   // remaining_mandays = Σ mandays_per_issue (status != Done) — overall + by category
   let remainingMandays = 0;
@@ -940,13 +959,13 @@ async function computeForecast() {
   const overallTargetDate = dueDates.length ? new Date(Math.max(...dueDates.map(d => d.getTime()))) : null;
 
   const timelineHealth = computeTimelineHealth(issueRows, today);
-  const developerLoad = computeDeveloperLoad(issueRows, cache.members || [], today);
+  const developerLoad = computeDeveloperLoad(issueRows, scopedMembers, today);
   const recommendations = computeRecommendations({
     byCategory, devLoad: developerLoad, issueRows, remainingMandays, dailyCapacity,
     activeDevCount, estCompletionDate: completionDate, overallTargetDate, today
   });
 
-  const burndownActual = await computeBurndownSeries(projectKeys, issueRows, fieldIds, today);
+  const burndownActual = await computeBurndownSeries(projectKeys, issueRows, fieldIds, today, scopedMemberIds ? [...scopedMemberIds] : null);
   const burndownIdeal = computeIdealLine(burndownActual, completionDate);
 
   const example = {
@@ -958,7 +977,7 @@ async function computeForecast() {
   };
 
   const result = {
-    totalBacklog: backlog.length,
+    totalBacklog: issueRows.length,
     remainingMandays: Math.round(remainingMandays * 10) / 10,
     remainingHours: Math.round(remainingMandays * val('WORK_HOURS_PER_DAY')),
     activeDevCount,
@@ -982,14 +1001,20 @@ async function computeForecast() {
     computedAt: new Date().toISOString()
   };
 
-  cache.forecast = result;
-  cache.ts['forecast'] = Date.now();
+  cache.forecastByFilter[cacheKey] = result;
+  cache.ts['forecast:' + cacheKey] = Date.now();
   return result;
 }
 
 app.get('/api/forecast', async (req, res) => {
   try {
-    const result = await computeForecast();
+    const toList = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean);
+    const filters = {
+      projectKeys: toList(req.query.projectKey),
+      categories: toList(req.query.category),
+      groups: toList(req.query.group)
+    };
+    const result = await computeForecast(filters);
     res.json(result);
   } catch (e) {
     console.error('forecast error:', e.message);

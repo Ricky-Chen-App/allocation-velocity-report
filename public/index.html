@@ -298,6 +298,23 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 /* Chart captions ("cara baca") */
 .chart-caption{font-size:11.5px;color:var(--ink-400);margin:8px 0 0;line-height:1.6}
 
+/* Velocity filter bar */
+.vf-filterbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:12px 32px 0}
+.vf-filter-reset{font-size:12px;padding:6px 12px}
+
+/* Charts: 2-column on desktop so the collapsible section stack doesn't require excess scrolling */
+.chart-grid{display:grid;grid-template-columns:1fr;gap:14px;margin:0 32px 14px}
+.chart-grid .coll-section{margin:0}
+@media(min-width:901px){.chart-grid{grid-template-columns:1fr 1fr}}
+
+/* Timeline Health: "no estimate" items get a task name + Jira button instead of prose */
+.th-item-task{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border-bottom:1px solid var(--ink-50)}
+.th-item-task:last-child{border-bottom:none}
+.th-item-name{font-size:12px;color:var(--ink-700);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.th-jira-btn{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--blue-600);background:var(--blue-50);border:1px solid var(--blue-100);border-radius:var(--r-pill);padding:5px 10px;text-decoration:none;white-space:nowrap}
+.th-jira-btn:hover{background:var(--blue-100)}
+.th-jira-btn svg{width:11px;height:11px}
+
 /* TASK PAGE */
 .task-filters{display:flex;gap:8px;padding:16px 32px 0;flex-wrap:wrap;align-items:center}
 .task-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;padding:16px 32px 32px}
@@ -923,11 +940,21 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
           <div class="page-sub">Mandays (hari kerja) · Berbasis tanggal start/due di Jira</div>
         </div>
       </div>
+      <div class="vf-filterbar" id="vf-filterbar">
+        <div class="combo" id="vf-combo-category"></div>
+        <div class="combo" id="vf-combo-project"></div>
+        <div class="combo" id="vf-combo-group"></div>
+        <button type="button" class="btn-ghost vf-filter-reset" id="vf-filter-reset" onclick="vfResetFilters()" style="display:none">Reset filters</button>
+      </div>
       <div style="padding:16px 32px 0">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px" id="velocity-kpis">
           <div class="sync-stat"><div class="ss-label">Total Backlog Issues</div><div class="ss-val skeleton" style="height:28px;width:60px;margin-top:4px"></div></div>
           <div class="sync-stat"><div class="ss-label">Remaining Mandays</div><div class="ss-val skeleton" style="height:28px;width:60px;margin-top:4px"></div></div>
           <div class="sync-stat"><div class="ss-label">Remaining Hours (Est.)</div><div class="ss-val skeleton" style="height:28px;width:60px;margin-top:4px"></div></div>
+        </div>
+        <div class="velocity-card" style="margin-top:14px">
+          <div class="card-header"><div class="card-title">Remaining Mandays by Category</div></div>
+          <div style="padding:12px 20px 16px" id="velocity-summary-chart"></div>
         </div>
         <div id="velocity-sp-banner" style="display:none;margin-top:14px;background:var(--ink-0);border:1px solid var(--ink-100);border-radius:var(--radius-lg);box-shadow:var(--shadow-xs)"></div>
       </div>
@@ -955,6 +982,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
           </div>
           <div class="velocity-card">
             <div class="card-header"><div class="card-title">Sprint Velocity (last 5)</div></div>
+            <div class="chart-caption" style="padding:10px 20px 0">Cara baca: mandays Jira sprint (Agile board) selesai per sprint — dipakai sanity-check forecast mandays di atas terhadap throughput riil tim. Sering 0 karena issue sprint sering belum punya tanggal start/due (dataset terpisah dari backlog forecast).</div>
             <div style="padding:16px 20px" id="velocity-sprints">
               <div style="color:var(--ink-400);font-size:12.5px;text-align:center;padding:20px 0">Loading sprint data…</div>
             </div>
@@ -2287,6 +2315,13 @@ function capModalPick(accountId, projectKey){ capCloseModal(); capDrill(accountI
 
 // ——— VELOCITY PAGE ———
 
+// Thousands-separated number formatting for every big count on this page (KPIs,
+// table cells, chart labels, developer-load numbers).
+function fmtNum(n) {
+  if (n == null || isNaN(n)) return '—';
+  return Number(n).toLocaleString('en-US');
+}
+
 // Reusable collapsible section (formula panel, timeline health, recommendations, charts).
 // Toggling is a pure DOM show/hide — the section's HTML is already rendered, so no
 // re-fetch or re-render is needed on click (unlike the Timeline page's group toggles).
@@ -2324,7 +2359,7 @@ function svgBarChart(items, opts = {}) {
   const gap = Math.min(14, (plotW / n) * 0.25);
   const barW = Math.max(6, (plotW - gap * (n - 1)) / n);
   const maxVal = Math.max(...items.map(i => i.value), opts.avgValue || 0, opts.capacityValue || 0, 1);
-  const fmt = opts.formatValue || (v => v);
+  const fmt = opts.formatValue || fmtNum;
 
   const bars = items.map((it, i) => {
     const x = padL + i * (barW + gap);
@@ -2376,7 +2411,7 @@ function svgLineChart(actualSeries, idealSeries, opts = {}) {
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;overflow:visible">
     <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + plotH}" stroke="var(--ink-100)"/>
     <line x1="${padL}" y1="${padT + plotH}" x2="${W - padR}" y2="${padT + plotH}" stroke="var(--ink-100)"/>
-    <text x="${padL - 6}" y="${padT + 4}" text-anchor="end" font-size="9" fill="var(--ink-400)">${Math.round(maxVal)}</text>
+    <text x="${padL - 6}" y="${padT + 4}" text-anchor="end" font-size="9" fill="var(--ink-400)">${fmtNum(Math.round(maxVal))}</text>
     <text x="${padL - 6}" y="${padT + plotH}" text-anchor="end" font-size="9" fill="var(--ink-400)">0</text>
     ${idealPath}${actualPath}
     <text x="${padL}" y="${H - 4}" text-anchor="start" font-size="9" fill="var(--ink-400)">${firstDate}</text>
@@ -2404,10 +2439,10 @@ function renderFormulaPanel(f) {
     <div class="formula-list">${paramRows}</div>
     <div class="formula-example">
       <div>mandays_per_issue = businessDays(effective_start, effective_due)</div>
-      <div>remaining_mandays = Σ mandays_per_issue (status ≠ Done) = <strong>${f.remainingMandays}</strong></div>
+      <div>remaining_mandays = Σ mandays_per_issue (status ≠ Done) = <strong>${fmtNum(f.remainingMandays)}</strong></div>
       <div>${capacityLine}</div>
       ${f.capacityStatus === 'ok' ? `
-      <div>est_hari_kerja = ${f.remainingMandays} ÷ ${f.dailyCapacity} = <strong>${f.estHariKerja}</strong> hari kerja</div>
+      <div>est_hari_kerja = ${fmtNum(f.remainingMandays)} ÷ ${f.dailyCapacity} = <strong>${f.estHariKerja}</strong> hari kerja</div>
       <div>est_kalender = ${f.estHariKerja} × ${f.config.CALENDAR_CONVERSION.value.toFixed(2)} ≈ <strong>${f.estKalender}</strong> hari kalender</div>` : ''}
       <div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--blue-200)">${f.example.text}</div>
     </div>
@@ -2416,18 +2451,33 @@ function renderFormulaPanel(f) {
     </div>`;
 }
 
+const JIRA_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3h7v7M13 3L6 10"/><path d="M11 9v4H3V5h4"/></svg>';
+
+// "No estimate" items just need the task name + a jump-to-Jira button, not the
+// full sentence — this group is usually the longest, so it's the one most worth
+// scanning quickly rather than reading prose per row.
+function thItemHtml(g, it) {
+  if (g.type === 'noEstimate') {
+    return `<div class="th-item-task">
+      <span class="th-item-name" title="${cEsc(it.summary || it.key)}">${cEsc(it.key)} — ${cEsc(it.summary || 'Untitled')}</span>
+      ${it.url ? `<a class="th-jira-btn" href="${it.url}" target="_blank" rel="noopener">${JIRA_ICON} Buka Jira</a>` : ''}
+    </div>`;
+  }
+  return `<div class="th-item">${it.url ? `<a href="${it.url}" target="_blank" rel="noopener">${it.key}</a> — ` : ''}${it.message}</div>`;
+}
+
 function renderTimelineHealth(f) {
   const th = f.timelineHealth;
   if (!th.totalWarnings) {
     return emptyState({ icon: '✅', title: 'Tidak ada anomali terdeteksi', description: 'Semua issue backlog punya tanggal start/due yang masuk akal.' });
   }
   return `
-    <div style="font-size:12px;color:var(--ink-500);margin-bottom:12px">${th.totalWarnings} peringatan terdeteksi di ${th.groups.length} kategori.</div>
+    <div style="font-size:12px;color:var(--ink-500);margin-bottom:12px">${fmtNum(th.totalWarnings)} peringatan terdeteksi di ${th.groups.length} kategori.</div>
     ${th.groups.map(g => `
       <div class="th-group">
-        <div class="th-group-title">${g.label} <span class="coll-count">${g.count}</span></div>
-        ${g.items.slice(0, 8).map(it => `<div class="th-item">${it.url ? `<a href="${it.url}" target="_blank" rel="noopener">${it.key}</a> — ` : ''}${it.message}</div>`).join('')}
-        ${g.count > 8 ? `<div class="th-item" style="color:var(--ink-400)">+${g.count - 8} lainnya…</div>` : ''}
+        <div class="th-group-title">${g.label} <span class="coll-count">${fmtNum(g.count)}</span></div>
+        ${g.items.slice(0, 8).map(it => thItemHtml(g, it)).join('')}
+        ${g.count > 8 ? `<div class="th-item" style="color:var(--ink-400)">+${fmtNum(g.count - 8)} lainnya…</div>` : ''}
       </div>`).join('')}`;
 }
 
@@ -2455,7 +2505,7 @@ function renderDeveloperLoad(f) {
       <div class="devload-card">
         <div class="devload-name" title="${d.name}">${d.name}</div>
         <span class="wl-badge ${cls}" style="margin-top:6px;display:inline-block">${d.statusLabel}</span>
-        <div class="devload-meta"><span>${d.load} / ${d.capacity} mandays</span><span>${ratioLabel}</span></div>
+        <div class="devload-meta"><span>${fmtNum(d.load)} / ${fmtNum(d.capacity)} mandays</span><span>${ratioLabel}</span></div>
       </div>`;
   }).join('');
 
@@ -2475,15 +2525,30 @@ function renderVelocityTrendChart(velocity) {
     return emptyState({ icon: '🏃', title: 'Sprint data not available', description: 'Belum ada sprint yang selesai untuk dihitung velocity-nya.' });
   }
   const sprints = boards[0].sprints.slice(-10);
+  const allZero = sprints.every(s => !s.completedMandays);
+  if (allZero) {
+    return emptyState({
+      icon: '📅', title: 'Sprint issues belum punya tanggal',
+      description: `${sprints.length} sprint ditemukan, tapi semua issue Done di dalamnya belum punya start/due date — mandays selesai tercatat 0. Ini bukan berarti sprint kosong, hanya belum bisa dihitung dari tanggal. Lengkapi tanggal di Jira supaya trend ini terisi.`
+    });
+  }
   const items = sprints.map(s => ({ label: (s.sprintName || 'Sprint').slice(-10), value: s.completedMandays, colorVar: 'var(--blue-400)' }));
   const svg = svgBarChart(items, { avgValue: boards[0].avgVelocityMandays });
-  return `${svg}<div style="font-size:11px;color:var(--ink-400);margin-top:6px">Rata-rata: <strong style="color:var(--ink-700)">${boards[0].avgVelocityMandays} mandays/sprint</strong></div>`;
+  return `${svg}<div style="font-size:11px;color:var(--ink-400);margin-top:6px">Rata-rata: <strong style="color:var(--ink-700)">${fmtNum(boards[0].avgVelocityMandays)} mandays/sprint</strong></div>`;
 }
 
 function renderMandaysByCategoryChart(byCategory) {
   if (!byCategory.length) return emptyState({ icon: '📊', title: 'No backlog', description: 'Tidak ada issue aktif untuk dihitung.' });
   const items = byCategory.map(c => ({ label: c.category, value: c.mandays, colorVar: 'var(--violet-400)' }));
   return svgBarChart(items);
+}
+
+// Always-visible chart in the summary/KPI area (not collapsed) — same data as the
+// collapsible "Mandays per Kategori" chart below, but front-and-center per request.
+function renderSummaryChart(f) {
+  if (!f.byCategory.length) return emptyState({ icon: '📊', title: 'No backlog', description: 'Tidak ada issue aktif untuk dihitung.' });
+  const items = f.byCategory.map(c => ({ label: c.category, value: c.mandays, colorVar: 'var(--violet-400)' }));
+  return svgBarChart(items, { height: 160 });
 }
 
 function renderDevLoadChart(developerLoad) {
@@ -2518,11 +2583,209 @@ function renderForecastRangeChart(f) {
   </svg>`;
 }
 
+// ——— Velocity filter bar (Category / Project / Group) ———
+// Own state (VF/VCOMBOS) mirroring the Timeline page's searchable-combo pattern
+// (TLF/COMBOS, see the Timeline section below) so it can't collide with it —
+// both pages reuse the same .combo-* CSS but keep independent selection state.
+const VF = { category: [], project: [], group: [] };
+const VCOMBOS = {};
+
+function vfPopulateFilters() {
+  const members  = STATE.members || [];
+  const projects = STATE.projects?.projects || [];
+  const catNames = [...new Set((STATE.projects?.categories || []).map(c => c.name || c).filter(Boolean))];
+  const groups   = [...new Set(members.flatMap(m => m.groups || []))].sort();
+
+  const projByCat = {}; projects.forEach(p => { const k = p.category || p.projectCategory?.name || ''; if (k) projByCat[k] = (projByCat[k] || 0) + 1; });
+  const memByGrp  = {}; members.forEach(m => (m.groups || []).forEach(g => memByGrp[g] = (memByGrp[g] || 0) + 1));
+
+  VCOMBOS.category = { el: document.getElementById('vf-combo-category'), fieldName: 'Category', allLabel: 'All Categories',
+    options: catNames.map((c, i) => ({ value: c, label: c, count: projByCat[c] || 0, dot: CAT_PALETTE[i % CAT_PALETTE.length] })),
+    onChange: () => { vfBuildProjects(); loadVelocityPage(); } };
+  VCOMBOS.group = { el: document.getElementById('vf-combo-group'), fieldName: 'Group', allLabel: 'All Groups',
+    options: groups.map(g => ({ value: g, label: g, count: memByGrp[g] || 0 })), onChange: loadVelocityPage };
+  vfBuildProjects();
+
+  ['category', 'project', 'group'].forEach(f => {
+    if (!VCOMBOS[f]) return;
+    const valid = new Set(VCOMBOS[f].options.map(o => o.value));
+    VF[f] = VF[f].filter(v => valid.has(v));
+    vfComboRender(f);
+  });
+  vfUpdateResetButton();
+}
+
+// Project options depend on the selected categories (IN match) — rebuilt on category change.
+function vfBuildProjects() {
+  const projects = STATE.projects?.projects || [];
+  const selCats = VF.category;
+  const filtered = selCats.length
+    ? projects.filter(p => selCats.includes(p.category) || selCats.includes(p.projectCategory?.name))
+    : projects;
+  VCOMBOS.project = { el: document.getElementById('vf-combo-project'), fieldName: 'Project', allLabel: 'All Projects',
+    options: filtered.map(p => ({ value: p.key, label: p.name, sub: `[${p.key}]` })), onChange: loadVelocityPage };
+  const valid = new Set(filtered.map(p => p.key));
+  VF.project = VF.project.filter(v => valid.has(v));
+  vfComboRender('project');
+}
+
+function vfComboTriggerLabel(field) {
+  const c = VCOMBOS[field], sel = VF[field];
+  if (!sel.length) return c.allLabel;
+  if (sel.length === 1) return c.options.find(o => o.value === sel[0])?.label || '1 selected';
+  return `${sel.length} selected`;
+}
+
+function vfComboOptionsHtml(field, query) {
+  const c = VCOMBOS[field], sel = VF[field];
+  const q = (query || '').toLowerCase().trim();
+  const filtered = c.options.filter(o => !q || o.label.toLowerCase().includes(q) || (o.sub || '').toLowerCase().includes(q));
+  const allRow = `<div class="combo-opt" role="option" aria-selected="${!sel.length}" data-v="__all__" onclick="vfComboPick('${field}','__all__')">
+      <span class="combo-check">${COMBO_CHECK}</span><div class="combo-opt-main"><span class="combo-opt-label">${cEsc(c.allLabel)}</span></div></div>`;
+  if (!filtered.length) return allRow + `<div class="combo-empty">No matches</div>`;
+  const rows = filtered.map(o => {
+    const on = sel.includes(o.value);
+    const lead = o.dot ? `<span class="combo-dot" style="background:${o.dot}"></span>` : '';
+    const sub = o.sub ? `<span class="combo-opt-sub">${cEsc(o.sub)}</span>` : '';
+    const cnt = (o.count != null) ? `<span class="combo-opt-count">${o.count}</span>` : '';
+    return `<div class="combo-opt" role="option" aria-selected="${on}" data-v="${cEsc(o.value)}" onclick="vfComboPick('${field}','${cEsc(o.value)}')">
+      <span class="combo-check">${COMBO_CHECK}</span>${lead}<div class="combo-opt-main"><span class="combo-opt-label">${cEsc(o.label)}</span>${sub}</div>${cnt}</div>`;
+  }).join('');
+  return allRow + rows;
+}
+
+function vfComboRender(field) {
+  const c = VCOMBOS[field];
+  if (!c || !c.el) return;
+  const sel = VF[field];
+  c.el.innerHTML = `
+    <button type="button" class="combo-trigger${sel.length ? ' active' : ''}" role="combobox" aria-haspopup="listbox" aria-expanded="false" onclick="vfComboToggle('${field}',event)">
+      <span class="combo-trigger-label"><span class="combo-field">${c.fieldName}</span><span class="combo-value">${cEsc(vfComboTriggerLabel(field))}</span></span>
+      ${sel.length > 1 ? `<span class="combo-count">${sel.length}</span>` : ''}
+      <svg class="combo-chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l4 4 4-4"/></svg>
+    </button>
+    <div class="combo-panel" role="listbox" aria-multiselectable="true" style="display:none">
+      <div class="combo-search"><input type="text" placeholder="Search ${c.fieldName.toLowerCase()}…" oninput="vfComboFilter('${field}',this.value)" onkeydown="vfComboKey('${field}',event)"></div>
+      <div class="combo-options">${vfComboOptionsHtml(field, '')}</div>
+      <div class="combo-footer"><span class="combo-counter">${sel.length} selected</span><div style="display:flex;gap:8px"><button type="button" class="combo-clear" onclick="vfComboClear('${field}')">Clear</button><button type="button" class="combo-done" onclick="vfComboCloseAll()">Done</button></div></div>
+    </div>`;
+}
+
+// Update an open panel's options + trigger in place (so search/scroll survive a pick).
+function vfComboRefreshOpen(field) {
+  const c = VCOMBOS[field], sel = VF[field];
+  const searchVal = c.el.querySelector('.combo-search input')?.value || '';
+  const optsEl = c.el.querySelector('.combo-options');
+  if (optsEl) optsEl.innerHTML = vfComboOptionsHtml(field, searchVal);
+  const trig = c.el.querySelector('.combo-trigger');
+  const valEl = c.el.querySelector('.combo-value');
+  if (valEl) valEl.textContent = vfComboTriggerLabel(field);
+  if (trig) trig.classList.toggle('active', sel.length > 0);
+  let cnt = c.el.querySelector('.combo-count');
+  if (sel.length > 1) {
+    if (!cnt) { cnt = document.createElement('span'); cnt.className = 'combo-count'; trig.insertBefore(cnt, trig.querySelector('.combo-chev')); }
+    cnt.textContent = sel.length;
+  } else if (cnt) { cnt.remove(); }
+  const counter = c.el.querySelector('.combo-counter');
+  if (counter) counter.textContent = `${sel.length} selected`;
+}
+
+function vfComboCloseAll() {
+  Object.values(VCOMBOS).forEach(c => {
+    if (!c.el) return;
+    c.el.classList.remove('open');
+    const p = c.el.querySelector('.combo-panel'); if (p) p.style.display = 'none';
+    const t = c.el.querySelector('.combo-trigger'); if (t) t.setAttribute('aria-expanded', 'false');
+  });
+}
+
+function vfComboToggle(field, ev) {
+  ev.stopPropagation();
+  const c = VCOMBOS[field];
+  const isOpen = c.el.classList.contains('open');
+  vfComboCloseAll(); comboCloseAll(); apCloseAll();
+  if (isOpen) return;
+  c.el.classList.add('open');
+  c.el.querySelector('.combo-panel').style.display = 'block';
+  c.el.querySelector('.combo-trigger').setAttribute('aria-expanded', 'true');
+  vfComboRefreshOpen(field);
+  setTimeout(() => c.el.querySelector('.combo-search input')?.focus(), 0);
+}
+
+function vfComboFilter(field, q) {
+  const optsEl = VCOMBOS[field].el.querySelector('.combo-options');
+  if (optsEl) optsEl.innerHTML = vfComboOptionsHtml(field, q);
+}
+
+function vfComboPick(field, value) {
+  const sel = VF[field];
+  if (value === '__all__') { VF[field] = []; }
+  else { const i = sel.indexOf(value); if (i >= 0) sel.splice(i, 1); else sel.push(value); }
+  vfComboRefreshOpen(field);
+  if (field === 'category') vfBuildProjects();
+  vfUpdateResetButton();
+  VCOMBOS[field].onChange();
+}
+
+function vfComboClear(field) {
+  VF[field] = [];
+  vfComboRefreshOpen(field);
+  if (field === 'category') vfBuildProjects();
+  vfUpdateResetButton();
+  VCOMBOS[field].onChange();
+}
+
+function vfComboKey(field, ev) {
+  const optsEl = VCOMBOS[field].el.querySelector('.combo-options');
+  const rows = [...optsEl.querySelectorAll('.combo-opt')];
+  const cur = rows.findIndex(r => r.classList.contains('focused'));
+  if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+    ev.preventDefault();
+    if (!rows.length) return;
+    let n = cur + (ev.key === 'ArrowDown' ? 1 : -1);
+    if (n < 0) n = rows.length - 1; if (n >= rows.length) n = 0;
+    rows.forEach(r => r.classList.remove('focused'));
+    rows[n].classList.add('focused');
+    rows[n].scrollIntoView({ block: 'nearest' });
+  } else if (ev.key === 'Enter') {
+    ev.preventDefault();
+    if (cur >= 0) vfComboPick(field, rows[cur].dataset.v);
+  } else if (ev.key === 'Escape') {
+    ev.preventDefault();
+    vfComboCloseAll();
+    VCOMBOS[field].el.querySelector('.combo-trigger').focus();
+  }
+}
+
+function vfUpdateResetButton() {
+  const any = VF.category.length || VF.project.length || VF.group.length;
+  const btn = document.getElementById('vf-filter-reset');
+  if (btn) btn.style.display = any ? '' : 'none';
+}
+
+function vfResetFilters() {
+  VF.category = []; VF.project = []; VF.group = [];
+  vfBuildProjects();
+  vfComboRender('category'); vfComboRender('group');
+  vfUpdateResetButton();
+  loadVelocityPage();
+}
+
+function vfQueryString() {
+  const parts = [];
+  if (VF.category.length) parts.push('category=' + encodeURIComponent(VF.category.join(',')));
+  if (VF.project.length) parts.push('projectKey=' + encodeURIComponent(VF.project.join(',')));
+  if (VF.group.length) parts.push('group=' + encodeURIComponent(VF.group.join(',')));
+  return parts.length ? '?' + parts.join('&') : '';
+}
+
 async function loadVelocityPage() {
   showLoading('Calculating backlog completion forecast (mandays)…');
   try {
+    if (!VCOMBOS.category) vfPopulateFilters();
+    const qs = vfQueryString();
     const [forecast, velocity] = await Promise.all([
-      api('/api/forecast'),
+      api('/api/forecast' + qs),
       api('/api/velocity').catch(() => [])
     ]);
     STATE.forecast = forecast;
@@ -2532,17 +2795,18 @@ async function loadVelocityPage() {
     document.getElementById('velocity-kpis').innerHTML = `
       <div class="sync-stat">
         <div class="ss-label">Total Backlog Issues</div>
-        <div class="ss-val">${forecast.totalBacklog}</div>
+        <div class="ss-val">${fmtNum(forecast.totalBacklog)}</div>
       </div>
       <div class="sync-stat">
         <div class="ss-label">Remaining Mandays</div>
-        <div class="ss-val">${forecast.remainingMandays}</div>
+        <div class="ss-val">${fmtNum(forecast.remainingMandays)}</div>
       </div>
       <div class="sync-stat">
         <div class="ss-label">Remaining Hours (Est.)</div>
-        <div class="ss-val">${forecast.remainingHours}h</div>
+        <div class="ss-val">${fmtNum(forecast.remainingHours)}h</div>
       </div>
     `;
+    document.getElementById('velocity-summary-chart').innerHTML = renderSummaryChart(forecast);
 
     // Forecast box
     if (forecast.capacityStatus === 'ok') {
@@ -2563,10 +2827,10 @@ async function loadVelocityPage() {
       ? forecast.byCategory.map(c => `
         <tr>
           <td><strong>${c.category}</strong></td>
-          <td>${c.count}</td>
-          <td>${c.mandays}</td>
-          <td>${c.hours}h</td>
-          <td style="font-weight:600;color:var(--blue-700)">${c.estimatedDays != null ? c.estimatedDays + ' hari' : '<span style="color:var(--ink-300)">—</span>'}</td>
+          <td>${fmtNum(c.count)}</td>
+          <td>${fmtNum(c.mandays)}</td>
+          <td>${fmtNum(c.hours)}h</td>
+          <td style="font-weight:600;color:var(--blue-700)">${c.estimatedDays != null ? fmtNum(c.estimatedDays) + ' hari' : '<span style="color:var(--ink-300)">—</span>'}</td>
         </tr>`).join('')
       : `<tr><td colspan="5">${emptyState({icon:'📊',title:'No backlog',description:'No active issues to forecast.'})}</td></tr>`;
 
@@ -2587,22 +2851,27 @@ async function loadVelocityPage() {
 
     // Sprint velocity bars (mandays)
     const boards = velocity || [];
-    if (boards.length && boards[0].sprints?.length) {
+    if (boards.length && boards[0].sprints?.length && boards[0].sprints.some(s => s.completedMandays)) {
       const sprints = boards[0].sprints.slice(-5);
       const maxM = Math.max(...sprints.map(s => s.completedMandays), 1);
       document.getElementById('velocity-sprints').innerHTML = `
-        <div style="font-size:11px;color:var(--ink-400);margin-bottom:10px">Avg velocity: <strong style="color:var(--ink-800)">${boards[0].avgVelocityMandays} mandays/sprint</strong></div>
+        <div style="font-size:11px;color:var(--ink-400);margin-bottom:10px">Avg velocity: <strong style="color:var(--ink-800)">${fmtNum(boards[0].avgVelocityMandays)} mandays/sprint</strong></div>
         <div style="display:flex;flex-direction:column;gap:8px">
           ${sprints.map(s => `
             <div>
               <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
                 <span style="color:var(--ink-600)">${s.sprintName?.slice(-20) || 'Sprint'}</span>
-                <span style="font-weight:600;color:var(--blue-700)">${s.completedMandays} mandays</span>
+                <span style="font-weight:600;color:var(--blue-700)">${fmtNum(s.completedMandays)} mandays</span>
               </div>
               <div class="tbar-track"><div class="tbar-fill fill-blue" style="width:${Math.round((s.completedMandays/maxM)*100)}%"></div></div>
             </div>`).join('')}
         </div>
       `;
+    } else if (boards.length && boards[0].sprints?.length) {
+      document.getElementById('velocity-sprints').innerHTML = emptyState({
+        icon: '📅', title: 'Sprint issues belum punya tanggal',
+        description: `${boards[0].sprints.length} sprint ditemukan, tapi mandays selesai tercatat 0 karena issue-nya belum punya start/due date — bukan berarti sprint kosong. Lihat penjelasan di atas.`
+      });
     } else {
       document.getElementById('velocity-sprints').innerHTML = emptyState({
         icon: '🏃',
@@ -2634,31 +2903,35 @@ async function loadVelocityPage() {
         caption: 'Rasio beban vs kapasitas tiap developer bulan ini. Merah = overload, hijau = sesuai, kuning = idle, abu = tidak ada data.',
         bodyHtml: renderDeveloperLoad(forecast), defaultOpen: false
       }),
-      collapsibleSection({
-        id: 'coll-chart-burndown', title: '📉 Burndown (Mandays)',
-        caption: 'Cara baca: garis solid (aktual) di ATAS garis putus-putus (ideal) = tim tertinggal jadwal. Di bawah garis ideal = lebih cepat dari rencana.',
-        bodyHtml: renderBurndownChart(forecast.burndown), defaultOpen: false
-      }),
-      collapsibleSection({
-        id: 'coll-chart-velocity', title: '📈 Velocity Trend (Mandays/Sprint)',
-        caption: 'Cara baca: tren naik = tim makin cepat menyelesaikan kerja; tren turun = melambat. Garis putus-putus = rata-rata.',
-        bodyHtml: renderVelocityTrendChart(velocity), defaultOpen: false
-      }),
-      collapsibleSection({
-        id: 'coll-chart-category', title: '📊 Mandays per Kategori',
-        caption: 'Cara baca: bar terpanjang = kategori dengan beban kerja tersisa terbesar (bottleneck utama).',
-        bodyHtml: renderMandaysByCategoryChart(forecast.byCategory), defaultOpen: false
-      }),
-      collapsibleSection({
-        id: 'coll-chart-devload', title: '📊 Beban per Developer',
-        caption: 'Cara baca: warna bar mengikuti status (merah=overload, hijau=sesuai, kuning=idle). Bar yang melewati garis putus-putus merah = melebihi kapasitas.',
-        bodyHtml: renderDevLoadChart(forecast.developerLoad), defaultOpen: false
-      }),
-      collapsibleSection({
-        id: 'coll-chart-forecast', title: '🎯 Forecast Completion Range',
-        caption: 'Cara baca: 3 titik menunjukkan rentang tanggal selesai — optimis (tim bekerja lancar), estimasi (kondisi saat ini), pesimis (banyak hambatan).',
-        bodyHtml: renderForecastRangeChart(forecast), defaultOpen: false
-      })
+      // 5 charts in a 2-column grid on desktop (≥901px) so this stack doesn't force
+      // excessive scrolling — see .chart-grid.
+      `<div class="chart-grid">${[
+        collapsibleSection({
+          id: 'coll-chart-burndown', title: '📉 Burndown (Mandays)',
+          caption: 'Cara baca: garis solid (aktual) di ATAS garis putus-putus (ideal) = tim tertinggal jadwal. Di bawah garis ideal = lebih cepat dari rencana.',
+          bodyHtml: renderBurndownChart(forecast.burndown), defaultOpen: false
+        }),
+        collapsibleSection({
+          id: 'coll-chart-velocity', title: '📈 Velocity Trend (Mandays/Sprint)',
+          caption: 'Cara baca: tren naik = tim makin cepat menyelesaikan kerja; tren turun = melambat. Garis putus-putus = rata-rata.',
+          bodyHtml: renderVelocityTrendChart(velocity), defaultOpen: false
+        }),
+        collapsibleSection({
+          id: 'coll-chart-category', title: '📊 Mandays per Kategori',
+          caption: 'Cara baca: bar terpanjang = kategori dengan beban kerja tersisa terbesar (bottleneck utama).',
+          bodyHtml: renderMandaysByCategoryChart(forecast.byCategory), defaultOpen: false
+        }),
+        collapsibleSection({
+          id: 'coll-chart-devload', title: '📊 Beban per Developer',
+          caption: 'Cara baca: warna bar mengikuti status (merah=overload, hijau=sesuai, kuning=idle). Bar yang melewati garis putus-putus merah = melebihi kapasitas.',
+          bodyHtml: renderDevLoadChart(forecast.developerLoad), defaultOpen: false
+        }),
+        collapsibleSection({
+          id: 'coll-chart-forecast', title: '🎯 Forecast Completion Range',
+          caption: 'Cara baca: 3 titik menunjukkan rentang tanggal selesai — optimis (tim bekerja lancar), estimasi (kondisi saat ini), pesimis (banyak hambatan).',
+          bodyHtml: renderForecastRangeChart(forecast), defaultOpen: false
+        })
+      ].join('')}</div>`
     ].join('');
 
   } catch(e) {
@@ -3210,7 +3483,7 @@ function comboKey(field, ev) {
 }
 
 // Click outside closes any open combo (registered once).
-document.addEventListener('click', e => { if (!e.target.closest('.combo')) { comboCloseAll(); apCloseAll(); } });
+document.addEventListener('click', e => { if (!e.target.closest('.combo')) { comboCloseAll(); apCloseAll(); vfComboCloseAll(); } });
 
 // ======== TIMELINE ========
 let TL = { data: null, statusFilter: 'all', viewMode: 'developer', expanded: new Set(), expandedEpics: new Set(), expandedTasks: new Set(), subBars: {} };
