@@ -2335,6 +2335,16 @@ function toggleCollapse(id) {
   if (chev) chev.classList.toggle('open', !isOpen);
 }
 
+// "See all in Timeline Health" jump from the no-estimate banner — expand it if
+// collapsed, then scroll it into view.
+function vfJumpToTimelineHealth() {
+  const el = document.getElementById('coll-timeline-health');
+  if (!el) return;
+  const body = el.querySelector('.coll-body');
+  if (body.style.display === 'none') toggleCollapse('coll-timeline-health');
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function collapsibleSection({ id, title, caption, bodyHtml, defaultOpen = false, count = null }) {
   return `
     <div class="coll-section" id="${id}">
@@ -2834,19 +2844,29 @@ async function loadVelocityPage() {
         </tr>`).join('')
       : `<tr><td colspan="5">${emptyState({icon:'📊',title:'No backlog',description:'No active issues to forecast.'})}</td></tr>`;
 
-    // Data-quality banner: how many issues lack a start/due estimate (Timeline Health has the full breakdown).
+    // Data-quality banner: list the actual no-estimate tasks (name + direct Jira link per
+    // row), not just a generic "open Jira" button — Timeline Health below has the full list.
     const noEstimateGroup = forecast.timelineHealth.groups.find(g => g.type === 'noEstimate');
     const banner = document.getElementById('velocity-sp-banner');
     if (!noEstimateGroup) {
       banner.style.display = 'none';
     } else {
       banner.style.display = 'block';
-      banner.innerHTML = emptyState({
-        icon: '🎯',
-        title: `${noEstimateGroup.count} issue belum ada tanggal start/due`,
-        description: 'Lengkapi tanggal start/due (atau New Start Date/New Due Date) di Jira supaya forecast mandays akurat untuk issue-issue ini. Lihat detail di panel "Timeline Health" di bawah.',
-        action: { label: 'Buka Jira', href: 'https://linkit360.atlassian.net' }
-      });
+      const preview = noEstimateGroup.items.slice(0, 6);
+      const remaining = noEstimateGroup.count - preview.length;
+      banner.innerHTML = `
+        <div style="padding:16px 20px 8px;display:flex;align-items:flex-start;gap:10px">
+          <span style="font-size:20px;line-height:1">🎯</span>
+          <div>
+            <div style="font-weight:700;font-size:14px;color:var(--ink-800)">${fmtNum(noEstimateGroup.count)} issue belum ada tanggal start/due</div>
+            <div style="font-size:11.5px;color:var(--ink-400);margin-top:2px">Lengkapi tanggal start/due (atau New Start Date/New Due Date) di Jira. Klik task untuk buka langsung di Jira.</div>
+          </div>
+        </div>
+        <div style="padding:0 20px 12px">
+          ${preview.map(it => thItemHtml(noEstimateGroup, it)).join('')}
+          ${remaining > 0 ? `<div class="th-item" style="color:var(--blue-600);cursor:pointer;font-weight:600" onclick="vfJumpToTimelineHealth()">+${fmtNum(remaining)} lainnya — lihat semua di Timeline Health ↓</div>` : ''}
+        </div>
+      `;
     }
 
     // Sprint velocity bars (mandays)
