@@ -4,6 +4,9 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const fetch = require('node-fetch');
 const fs = require('fs');
+const forecastConfig = require('./forecastConfig');
+const { getEffectiveDates, classifyLoad, LOAD_STATUS_LABEL, DEFAULT_FIELD_IDS, val, PARAMS } = forecastConfig;
+const { businessDaysBetween, addBusinessDays, toIso } = require('./businessDays');
 
 const app = express();
 app.use(express.json());
@@ -156,6 +159,39 @@ async function ensureMembers() {
   cache.members = Object.values(membersMap);
   cache.ts['members'] = Date.now();
   return cache.members;
+}
+
+// Resolve the "Start date" / "New Start Date" / "New Due Date" custom field
+// IDs by NAME against Jira's live field schema (/rest/api/3/field), instead
+// of trusting hardcoded customfield_XXXXX IDs forever — Jira admins can and
+// do recreate fields with new IDs. Falls back to the last-verified IDs
+// (forecastConfig.DEFAULT_FIELD_IDS, checked 2026-07-09) if the lookup fails
+// or a name isn't found, logging a warning so a silent drift doesn't go
+// unnoticed. Resolved once per process and cached like everything else.
+let dateFieldIds = null;
+async function ensureDateFieldIds() {
+  if (dateFieldIds) return dateFieldIds;
+  const fallback = DEFAULT_FIELD_IDS;
+  try {
+    const allFields = await jiraGet('/rest/api/3/field');
+    const byName = name => allFields.find(f => (f.name || '').toLowerCase() === name.toLowerCase());
+    const startField = byName('Start date');
+    const newStartField = byName('New Start Date');
+    const newDueField = byName('New Due Date');
+    if (!startField) console.warn(`ensureDateFieldIds: "Start date" not found by name, falling back to ${fallback.start}`);
+    if (!newStartField) console.warn(`ensureDateFieldIds: "New Start Date" not found by name, falling back to ${fallback.newStart}`);
+    if (!newDueField) console.warn(`ensureDateFieldIds: "New Due Date" not found by name, falling back to ${fallback.newDue}`);
+    dateFieldIds = {
+      start: startField?.id || fallback.start,
+      newStart: newStartField?.id || fallback.newStart,
+      due: fallback.due, // 'duedate' is a system field — not listed by a friendly name in /field
+      newDue: newDueField?.id || fallback.newDue
+    };
+  } catch (e) {
+    console.warn('ensureDateFieldIds: schema lookup failed, using fallback IDs:', e.message);
+    dateFieldIds = { ...fallback };
+  }
+  return dateFieldIds;
 }
 
 // ——— GET /api/projects ———
@@ -447,6 +483,7 @@ app.get('/api/capacity', async (req, res) => {
 app.get('/api/velocity', async (req, res) => {
   try {
     const { boardId } = req.query;
+    const fieldIds = await ensureDateFieldIds();
 
     // Get all boards if no boardId specified
     let boards = [];
@@ -462,6 +499,10 @@ app.get('/api/velocity', async (req, res) => {
     }
 
     const velocityData = [];
+    const sprintFields = [
+      'story_points', 'customfield_10016', 'timeoriginalestimate', 'status', 'resolutiondate',
+      fieldIds.start, fieldIds.newStart, fieldIds.due, fieldIds.newDue
+    ].filter((v, i, a) => a.indexOf(v) === i).join(',');
 
     for (const board of boards.slice(0, 5)) {
       try {
@@ -472,14 +513,20 @@ app.get('/api/velocity', async (req, res) => {
         const sprintVelocity = [];
         for (const sprint of sprints) {
           try {
-            const issueData = await jiraGet(`/rest/agile/1.0/sprint/${sprint.id}/issue?maxResults=200&fields=story_points,customfield_10016,timeoriginalestimate,status,resolutiondate`);
+            const issueData = await jiraGet(`/rest/agile/1.0/sprint/${sprint.id}/issue?maxResults=200&fields=${sprintFields}`);
             const done = (issueData.issues || []).filter(i => isDoneStatus(i.fields.status?.name));
+            // Story points/hours kept for rollback — no longer what drives the velocity math below.
             const points = done.reduce((sum, i) => {
               const sp = i.fields.customfield_10016 || i.fields.story_points;
               return sum + (sp || 0);
             }, 0);
             const hours = done.reduce((sum, i) => {
               return sum + ((i.fields.timeoriginalestimate || 0) / 3600);
+            }, 0);
+            // Mandays: businessDaysBetween(effective_start, effective_due) summed over Done issues in the sprint.
+            const mandays = done.reduce((sum, i) => {
+              const { start, due } = getEffectiveDates(i.fields, fieldIds);
+              return sum + (businessDaysBetween(start, due) || 0);
             }, 0);
 
             sprintVelocity.push({
@@ -489,6 +536,7 @@ app.get('/api/velocity', async (req, res) => {
               endDate: sprint.endDate,
               completedPoints: points,
               completedHours: Math.round(hours),
+              completedMandays: Math.round(mandays * 10) / 10,
               completedIssues: done.length,
               totalIssues: (issueData.issues || []).length
             });
@@ -500,12 +548,17 @@ app.get('/api/velocity', async (req, res) => {
         const avgVelocity = sprintVelocity.length
           ? Math.round(sprintVelocity.reduce((s, v) => s + v.completedPoints, 0) / sprintVelocity.length)
           : 0;
+        // avg_velocity = mean(velocity 5 sprint terakhir), unit: mandays/sprint
+        const avgVelocityMandays = sprintVelocity.length
+          ? Math.round((sprintVelocity.reduce((s, v) => s + v.completedMandays, 0) / sprintVelocity.length) * 10) / 10
+          : 0;
 
         velocityData.push({
           boardId: board.id,
           boardName: board.name,
           sprints: sprintVelocity,
-          avgVelocityPoints: avgVelocity
+          avgVelocityPoints: avgVelocity,
+          avgVelocityMandays
         });
       } catch (e) {
         console.warn(`Board ${board.id} error:`, e.message);
@@ -520,6 +573,272 @@ app.get('/api/velocity', async (req, res) => {
 });
 
 // ——— Forecast computation (shared by endpoint + warmup) ———
+// ——— Timeline Health: sanity-check every backlog issue's date range ———
+function computeTimelineHealth(issueRows, today) {
+  const maxMandays = val('MAX_REASONABLE_MANDAYS_PER_ISSUE');
+  const minSubtasks = val('ZERO_MANDAYS_MIN_SUBTASKS');
+  const link = key => `${JIRA_BASE}/browse/${key}`;
+
+  const groups = {
+    reversed: [], noEstimate: [], zeroMandaysLargeIssue: [], extremeDuration: [],
+    overdue: [], futureStartInProgress: [], overlappingDev: []
+  };
+
+  for (const r of issueRows) {
+    const hasStart = !!r.start, hasDue = !!r.due;
+    if (hasStart && hasDue && new Date(r.due) < new Date(r.start)) {
+      groups.reversed.push({ key: r.key, url: link(r.key),
+        message: `Timeline tidak masuk akal: due date lebih awal dari start date (${r.key})` });
+      continue; // other date checks are meaningless once the range itself is inverted
+    }
+    if (!hasStart || !hasDue) {
+      groups.noEstimate.push({ key: r.key, url: link(r.key),
+        message: `${r.key} belum punya ${!hasStart && !hasDue ? 'tanggal start & due' : !hasStart ? 'tanggal start' : 'tanggal due'} — forecast untuk issue ini tidak akurat.` });
+      continue;
+    }
+    if (r.mandays === 0 && r.subtaskCount >= minSubtasks) {
+      groups.zeroMandaysLargeIssue.push({ key: r.key, url: link(r.key),
+        message: `${r.key} tercatat 0 mandays tapi punya ${r.subtaskCount} subtask — kemungkinan tanggal belum di-set dengan benar.` });
+    }
+    if (r.mandays > maxMandays) {
+      groups.extremeDuration.push({ key: r.key, url: link(r.key),
+        message: `${r.key} berdurasi ${r.mandays} hari kerja (>${maxMandays}) — kemungkinan salah set tanggal, pertimbangkan pecah jadi sub-task.` });
+    }
+    if (new Date(r.due) < today) {
+      groups.overdue.push({ key: r.key, url: link(r.key),
+        message: `${r.key} sudah melewati due date (${r.due}) tapi status masih "${r.status}".` });
+    }
+    if (new Date(r.start) > today && r.inProgress) {
+      groups.futureStartInProgress.push({ key: r.key, url: link(r.key),
+        message: `${r.key} berstatus In Progress tapi start date-nya (${r.start}) masih di masa depan.` });
+    }
+  }
+
+  // Overlapping-dev-tasks: per assignee, sweep-line over validly-dated issues to find
+  // any point in time where ≥2 of their issues are simultaneously active. Reported ONCE
+  // per affected developer (not per pair) — a real backlog has many long-range issues
+  // per person, so pairwise reporting explodes combinatorially and drowns out signal.
+  const byDev = {};
+  for (const r of issueRows) {
+    if (!r.assigneeId || !r.start || !r.due) continue;
+    (byDev[r.assigneeId] = byDev[r.assigneeId] || []).push(r);
+  }
+  for (const rows of Object.values(byDev)) {
+    if (rows.length < 2) continue;
+    const events = [];
+    for (const r of rows) {
+      events.push({ t: new Date(r.start).getTime(), delta: 1, key: r.key });
+      const after = new Date(r.due);
+      after.setDate(after.getDate() + 1);
+      events.push({ t: after.getTime(), delta: -1, key: r.key });
+    }
+    events.sort((a, b) => a.t - b.t);
+
+    const activeSet = new Set();
+    const overlappingKeys = new Set();
+    let maxConcurrent = 0;
+    for (const e of events) {
+      if (e.delta === 1) {
+        activeSet.add(e.key);
+        if (activeSet.size > 1) for (const k of activeSet) overlappingKeys.add(k);
+        maxConcurrent = Math.max(maxConcurrent, activeSet.size);
+      } else {
+        activeSet.delete(e.key);
+      }
+    }
+
+    if (maxConcurrent > 1) {
+      const devName = rows[0].assigneeName || 'Dev';
+      const keys = [...overlappingKeys];
+      groups.overlappingDev.push({
+        key: rows[0].assigneeId, url: null,
+        message: `${devName} punya ${keys.length} task dengan tanggal tumpang tindih (maks ${maxConcurrent} paralel dalam satu waktu): ${keys.slice(0, 10).join(', ')}${keys.length > 10 ? ', …' : ''} — beban paralel melebihi kapasitas 1 dev.`
+      });
+    }
+  }
+
+  const typeLabels = {
+    reversed: 'Tanggal terbalik (due < start)',
+    noEstimate: 'Belum ada estimasi tanggal',
+    zeroMandaysLargeIssue: '0 mandays pada issue besar',
+    extremeDuration: 'Durasi tidak wajar',
+    overdue: 'Overdue (belum Done)',
+    futureStartInProgress: 'Start di masa depan tapi In Progress',
+    overlappingDev: 'Beban tumpang tindih per developer'
+  };
+
+  const groupsOut = Object.entries(groups)
+    .filter(([, items]) => items.length)
+    .map(([type, items]) => ({ type, label: typeLabels[type], count: items.length, items: items.slice(0, 50) }));
+
+  return { totalWarnings: groupsOut.reduce((s, g) => s + g.count, 0), groups: groupsOut };
+}
+
+// ——— Bagian 6: developer load, current-calendar-month period ———
+function computeDeveloperLoad(issueRows, members, today) {
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  const remainingWorkDaysInPeriod = businessDaysBetween(toIso(today), toIso(monthEnd)) || 0;
+  const capacityDev = remainingWorkDaysInPeriod * val('FOCUS_FACTOR');
+
+  // load_dev = Σ (portion of mandays_per_issue that falls inside the current month) for
+  // the dev's not-done issues. Clipped to the period overlap (not the full issue mandays)
+  // — many backlog issues span several months, and counting their full mandays against a
+  // single month's capacity produced meaningless 1000%+ ratios. This mirrors the existing
+  // getActiveDays() precedent on the Capacity page, which clips the same way.
+  const byDev = {};
+  for (const r of issueRows) {
+    if (!r.assigneeId || !r.start || !r.due) continue;
+    const rStart = new Date(r.start), rDue = new Date(r.due);
+    if (rStart > monthEnd || rDue < monthStart) continue; // no overlap at all
+    const clippedStart = rStart > monthStart ? rStart : monthStart;
+    const clippedEnd = rDue < monthEnd ? rDue : monthEnd;
+    const clippedMandays = businessDaysBetween(toIso(clippedStart), toIso(clippedEnd)) || 0;
+    if (!byDev[r.assigneeId]) byDev[r.assigneeId] = { load: 0, issueCount: 0 };
+    byDev[r.assigneeId].load += clippedMandays;
+    byDev[r.assigneeId].issueCount++;
+  }
+
+  const rows = members.map(m => {
+    const d = byDev[m.accountId];
+    const load = d ? d.load : 0;
+    const issueCount = d ? d.issueCount : 0;
+    const ratio = capacityDev > 0 ? load / capacityDev : null;
+    const status = classifyLoad(ratio);
+    return {
+      accountId: m.accountId,
+      name: m.displayName,
+      load: Math.round(load * 10) / 10,
+      capacity: Math.round(capacityDev * 10) / 10,
+      ratio: ratio != null ? Math.round(ratio * 100) / 100 : null,
+      issueCount,
+      status,
+      statusLabel: LOAD_STATUS_LABEL[status]
+    };
+  }).sort((a, b) => (b.ratio ?? -1) - (a.ratio ?? -1));
+
+  return { period: { start: toIso(monthStart), end: toIso(monthEnd), remainingWorkDays: remainingWorkDaysInPeriod }, rows };
+}
+
+// ——— Bagian 5: actionable recommendations, sorted by impact ———
+function computeRecommendations(ctx) {
+  const { byCategory, devLoad, issueRows, remainingMandays, dailyCapacity, activeDevCount, estCompletionDate, overallTargetDate, today } = ctx;
+  const recs = [];
+
+  const top = byCategory[0];
+  if (top && top.mandays > 0) {
+    recs.push({ type: 'bottleneck-category', impact: top.mandays,
+      message: `Kategori "${top.category}" adalah bottleneck utama — ${top.mandays} mandays tersisa dari ${top.count} issue. Pertimbangkan tambah developer atau pecah task jadi lebih kecil.` });
+  }
+
+  const overloaded = devLoad.rows.filter(d => d.status === 'overload').sort((a, b) => b.ratio - a.ratio);
+  const idle = devLoad.rows.filter(d => d.status === 'idle').sort((a, b) => a.ratio - b.ratio);
+  const pairs = Math.min(overloaded.length, idle.length);
+  for (let i = 0; i < pairs; i++) {
+    const over = overloaded[i], free = idle[i];
+    recs.push({ type: 'redistribute', impact: over.load - over.capacity,
+      message: `${over.name} overload (${Math.round(over.ratio * 100)}% kapasitas) — pertimbangkan redistribusi task ke ${free.name} yang idle (${Math.round((free.ratio || 0) * 100)}% kapasitas).` });
+  }
+  for (let i = pairs; i < overloaded.length; i++) {
+    const over = overloaded[i];
+    recs.push({ type: 'overload-no-target', impact: over.load - over.capacity,
+      message: `${over.name} overload (${Math.round(over.ratio * 100)}% kapasitas) — tidak ada developer idle untuk redistribusi, pertimbangkan tambah anggota tim.` });
+  }
+  for (let i = pairs; i < idle.length; i++) {
+    const free = idle[i];
+    recs.push({ type: 'idle', impact: free.capacity - free.load,
+      message: `${free.name} idle (${Math.round((free.ratio || 0) * 100)}% kapasitas) — kapasitas nganggur, bisa ambil task dari backlog.` });
+  }
+
+  const noEstimateCount = issueRows.filter(r => !r.start || !r.due).length;
+  if (noEstimateCount > 0) {
+    recs.push({ type: 'no-estimate', impact: noEstimateCount * 5,
+      message: `${noEstimateCount} issue belum ada tanggal start/due — forecast belum akurat untuk issue-issue ini, lengkapi dulu di Jira.` });
+  }
+
+  // Target = max(effective_due) yang sudah di-set di Jira (bukan field Target End —
+  // lihat catatan di forecastConfig / plan). dev_dibutuhkan = remaining / (target_hari_kerja × FOCUS_FACTOR).
+  if (overallTargetDate && estCompletionDate && dailyCapacity > 0) {
+    const targetWorkDays = businessDaysBetween(toIso(today), toIso(overallTargetDate));
+    if (targetWorkDays !== null && targetWorkDays > 0) {
+      const focusFactor = val('FOCUS_FACTOR');
+      const devNeeded = remainingMandays / (targetWorkDays * focusFactor);
+      const devGap = Math.ceil(devNeeded) - activeDevCount;
+      if (new Date(estCompletionDate) > new Date(overallTargetDate) && devGap > 0) {
+        const mandaysToCut = Math.round(remainingMandays - (targetWorkDays * activeDevCount * focusFactor));
+        recs.push({ type: 'target-miss', impact: remainingMandays,
+          message: `Estimasi selesai (${toIso(estCompletionDate)}) melewati target (${toIso(overallTargetDate)}, dari due date terjauh yang sudah di-set). Butuh ~${Math.ceil(devNeeded)} dev aktif (saat ini ${activeDevCount}), atau pangkas ~${mandaysToCut} mandays agar sesuai target.` });
+      } else if (new Date(estCompletionDate) <= new Date(overallTargetDate)) {
+        recs.push({ type: 'target-ok', impact: 1,
+          message: `Estimasi selesai (${toIso(estCompletionDate)}) masih dalam target (${toIso(overallTargetDate)}).` });
+      }
+    } else if (targetWorkDays !== null && targetWorkDays <= 0) {
+      recs.push({ type: 'target-passed', impact: remainingMandays,
+        message: `Target (due date terjauh yang di-set, ${toIso(overallTargetDate)}) sudah lewat — backlog ini perlu direview ulang.` });
+    }
+  }
+
+  return recs.sort((a, b) => b.impact - a.impact);
+}
+
+// ——— Burndown/burnup series: reconstruct recent "remaining mandays" history ———
+// Simplification (documented, no persisted daily snapshots exist): every
+// currently-open issue is treated as if it had been open for the whole
+// lookback window; only issues resolved within the window are "subtracted
+// back in" for the days before their resolution date.
+async function computeBurndownSeries(projectKeys, issueRows, fieldIds, today) {
+  const lookbackDays = val('BURNDOWN_LOOKBACK_DAYS');
+  const startWindow = new Date(today);
+  startWindow.setDate(startWindow.getDate() - lookbackDays);
+
+  let resolvedRows = [];
+  try {
+    const jql = `project in (${projectKeys.map(k => `"${k}"`).join(',')}) AND status in (Done, Closed, Resolved) AND resolutiondate >= -${lookbackDays}d ORDER BY resolutiondate DESC`;
+    const fields = ['status', 'resolutiondate', fieldIds.start, fieldIds.newStart, fieldIds.due, fieldIds.newDue]
+      .filter((v, i, a) => a.indexOf(v) === i).join(',');
+    const resolved = await jiraSearchAll(jql, fields, 2000);
+    resolvedRows = resolved.map(issue => {
+      const { start, due } = getEffectiveDates(issue.fields, fieldIds);
+      return { mandays: businessDaysBetween(start, due) || 0, resolutiondate: issue.fields.resolutiondate ? issue.fields.resolutiondate.slice(0, 10) : null };
+    }).filter(r => r.resolutiondate);
+  } catch (e) {
+    console.warn('computeBurndownSeries: resolved-issue fetch failed:', e.message);
+  }
+
+  const openMandaysTotal = issueRows.reduce((s, r) => s + (r.mandays || 0), 0);
+
+  const actual = [];
+  const cur = new Date(startWindow);
+  while (cur <= today) {
+    const dayStr = toIso(cur);
+    const stillOpenFromResolved = resolvedRows.filter(r => r.resolutiondate > dayStr).reduce((s, r) => s + r.mandays, 0);
+    actual.push({ date: dayStr, remaining: Math.round((openMandaysTotal + stillOpenFromResolved) * 10) / 10 });
+    cur.setDate(cur.getDate() + 1);
+  }
+  return actual;
+}
+
+// Ideal reference line: straight decline from the burndown window's first
+// actual point down to 0 at the estimated (or optimistic) completion date.
+function computeIdealLine(actualSeries, estCompletionDate) {
+  if (!actualSeries.length) return [];
+  const startValue = actualSeries[0].remaining;
+  const startDate = new Date(actualSeries[0].date);
+  const endDate = estCompletionDate ? new Date(estCompletionDate) : new Date(actualSeries[actualSeries.length - 1].date);
+  const totalDays = Math.max(1, Math.round((endDate - startDate) / 86400000));
+
+  const points = [];
+  const cur = new Date(startDate);
+  let i = 0;
+  while (cur <= endDate) {
+    const frac = i / totalDays;
+    points.push({ date: toIso(cur), value: Math.round(startValue * (1 - frac) * 10) / 10 });
+    cur.setDate(cur.getDate() + 1);
+    i++;
+  }
+  return points;
+}
+
 async function computeForecast() {
   if (isFresh('forecast') && cache.forecast) return cache.forecast;
 
@@ -527,89 +846,145 @@ async function computeForecast() {
   await Promise.all([ensureProjects(), ensureMembers()]);
   const projects = cache.projects?.projects || [];
   if (!projects.length) {
-    return { totalBacklog: 0, totalPoints: 0, totalHours: 0, daysToComplete: 0, completionMonths: 0, completionDate: new Date().toISOString().split('T')[0], byCategory: [] };
+    return {
+      totalBacklog: 0, remainingMandays: 0, remainingHours: 0, activeDevCount: 0,
+      dailyCapacity: 0, capacityStatus: 'no-capacity-data',
+      estHariKerja: null, estKalender: null, completionDate: null,
+      completionDateOptimistic: null, completionDatePessimistic: null, overallTargetDate: null,
+      byCategory: [], totalPoints: 0, totalHours: 0,
+      timelineHealth: { totalWarnings: 0, groups: [] },
+      developerLoad: { period: {}, rows: [] },
+      recommendations: [], burndown: { actual: [], ideal: [] },
+      config: PARAMS, example: { text: 'Belum ada project — tidak ada yang bisa dihitung.' },
+      computedAt: new Date().toISOString()
+    };
   }
 
+  const fieldIds = await ensureDateFieldIds();
   const projectKeys = projects.map(p => p.key);
   const jql = `project in (${projectKeys.map(k => `"${k}"`).join(',')}) AND status not in (Done, Closed, Resolved) ORDER BY priority DESC`;
-  const fields = 'summary,status,priority,customfield_10016,timeoriginalestimate,project,assignee,issuetype';
+  const fields = [
+    'summary', 'status', 'priority', 'project', 'assignee', 'issuetype', 'subtasks',
+    'customfield_10016', 'timeoriginalestimate',
+    fieldIds.start, fieldIds.newStart, fieldIds.due, fieldIds.newDue
+  ].filter((v, i, a) => a.indexOf(v) === i).join(',');
+
   // Token-based pagination (the new /search/jql ignores startAt)
   const backlog = (await jiraSearchAll(jql, fields, 5000))
     .filter(i => !isDropped(i.fields?.status?.name)); // ignore Dropped
 
-    // Group by project category
-    const projectCategoryMap = {};
-    for (const p of projects) {
-      projectCategoryMap[p.key] = p.category;
-    }
+  const projectCategoryMap = {};
+  for (const p of projects) projectCategoryMap[p.key] = p.category;
 
-    const byCategory = {};
-    let totalPoints = 0;
-    let totalHours = 0;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-    for (const issue of backlog) {
-      const projKey = issue.fields.project?.key;
-      const category = projectCategoryMap[projKey] || 'Other';
-      if (!byCategory[category]) byCategory[category] = { points: 0, hours: 0, count: 0 };
-      const sp = issue.fields.customfield_10016 || 0;
-      const hrs = (issue.fields.timeoriginalestimate || 0) / 3600;
-      byCategory[category].points += sp;
-      byCategory[category].hours += hrs;
-      byCategory[category].count++;
-      totalPoints += sp;
-      totalHours += hrs;
-    }
-
-    // Velocity: estimate based on active developers × capacity
-    // If no story points/hours: use issue count velocity
-    // Assume team can close ~N issues per working day
-    const activeDeveloperCount = Math.max((cache.members || []).length, 1);
-    // Conservative: each dev closes ~0.5 issues/day on average across backlog types
-    const issuesPerDay = Math.max(activeDeveloperCount * 0.5, 1);
-    const avgVelocityPerDay = 4;
-
-    let daysToComplete;
-    if (totalPoints > 0) {
-      daysToComplete = Math.ceil(totalPoints / avgVelocityPerDay);
-    } else if (totalHours > 0) {
-      daysToComplete = Math.ceil(totalHours / (activeDeveloperCount * 6));
-    } else {
-      // Fallback: issue count based
-      daysToComplete = Math.ceil(backlog.length / issuesPerDay);
-    }
-
-    const completionDate = addWorkingDays(new Date(), daysToComplete);
-    const completionMonths = (daysToComplete / 22).toFixed(1);
-    const usedMetric = totalPoints > 0 ? 'story_points' : totalHours > 0 ? 'time_estimate' : 'issue_count';
-
-    const result = {
-      totalBacklog: backlog.length,
-      totalPoints,
-      totalHours: Math.round(totalHours),
-      daysToComplete,
-      completionMonths: parseFloat(completionMonths),
-      completionDate: completionDate.toISOString().split('T')[0],
-      velocityMetric: usedMetric,
-      issuesPerDay: Math.round(issuesPerDay * 10) / 10,
-      byCategory: Object.entries(byCategory).map(([cat, data]) => {
-        const catDays = data.points > 0
-          ? Math.ceil(data.points / avgVelocityPerDay)
-          : data.hours > 0
-            ? Math.ceil(data.hours / (activeDeveloperCount * 6))
-            : Math.ceil(data.count / issuesPerDay);
-        return {
-          category: cat,
-          count: data.count,
-          points: Math.round(data.points),
-          hours: Math.round(data.hours),
-          estimatedDays: catDays
-        };
-      })
+  // Single pass: derive effective dates + mandays per issue (mandays_per_issue = businessDays(effective_start, effective_due))
+  let totalPoints = 0, totalHours = 0;
+  const issueRows = backlog.map(issue => {
+    const f = issue.fields;
+    const { start, due } = getEffectiveDates(f, fieldIds);
+    const mandays = businessDaysBetween(start, due); // null = no estimate / reversed range
+    const sp = f.customfield_10016 || 0;
+    const hrs = (f.timeoriginalestimate || 0) / 3600;
+    totalPoints += sp; totalHours += hrs;
+    return {
+      key: issue.key, summary: f.summary, status: f.status?.name,
+      projectKey: f.project?.key, category: projectCategoryMap[f.project?.key] || 'Other',
+      assigneeId: f.assignee?.accountId || null, assigneeName: f.assignee?.displayName || null,
+      subtaskCount: (f.subtasks || []).length,
+      start, due, mandays: mandays || 0, hasEstimate: mandays !== null,
+      inProgress: /progress|develop|coding|review/i.test(f.status?.name || '')
     };
+  });
 
-    cache.forecast = result;
-    cache.ts['forecast'] = Date.now();
-    return result;
+  // remaining_mandays = Σ mandays_per_issue (status != Done) — overall + by category
+  let remainingMandays = 0;
+  const byCategoryMap = {};
+  for (const r of issueRows) {
+    remainingMandays += r.mandays;
+    if (!byCategoryMap[r.category]) byCategoryMap[r.category] = { mandays: 0, count: 0 };
+    byCategoryMap[r.category].mandays += r.mandays;
+    byCategoryMap[r.category].count++;
+  }
+
+  // jumlah_dev_aktif = distinct assignees currently carrying ≥1 non-Done issue in scope
+  const activeDevCount = new Set(issueRows.filter(r => r.assigneeId).map(r => r.assigneeId)).size;
+  const focusFactor = val('FOCUS_FACTOR');
+  const dailyCapacity = activeDevCount * focusFactor;
+  const capacityStatus = dailyCapacity > 0 ? 'ok' : 'no-capacity-data';
+
+  let estHariKerja = null, estKalender = null, completionDate = null, completionDateOptimistic = null, completionDatePessimistic = null;
+  if (dailyCapacity > 0) {
+    estHariKerja = remainingMandays / dailyCapacity;
+    estKalender = estHariKerja * val('CALENDAR_CONVERSION');
+    completionDate = addBusinessDays(today, estHariKerja);
+
+    const optCapacity = activeDevCount * focusFactor * (1 + val('OPTIMISTIC_ADJUST'));
+    const pessCapacity = activeDevCount * focusFactor * (1 - val('PESSIMISTIC_ADJUST'));
+    completionDateOptimistic = addBusinessDays(today, remainingMandays / optCapacity);
+    completionDatePessimistic = pessCapacity > 0 ? addBusinessDays(today, remainingMandays / pessCapacity) : null;
+  }
+
+  const byCategory = Object.entries(byCategoryMap).map(([cat, data]) => ({
+    category: cat,
+    count: data.count,
+    mandays: Math.round(data.mandays * 10) / 10,
+    hours: Math.round(data.mandays * val('WORK_HOURS_PER_DAY')),
+    estimatedDays: dailyCapacity > 0 ? Math.ceil(data.mandays / dailyCapacity) : null
+  })).sort((a, b) => b.mandays - a.mandays);
+
+  // Target/deadline = furthest effective_due already set on the remaining issues themselves
+  // (not Jira's "Target End" field — see plan notes: rarely populated, stale).
+  const dueDates = issueRows.filter(r => r.due).map(r => new Date(r.due));
+  const overallTargetDate = dueDates.length ? new Date(Math.max(...dueDates.map(d => d.getTime()))) : null;
+
+  const timelineHealth = computeTimelineHealth(issueRows, today);
+  const developerLoad = computeDeveloperLoad(issueRows, cache.members || [], today);
+  const recommendations = computeRecommendations({
+    byCategory, devLoad: developerLoad, issueRows, remainingMandays, dailyCapacity,
+    activeDevCount, estCompletionDate: completionDate, overallTargetDate, today
+  });
+
+  const burndownActual = await computeBurndownSeries(projectKeys, issueRows, fieldIds, today);
+  const burndownIdeal = computeIdealLine(burndownActual, completionDate);
+
+  const example = {
+    remainingMandays: Math.round(remainingMandays * 10) / 10,
+    activeDevCount, focusFactor,
+    text: dailyCapacity > 0
+      ? `remaining ${Math.round(remainingMandays)} mandays ÷ (${activeDevCount} dev × ${focusFactor}) = ${estHariKerja.toFixed(1)} hari kerja ≈ ${estKalender.toFixed(0)} hari kalender`
+      : `Tidak ada data kapasitas developer (${activeDevCount} dev aktif) — forecast tidak bisa dihitung.`
+  };
+
+  const result = {
+    totalBacklog: backlog.length,
+    remainingMandays: Math.round(remainingMandays * 10) / 10,
+    remainingHours: Math.round(remainingMandays * val('WORK_HOURS_PER_DAY')),
+    activeDevCount,
+    dailyCapacity: Math.round(dailyCapacity * 100) / 100,
+    capacityStatus,
+    estHariKerja: estHariKerja != null ? Math.round(estHariKerja * 10) / 10 : null,
+    estKalender: estKalender != null ? Math.round(estKalender * 10) / 10 : null,
+    completionDate: completionDate ? toIso(completionDate) : null,
+    completionDateOptimistic: completionDateOptimistic ? toIso(completionDateOptimistic) : null,
+    completionDatePessimistic: completionDatePessimistic ? toIso(completionDatePessimistic) : null,
+    overallTargetDate: overallTargetDate ? toIso(overallTargetDate) : null,
+    byCategory,
+    // Legacy story-point fields — kept for rollback / other consumers, no longer drive this page's UI.
+    totalPoints, totalHours: Math.round(totalHours),
+    timelineHealth,
+    developerLoad,
+    recommendations,
+    burndown: { actual: burndownActual, ideal: burndownIdeal },
+    config: PARAMS,
+    example,
+    computedAt: new Date().toISOString()
+  };
+
+  cache.forecast = result;
+  cache.ts['forecast'] = Date.now();
+  return result;
 }
 
 app.get('/api/forecast', async (req, res) => {
