@@ -20,6 +20,8 @@
   --green-600:oklch(0.52 0.13 150);--green-500:oklch(0.62 0.15 150);--green-400:oklch(0.72 0.16 150);--green-100:oklch(0.90 0.07 150);--green-50:oklch(0.96 0.03 150);
   /* —— Review / warning (amber) —— */
   --amber-600:oklch(0.60 0.12 70);--amber-500:oklch(0.70 0.14 75);--amber-400:oklch(0.80 0.15 78);--amber-100:oklch(0.92 0.08 80);--amber-50:oklch(0.965 0.035 82);
+  /* —— Timeline "Epic" row tint — dedicated (muted, low-chroma) so it stays legible, separate from the brighter shared --amber-* ramp above —— */
+  --tl-epic-bg:oklch(0.96 0.014 75);--tl-epic-bg-hover:oklch(0.925 0.018 75);--tl-epic-track-bg:oklch(0.88 0.018 75);--tl-epic-track-fill:oklch(0.68 0.06 68);--tl-epic-accent:oklch(0.52 0.07 65);
   /* —— Overload (coral) —— */
   --red-600:oklch(0.50 0.18 30);--red-500:oklch(0.58 0.20 30);--red-400:oklch(0.68 0.19 32);--red-100:oklch(0.90 0.07 30);--red-50:oklch(0.96 0.03 30);
   /* —— Project / secondary violet —— */
@@ -372,6 +374,12 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .help-icon[data-hint]:hover::after{content:attr(data-hint);position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);background:var(--ink-900);color:#fff;padding:7px 10px;border-radius:var(--radius-sm);font-size:11px;font-weight:400;line-height:1.5;white-space:normal;width:max-content;max-width:260px;text-align:left;text-transform:none;letter-spacing:0;z-index:60;box-shadow:var(--shadow-md);pointer-events:none}
 .help-icon[data-hint]:hover::before{content:'';position:absolute;bottom:calc(100% + 2px);left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--ink-900);z-index:60}
 
+/* Truncated Timeline task/subtask names: full text on hover (same visual recipe as
+   .help-icon, anchored left instead of centered since these spans sit in a narrow
+   sticky column rather than being small standalone icons). */
+.tl-name-tip[data-hint]:hover::after{content:attr(data-hint);position:absolute;bottom:calc(100% + 6px);left:0;background:var(--ink-900);color:#fff;padding:7px 10px;border-radius:var(--radius-sm);font-size:11.5px;font-weight:400;line-height:1.5;white-space:normal;width:max-content;max-width:320px;text-align:left;z-index:60;box-shadow:var(--shadow-md);pointer-events:none}
+.tl-name-tip[data-hint]:hover::before{content:'';position:absolute;bottom:calc(100% + 1px);left:10px;border:5px solid transparent;border-top-color:var(--ink-900);z-index:60}
+
 /* KANBAN: show-more button for long columns */
 .col-more{width:100%;padding:10px 16px;border:none;border-top:1px solid var(--ink-100);background:var(--ink-50);color:var(--blue-700);font-size:12px;font-weight:500;font-family:var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:background var(--transition)}
 .col-more:hover{background:var(--blue-50)}
@@ -524,7 +532,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .tl-grp-header:hover .tl-grp-left{background:var(--ink-100)}
 .tl-grp-chev{width:14px;height:14px;color:var(--ink-400);flex-shrink:0;transition:transform var(--transition)}
 .tl-grp-chev.open{transform:rotate(90deg)}
-.tl-grp-name{font-size:12.5px;font-weight:600;color:var(--ink-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-grp-name{font-size:12.5px;font-weight:600;color:var(--ink-900);white-space:normal;overflow:visible;word-break:break-word;line-height:1.3;flex:1;min-width:0}
 .tl-grp-sub{font-size:10.5px;color:var(--ink-400);margin-top:1px}
 .tl-grp-track{position:relative;flex-shrink:0}
 .tl-grp-span{position:absolute;top:50%;transform:translateY(-50%);height:14px;border-radius:7px;background:var(--violet-100);overflow:hidden}
@@ -535,7 +543,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .tl-task-left{display:flex;align-items:center;gap:6px;padding:4px 14px 4px 30px;border-right:1px solid var(--ink-100);position:sticky;left:0;background:var(--ink-0);z-index:3}
 .tl-task-row:hover .tl-task-left{background:var(--ink-50)}
 .tl-task-key{font-size:10.5px;font-family:var(--font-mono);color:var(--ink-400);flex-shrink:0}
-.tl-task-name{font-size:11.5px;font-weight:500;color:var(--ink-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-task-name{font-size:11.5px;font-weight:500;color:var(--ink-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative}
 .tl-task-chev{width:12px;height:12px;color:var(--ink-400);flex-shrink:0;cursor:pointer;transition:transform var(--transition);border-radius:3px}
 .tl-task-chev:hover{color:var(--ink-700);background:var(--ink-100)}
 .tl-task-chev.open{transform:rotate(90deg)}
@@ -543,21 +551,23 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .tl-sub-left{display:flex;align-items:center;gap:7px;padding:4px 14px 4px 52px;border-right:1px solid var(--ink-100);position:sticky;left:0;background:var(--ink-0);z-index:3;min-height:30px}
 .tl-task-row:hover ~ .tl-sub-row .tl-sub-left{background:var(--ink-0)}
 .tl-sub-key{font-size:9.5px;font-family:var(--font-mono);color:var(--ink-300);flex-shrink:0}
-.tl-sub-name{font-size:10.5px;color:var(--ink-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-sub-name{font-size:10.5px;color:var(--ink-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative}
 .tl-sub-bars{flex:1}
-/* Epic sub-group header (Project → Epic → Task hierarchy) */
-.tl-epic-row{display:flex;align-items:stretch;border-bottom:1px solid var(--ink-50);background:var(--amber-50);cursor:pointer;min-height:34px;position:relative}
-.tl-epic-row:hover{background:var(--amber-100)}
-.tl-epic-left{display:flex;align-items:center;gap:7px;padding:5px 14px 5px 30px;border-right:1px solid var(--ink-100);position:sticky;left:0;background:var(--amber-50);z-index:3}
-.tl-epic-row:hover .tl-epic-left{background:var(--amber-100)}
-.tl-epic-chev{width:12px;height:12px;color:var(--amber-600);flex-shrink:0;transition:transform var(--transition)}
+/* Epic sub-group header (Project → Epic → Task hierarchy) — muted ochre tint
+   (dedicated tokens, not the shared --amber-* ramp used elsewhere in the app)
+   so text stays readable instead of washing out against a bright yellow. */
+.tl-epic-row{display:flex;align-items:stretch;border-bottom:1px solid var(--ink-50);background:var(--tl-epic-bg);cursor:pointer;min-height:34px;position:relative}
+.tl-epic-row:hover{background:var(--tl-epic-bg-hover)}
+.tl-epic-left{display:flex;align-items:center;gap:7px;padding:5px 14px 5px 30px;border-right:1px solid var(--ink-100);position:sticky;left:0;background:var(--tl-epic-bg);z-index:3}
+.tl-epic-row:hover .tl-epic-left{background:var(--tl-epic-bg-hover)}
+.tl-epic-chev{width:12px;height:12px;color:var(--tl-epic-accent);flex-shrink:0;transition:transform var(--transition)}
 .tl-epic-chev.open{transform:rotate(90deg)}
-.tl-epic-key{font-family:var(--font-mono);font-size:9.5px;font-weight:600;color:var(--amber-600);flex-shrink:0}
-.tl-epic-name{font-size:12px;font-weight:600;color:var(--ink-800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tl-epic-sub{font-size:9.5px;color:var(--ink-400);flex-shrink:0;font-family:var(--font-mono)}
+.tl-epic-key{font-family:var(--font-mono);font-size:9.5px;font-weight:600;color:var(--tl-epic-accent);flex-shrink:0}
+.tl-epic-name{font-size:12px;font-weight:600;color:var(--ink-800);white-space:normal;overflow:visible;word-break:break-word;line-height:1.3;flex:1;min-width:0}
+.tl-epic-sub{font-size:9.5px;color:var(--ink-600);flex-shrink:0;font-family:var(--font-mono)}
 .tl-epic-track{position:relative;flex-shrink:0}
-.tl-epic-span{position:absolute;top:50%;transform:translateY(-50%);height:10px;border-radius:5px;background:var(--amber-100);overflow:hidden}
-.tl-epic-span-fill{height:100%;background:var(--amber-400);opacity:.6}
+.tl-epic-span{position:absolute;top:50%;transform:translateY(-50%);height:10px;border-radius:5px;background:var(--tl-epic-track-bg);overflow:hidden}
+.tl-epic-span-fill{height:100%;background:var(--tl-epic-track-fill);opacity:.7}
 .tl-sub-bar-loading{position:absolute;font-size:11px;letter-spacing:2px;color:var(--ink-300);padding-left:8px}
 .tl-sub-nodate{position:absolute;height:16px;display:inline-flex;align-items:center;padding:0 8px;font-size:9px;color:var(--ink-400);border:1px dashed var(--ink-200);border-radius:4px;background:var(--ink-50);white-space:nowrap}
 .tl-task-bars{position:relative;flex-shrink:0}
@@ -3880,7 +3890,7 @@ function renderTimeline(data) {
   const today = new Date(); today.setHours(0,0,0,0);
   const sevenAgo = new Date(today); sevenAgo.setDate(today.getDate() - 7);
 
-  const PERSON_W = 300;
+  const PERSON_W = 340;
   // Fill the available chart area exactly so the months span the full width with
   // no empty space after the last month and no spurious horizontal scroll. The
   // axis is always ≤ 1 year (clamped to the display window). A minimum day width
@@ -4012,7 +4022,7 @@ function renderTimeline(data) {
             <div class="tl-sub-left" style="width:${PERSON_W}px;min-width:${PERSON_W}px;padding-left:${52+extraIndent}px">
               <span style="width:7px;height:7px;border-radius:2px;background:${sStyle.bg};flex-shrink:0"></span>
               <span class="tl-sub-key">${s.key}</span>
-              <span class="tl-sub-name" title="${esc(s.summary||'')}">${s.summary || ''}</span>
+              <span class="tl-sub-name tl-name-tip" title="${esc(s.summary||'')}" data-hint="${esc(s.summary||'')}">${s.summary || ''}</span>
               ${statusPill(s.status)}
             </div>
             <div class="tl-sub-bars" style="width:${chartW}px;position:relative">${subBar}</div>
@@ -4024,7 +4034,7 @@ function renderTimeline(data) {
             ${chev}
             <span style="width:9px;height:9px;border-radius:2px;background:${style.bg};flex-shrink:0"></span>
             <span class="tl-task-key">${task.key}</span>
-            <span class="tl-task-name" title="${esc(task.summary)}">${task.summary || ''}</span>
+            <span class="tl-task-name tl-name-tip" title="${esc(task.summary)}" data-hint="${esc(task.summary||'')}">${task.summary || ''}</span>
             ${subtasks.length?`<span class="tl-grp-sub" style="margin:0;flex-shrink:0">${subtasks.length} sub</span>`:''}
             ${isOverdue?'<span class="tl-ovr-badge">OVR</span>':''}${isNew?'<span class="tl-new-badge">NEW</span>':''}
           </div>
