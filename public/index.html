@@ -2707,7 +2707,7 @@ function vfComboRender(field) {
       <svg class="combo-chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l4 4 4-4"/></svg>
     </button>
     <div class="combo-panel" role="listbox" aria-multiselectable="true" style="display:none">
-      <div class="combo-search"><input type="text" placeholder="Search ${c.fieldName.toLowerCase()}…" oninput="vfComboFilter('${field}',this.value)" onkeydown="vfComboKey('${field}',event)"></div>
+      <div class="combo-search"><input type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search ${c.fieldName.toLowerCase()}…" oninput="vfComboFilter('${field}',this.value)" onkeydown="vfComboKey('${field}',event)"></div>
       <div class="combo-options">${vfComboOptionsHtml(field, '')}</div>
       <div class="combo-footer"><span class="combo-counter">${sel.length} selected</span><div style="display:flex;gap:8px"><button type="button" class="combo-clear" onclick="vfComboClear('${field}')">Clear</button><button type="button" class="combo-done" onclick="vfComboCloseAll()">Done</button></div></div>
     </div>`;
@@ -3451,7 +3451,7 @@ function comboRender(field) {
       <svg class="combo-chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l4 4 4-4"/></svg>
     </button>
     <div class="combo-panel" role="listbox" aria-multiselectable="true" style="display:none">
-      <div class="combo-search"><input type="text" placeholder="Search ${c.fieldName.toLowerCase()}…" oninput="comboFilter('${field}',this.value)" onkeydown="comboKey('${field}',event)"></div>
+      <div class="combo-search"><input type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search ${c.fieldName.toLowerCase()}…" oninput="comboFilter('${field}',this.value)" onkeydown="comboKey('${field}',event)"></div>
       <div class="combo-options">${comboOptionsHtml(field, '')}</div>
       <div class="combo-footer"><span class="combo-counter">${sel.length} selected</span><div style="display:flex;gap:8px"><button type="button" class="combo-clear" onclick="comboClear('${field}')">Clear</button><button type="button" class="combo-done" onclick="comboCloseAll()">Done</button></div></div>
     </div>`;
@@ -4865,7 +4865,7 @@ function apRenderTrigger(elId) {
       <svg class="combo-chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l4 4 4-4"/></svg>
     </button>
     <div class="combo-panel" role="listbox" style="display:none">
-      <div class="combo-search"><input type="text" placeholder="Search ${cEsc(p.cfg.label.toLowerCase())}…" oninput="apFilter('${elId}',this.value)" onkeydown="apKey('${elId}',event)"></div>
+      <div class="combo-search"><input type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search ${cEsc(p.cfg.label.toLowerCase())}…" oninput="apFilter('${elId}',this.value)" onkeydown="apKey('${elId}',event)"></div>
       <div class="combo-options">${apOptionsHtml(elId, '')}</div>
       <div class="combo-footer"><span class="combo-counter">${n} selected</span><div style="display:flex;gap:8px"><button type="button" class="combo-clear" onclick="apClear('${elId}')">Clear</button><button type="button" class="combo-done" onclick="apCommit('${elId}')">Add${n ? ` (${n})` : ''}</button></div></div>
     </div>`;
