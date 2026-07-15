@@ -3971,6 +3971,20 @@ function renderTimeline(data) {
   const effTS = t => t.targetStart || t.origBarStart || t.barStart;
   const effTE = t => t.targetEnd   || t.origBarEnd   || t.barEnd;
 
+  // An epic reaches the timeline only as a `parent` reference on its child tasks
+  // (Jira's default parent embed carries summary/status, not custom fields), so
+  // editing Target start/end ON THE EPIC ITSELF has to come from a dedicated
+  // lookup — data.epicTargets, keyed by epic key. Prefer that over aggregating
+  // child-task dates; only fall back when the epic itself has no Target set.
+  const epicTargets = data.epicTargets || {};
+  const tlEpicRange = (epicKey, tasks) => {
+    const own = epicKey && epicTargets[epicKey];
+    if (own && own.targetStart && own.targetEnd) return { start: own.targetStart, end: own.targetEnd };
+    const starts = tasks.map(effTS).filter(Boolean).sort();
+    const ends   = tasks.map(effTE).filter(Boolean).sort();
+    return { start: starts[0], end: ends[ends.length-1] };
+  };
+
   const groupRows = items.map(grp => {
     const gid = grp.accountId;
     const expanded = TL.expanded.has(gid);
@@ -3993,12 +4007,28 @@ function renderTimeline(data) {
     const gLeft  = allStarts.length ? px(allStarts[0]) : 0;
     const gRight = allEnds.length ? px(allEnds[allEnds.length-1]) + DAY_W*3 : 0;
     const gSpan  = Math.max(0, gRight - gLeft);
-    // Target line uses the roadmap Target start/end fields (min start → max end
-    // across tasks that have them); delayed when today is past that end and the
-    // group isn't fully done. Rows without any Target dates get no target line.
-    const tgStarts = grp.tasks.map(effTS).filter(Boolean).sort();
-    const tgEnds   = grp.tasks.map(effTE).filter(Boolean).sort();
-    const gOv = tlOverlay(tgStarts[0], tgEnds[tgEnds.length-1], { targetTop: 9, barCenter: 23, done: done === total, pctDone });
+    // Target line: for an epic-group row, use that epic's OWN target (falling
+    // back to its child tasks). For a project-group row, union each of its
+    // epics' effective ranges (+ any epic-less tasks) — this is what makes an
+    // epic-level Jira edit show up on the collapsed project row too. Developer
+    // rows aren't epic-shaped, so they keep the plain task-level aggregate.
+    let gTgtStart, gTgtEnd;
+    if (isEpic) {
+      const r = tlEpicRange(grp.epicKey, grp.tasks);
+      gTgtStart = r.start; gTgtEnd = r.end;
+    } else if (isProj) {
+      const byEpicKey = {}, noEpicTasks = [];
+      for (const t of grp.tasks) (t.epicKey ? (byEpicKey[t.epicKey] = byEpicKey[t.epicKey] || []).push(t) : noEpicTasks.push(t));
+      const ranges = Object.keys(byEpicKey).map(ek => tlEpicRange(ek, byEpicKey[ek]));
+      const starts = ranges.map(r => r.start).filter(Boolean).concat(noEpicTasks.map(effTS).filter(Boolean)).sort();
+      const ends   = ranges.map(r => r.end).filter(Boolean).concat(noEpicTasks.map(effTE).filter(Boolean)).sort();
+      gTgtStart = starts[0]; gTgtEnd = ends[ends.length-1];
+    } else {
+      const starts = grp.tasks.map(effTS).filter(Boolean).sort();
+      const ends   = grp.tasks.map(effTE).filter(Boolean).sort();
+      gTgtStart = starts[0]; gTgtEnd = ends[ends.length-1];
+    }
+    const gOv = tlOverlay(gTgtStart, gTgtEnd, { targetTop: 9, barCenter: 23, done: done === total, pctDone });
 
     // attrs builder for a bar
     const attrs = (t, sVal, eVal, dueVal, ov, dn) =>
@@ -4126,9 +4156,8 @@ function renderTimeline(data) {
           const eLeft  = eStarts.length ? px(eStarts[0]) : 0;
           const eRight = eEnds.length ? px(eEnds[eEnds.length-1]) + DAY_W*2 : 0;
           const eSpan  = Math.max(0, eRight - eLeft);
-          const etStarts = epic.tasks.map(effTS).filter(Boolean).sort();
-          const etEnds   = epic.tasks.map(effTE).filter(Boolean).sort();
-          const eOv = tlOverlay(etStarts[0], etEnds[etEnds.length-1], { targetTop: 6, barCenter: 17, done: eDone === eTotal, pctDone: ePct });
+          const eRange = tlEpicRange(epic.key, epic.tasks);
+          const eOv = tlOverlay(eRange.start, eRange.end, { targetTop: 6, barCenter: 17, done: eDone === eTotal, pctDone: ePct });
           let h = `<div class="tl-epic-row${eOv.delayed?' tl-row-delayed':''}" onclick="toggleTlEpic('${esc(ekId)}',event)">
             <div class="tl-epic-left" style="width:${PERSON_W}px;min-width:${PERSON_W}px">
               <svg class="tl-epic-chev${epicOpen?' open':''}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4l4 4-4 4"/></svg>

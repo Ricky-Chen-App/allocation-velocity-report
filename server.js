@@ -1547,12 +1547,41 @@ app.get('/api/timeline', async (req, res) => {
 
     const totalIssues = Object.values(byAssignee).reduce((s, a) => s + a.tasks.length, 0);
 
+    // Epics only ever reach the timeline as a `parent` reference on their child
+    // tasks (Jira's default parent embed carries summary/status, not custom
+    // fields), so an epic's OWN Target start/end was never fetched — editing it
+    // in Jira had no effect on the Gantt. Batch-fetch those two fields directly
+    // for every distinct epic key seen above; the frontend prefers this over
+    // aggregating child-task dates when both target fields are set.
+    const epicKeys = [...new Set(
+      Object.values(byAssignee).flatMap(a => a.tasks.map(t => t.epicKey).filter(Boolean))
+    )];
+    const epicTargets = {};
+    if (epicKeys.length) {
+      const EBATCH = 80;
+      const epicChunks = [];
+      for (let i = 0; i < epicKeys.length; i += EBATCH) epicChunks.push(epicKeys.slice(i, i + EBATCH));
+      const epicResults = await Promise.all(epicChunks.map(async chunk => {
+        const jql = `key in (${chunk.map(k => `"${k}"`).join(',')})`;
+        try { return await jiraSearchAll(jql, 'customfield_10028,customfield_10029', 500); }
+        catch (e) { console.warn('Epic target fetch error:', e.message); return []; }
+      }));
+      for (const issue of epicResults.flat()) {
+        if (!issue?.key) continue; // defensive: skip malformed/partial entries
+        epicTargets[issue.key] = {
+          targetStart: issue.fields?.customfield_10028 || null,
+          targetEnd:   issue.fields?.customfield_10029 || null
+        };
+      }
+    }
+
     const result = {
       items: Object.values(byAssignee)
         .filter(a => a.tasks.length > 0)
         .sort((a, b) => a.displayName.localeCompare(b.displayName)),
       dateRange: { start: startStr, end: endStr },
-      totalIssues
+      totalIssues,
+      epicTargets
     };
     cache.timeline[cacheKey] = result;
     cache.ts['tl:'+cacheKey] = Date.now();
