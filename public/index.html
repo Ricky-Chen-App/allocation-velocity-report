@@ -573,6 +573,17 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .tl-task-bars{position:relative;flex-shrink:0}
 .tl-bar-label{position:absolute;font-size:10px;color:var(--ink-700);white-space:nowrap;pointer-events:none;line-height:20px;height:20px;display:flex;align-items:center}
 .tl-ovr-badge{background:var(--red-100);color:var(--red-700);font-size:8px;font-weight:700;padding:0 4px;border-radius:3px;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
+/* Target line (Target Start → Target End) + auto delay treatment.
+   Teal target range drawn above the progress bar; a red dashed "tail" runs from
+   Target End to Today when a row is overdue and unfinished. Colors use tokens. */
+.tl-target{position:absolute;height:0;border-top:3px solid var(--teal-500);border-radius:2px;z-index:1;pointer-events:none}
+.tl-target::before,.tl-target::after{content:'';position:absolute;top:-4px;width:2px;height:9px;background:var(--teal-600);border-radius:1px}
+.tl-target::before{left:0}.tl-target::after{right:-1px}
+.tl-delay-tail{position:absolute;height:0;border-top:2px dashed var(--red-500);z-index:3;pointer-events:none}
+.tl-delay-chip{position:absolute;transform:translate(-50%,-50%);background:var(--ink-0);border:1px solid var(--red-400);color:var(--red-600);font-size:9px;font-weight:700;padding:1px 6px;border-radius:var(--r-pill);white-space:nowrap;z-index:6;box-shadow:var(--shadow-sm);font-variant-numeric:tabular-nums;pointer-events:none}
+.tl-delay-badge{background:var(--red-500);color:#fff;font-size:8px;font-weight:800;padding:0 4px;border-radius:3px;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0;margin-left:4px}
+.tl-row-delayed{background:var(--red-50)!important}
+.tl-row-delayed:hover{background:var(--red-100)!important}
 
 /* ——— PROJECT ALLOCATION: clickable pills, overflow, drill-down ——— */
 .project-pill.clickable{cursor:pointer;font-family:var(--font-body);transition:filter var(--transition),box-shadow var(--transition)}
@@ -3794,6 +3805,8 @@ function renderTlLegend() {
   let html = items.map(i =>
     `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:18px;height:10px;border-radius:3px;${i.style};display:inline-block"></span>${i.label}</div>`
   ).join('');
+  html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:22px;height:0;border-top:3px solid var(--teal-500);display:inline-block"></span>Target start → end</div>`;
+  html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:22px;height:0;border-top:2px dashed var(--red-500);display:inline-block"></span>Delayed (past target)</div>`;
   html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:24px;height:10px;border-radius:3px;background:transparent;border:2px dashed var(--red-400);display:inline-block"></span>New date</div>`;
   html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span class="tl-new-badge" style="margin:0">NEW</span>created ≤7 days</div>`;
   html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:2px;height:14px;background:var(--blue-400);display:inline-block;border-radius:2px"></span>Today</div>`;
@@ -3923,6 +3936,36 @@ function renderTimeline(data) {
   const showToday = todayOffset >= 0 && todayOffset <= totalDays;
   const todayMark = showToday ? `<div style="position:absolute;top:0;bottom:0;left:${todayPx}px;width:2px;background:var(--amber-500);opacity:.55;z-index:2;pointer-events:none"></div>` : '';
 
+  // ——— Target line (Target Start → Target End) + auto delay overlay ———
+  // Reused by group / epic / task rows. Draws the teal target range, and — when
+  // the row is past Target End and still unfinished — a red dashed tail to Today
+  // plus a "Delayed Nd" chip. Delay days are computed on LOCAL-midnight dates so
+  // the count never drifts by a day across timezones. `o.done`/`o.pctDone` decide
+  // whether the row still counts as unfinished (pct omitted ⇒ single-task row).
+  const tlDelayDays = endIso => {
+    const e = new Date(endIso);
+    const endMid = new Date(e.getFullYear(), e.getMonth(), e.getDate());
+    return Math.max(0, Math.floor((today - endMid) / 86400000));
+  };
+  const tlOverlay = (startIso, endIso, o) => {
+    if (!startIso || !endIso) return { html: '', delayed: false, days: 0 };
+    const sPx = px(startIso), ePx = px(endIso);
+    const span = Math.max(6, ePx - sPx);
+    let html = `<div class="tl-target" style="left:${sPx}px;width:${span}px;top:${o.targetTop}px"></div>`;
+    const unfinished = o.done === true ? false : (o.pctDone === undefined ? true : o.pctDone < 100);
+    const delayed = showToday && unfinished && todayPx > ePx + 1;
+    let days = 0;
+    if (delayed) {
+      days = tlDelayDays(endIso);
+      const tailW = Math.max(4, todayPx - ePx);
+      const mid = ePx + tailW / 2;
+      const label = `Delayed ${days}d${o.statusName ? ' · ' + o.statusName : ''}`;
+      html += `<div class="tl-delay-tail" style="left:${ePx}px;width:${tailW}px;top:${o.barCenter}px"></div>`;
+      if (!o.noChip) html += `<div class="tl-delay-chip" style="left:${mid}px;top:${o.barCenter}px">${label}</div>`;
+    }
+    return { html, delayed, days };
+  };
+
   const groupRows = items.map(grp => {
     const gid = grp.accountId;
     const expanded = TL.expanded.has(gid);
@@ -3945,17 +3988,20 @@ function renderTimeline(data) {
     const gLeft  = allStarts.length ? px(allStarts[0]) : 0;
     const gRight = allEnds.length ? px(allEnds[allEnds.length-1]) + DAY_W*3 : 0;
     const gSpan  = Math.max(0, gRight - gLeft);
+    // Target line spans the aggregate min-start → max-end; delayed when today is
+    // past that end and the group isn't fully done.
+    const gOv = tlOverlay(allStarts[0], allEnds[allEnds.length-1], { targetTop: 9, barCenter: 23, done: done === total, pctDone });
 
     // attrs builder for a bar
     const attrs = (t, sVal, eVal, dueVal, ov, dn) =>
       `data-key="${esc(t.key)}" data-summary="${esc(t.summary)}" data-status="${esc(t.status)}" data-project="${esc(t.project)}" data-assignee="${esc(t._assignee||grp.displayName)}" data-due="${dueVal||''}" data-overdue="${ov?'1':''}" data-done="${dn?'1':''}" data-bar-start="${sVal}" data-bar-end="${eVal}" ${t.isRescheduled?`data-orig-start="${t.origStart||''}" data-new-start="${t.newStart||''}" data-orig-due="${t.origDue||''}" data-new-due="${t.newDue||''}" data-rescheduled="1"`:''} onmouseenter="tlTooltipEnter(event,this)" onmouseleave="tlTooltipLeave()"`;
 
-    let html = `<div class="tl-grp-header" onclick="toggleTlGroup('${esc(gid)}')">
+    let html = `<div class="tl-grp-header${gOv.delayed?' tl-row-delayed':''}" onclick="toggleTlGroup('${esc(gid)}')">
       <div class="tl-grp-left" style="width:${PERSON_W}px;min-width:${PERSON_W}px">
         <svg class="tl-grp-chev ${expanded?'open':''}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4l4 4-4 4"/></svg>
         <div class="dev-init" style="background:${gc.bg};color:${gc.color};flex-shrink:0">${initials}</div>
         <div style="min-width:0;flex:1">
-          <div class="tl-grp-name">${isEpic && grp.epicKey ? `<span style="font-family:var(--font-mono);font-size:11px;color:var(--amber-600)">${grp.epicKey}</span> ` : ''}${grp.displayName}</div>
+          <div class="tl-grp-name">${isEpic && grp.epicKey ? `<span style="font-family:var(--font-mono);font-size:11px;color:var(--amber-600)">${grp.epicKey}</span> ` : ''}${grp.displayName}${gOv.delayed?'<span class="tl-delay-badge">Delay</span>':''}</div>
           <div class="tl-grp-sub">${total} ${unitLabel} · ${done} done</div>
         </div>
       </div>
@@ -3963,6 +4009,7 @@ function renderTimeline(data) {
         ${todayMark}
         ${gSpan>0 ? `<div class="tl-grp-span" style="left:${gLeft}px;width:${gSpan}px" title="${done}/${total} ${unitLabel} done (${pctDone}%)"><div class="tl-grp-span-fill" style="width:${pctDone}%"></div></div>
         <div class="tl-grp-pct" style="left:${Math.min(gRight + 8, chartW - 42)}px" title="${done}/${total} ${unitLabel} done">${pctDone}%</div>` : ''}
+        ${gOv.html}
       </div>
     </div>`;
 
@@ -3981,8 +4028,11 @@ function renderTimeline(data) {
         const hasResched = task.isRescheduled && task.newBarEnd;
         const rowH = hasResched ? 46 : 30;
         const ovOutline = (isOverdue && ds !== 'Delay') ? ';outline:1.5px solid var(--red-400);outline-offset:-1px' : '';
+        // Teal target line (Target Start → End) above the bar + red dashed tail to
+        // Today when overdue. Chip is suppressed here (shown on project/epic rows).
+        const tOv = tlOverlay(oStart, oEnd, { targetTop: 1, barCenter: 17, done: task.isDone, statusName: ds, noChip: true });
 
-        let bars = `${todayMark}
+        let bars = `${todayMark}${tOv.html}
           <div class="tl-bar" style="left:${left}px;width:${width}px;top:6px;position:absolute;background:${style.bg};color:${style.text};border:1px solid ${style.border}${ovOutline}" ${attrs(task,oStart,oEnd,dueDate,isOverdue,task.isDone)}></div>
           <div class="tl-bar-label" style="left:${left+width+6}px;top:6px">${task.summary || task.key} <span style="opacity:.5">${fmt(oStart)} → ${fmt(oEnd)}</span></div>`;
         if (hasResched) {
@@ -4067,16 +4117,19 @@ function renderTimeline(data) {
           const eLeft  = eStarts.length ? px(eStarts[0]) : 0;
           const eRight = eEnds.length ? px(eEnds[eEnds.length-1]) + DAY_W*2 : 0;
           const eSpan  = Math.max(0, eRight - eLeft);
-          let h = `<div class="tl-epic-row" onclick="toggleTlEpic('${esc(ekId)}',event)">
+          const eOv = tlOverlay(eStarts[0], eEnds[eEnds.length-1], { targetTop: 6, barCenter: 17, done: eDone === eTotal, pctDone: ePct });
+          let h = `<div class="tl-epic-row${eOv.delayed?' tl-row-delayed':''}" onclick="toggleTlEpic('${esc(ekId)}',event)">
             <div class="tl-epic-left" style="width:${PERSON_W}px;min-width:${PERSON_W}px">
               <svg class="tl-epic-chev${epicOpen?' open':''}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4l4 4-4 4"/></svg>
               ${epic.key ? `<span class="tl-epic-key">${epic.key}</span>` : ''}
               <span class="tl-epic-name" title="${esc(epic.title)}">${epic.title}</span>
               <span class="tl-epic-sub">${eTotal}t · ${ePct}%</span>
+              ${eOv.delayed?'<span class="tl-delay-badge">Delay</span>':''}
             </div>
             <div class="tl-epic-track" style="width:${chartW}px">
               ${todayMark}
               ${eSpan>0 ? `<div class="tl-epic-span" style="left:${eLeft}px;width:${eSpan}px"><div class="tl-epic-span-fill" style="width:${ePct}%"></div></div>` : ''}
+              ${eOv.html}
             </div>
           </div>`;
           if (epicOpen) h += [...epic.tasks].sort(byStart).map(t => renderTaskRow(t, 18)).join('');
