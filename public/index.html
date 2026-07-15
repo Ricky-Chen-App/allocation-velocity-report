@@ -21,7 +21,7 @@
   /* —— Review / warning (amber) —— */
   --amber-600:oklch(0.60 0.12 70);--amber-500:oklch(0.70 0.14 75);--amber-400:oklch(0.80 0.15 78);--amber-100:oklch(0.92 0.08 80);--amber-50:oklch(0.965 0.035 82);
   /* —— Timeline "Epic" row tint — dedicated (muted, low-chroma) so it stays legible, separate from the brighter shared --amber-* ramp above —— */
-  --tl-epic-bg:oklch(0.96 0.014 75);--tl-epic-bg-hover:oklch(0.925 0.018 75);--tl-epic-track-bg:oklch(0.88 0.018 75);--tl-epic-track-fill:oklch(0.68 0.06 68);--tl-epic-accent:oklch(0.52 0.07 65);
+  --tl-epic-bg:oklch(0.945 0.022 72);--tl-epic-bg-hover:oklch(0.91 0.026 70);--tl-epic-track-bg:oklch(0.88 0.018 75);--tl-epic-track-fill:oklch(0.68 0.06 68);--tl-epic-accent:oklch(0.52 0.07 65);
   /* —— Overload (coral) —— */
   --red-600:oklch(0.50 0.18 30);--red-500:oklch(0.58 0.20 30);--red-400:oklch(0.68 0.19 32);--red-100:oklch(0.90 0.07 30);--red-50:oklch(0.96 0.03 30);
   /* —— Project / secondary violet —— */
@@ -460,7 +460,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .jabatan-select,.level-select{padding:5px 8px;border:1px solid var(--ink-200);border-radius:var(--radius-sm);font-size:12px;font-family:var(--font-body);color:var(--ink-700);background:var(--ink-0);outline:none;cursor:pointer;transition:border-color var(--transition)}
 .jabatan-select:focus,.level-select:focus{border-color:var(--blue-400)}
 .jabatan-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
-.j-CTO{background:var(--violet-50);color:var(--violet-700)}
+.j-CTO{background:var(--violet-50);color:var(--violet-600)}
 .j-PM{background:var(--amber-50);color:var(--amber-700)}
 .j-BA{background:var(--teal-50);color:var(--teal-700)}
 .j-QA{background:var(--green-50);color:var(--green-700)}
@@ -526,21 +526,26 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .wl-badge.low{background:var(--status-warning-bg);color:var(--status-warning-text);border:1px solid var(--amber-100)}
 
 /* ——— TIMELINE GANTT v3 (collapsible groups + epic names) ——— */
-.tl-grp-header{display:flex;align-items:stretch;border-bottom:1px solid var(--ink-100);cursor:pointer;background:var(--ink-50);min-height:46px;transition:background var(--transition)}
+/* Project / Epic / Task hierarchy: each row level carries its own left-edge
+   accent (project = violet, epic = the muted ochre tokens below, task = its
+   own status color) so the level reads at a glance beyond the avatar/dot —
+   plus roomier row heights and left-column padding across the board so
+   rows have breathing room instead of sitting flush against each other. */
+.tl-grp-header{display:flex;align-items:stretch;border-bottom:1px solid var(--ink-100);cursor:pointer;background:var(--ink-50);min-height:54px;transition:background var(--transition)}
 .tl-grp-header:hover{background:var(--ink-100)}
-.tl-grp-left{display:flex;align-items:center;gap:9px;padding:8px 14px;border-right:1px solid var(--ink-100);position:sticky;left:0;background:var(--ink-50);z-index:3}
+.tl-grp-left{display:flex;align-items:center;gap:11px;padding:10px 18px;border-right:1px solid var(--ink-100);position:sticky;left:0;background:var(--ink-50);z-index:3;box-sizing:border-box}
 .tl-grp-header:hover .tl-grp-left{background:var(--ink-100)}
 .tl-grp-chev{width:14px;height:14px;color:var(--ink-400);flex-shrink:0;transition:transform var(--transition)}
 .tl-grp-chev.open{transform:rotate(90deg)}
-.tl-grp-name{font-size:12.5px;font-weight:600;color:var(--ink-900);white-space:normal;overflow:visible;word-break:break-word;line-height:1.3;flex:1;min-width:0}
-.tl-grp-sub{font-size:10.5px;color:var(--ink-400);margin-top:1px}
+.tl-grp-name{font-size:12.5px;font-weight:600;color:var(--ink-900);white-space:normal;overflow:visible;word-break:break-word;line-height:1.4;flex:1;min-width:0}
+.tl-grp-sub{font-size:10.5px;color:var(--ink-400);margin-top:3px}
 .tl-grp-track{position:relative;flex-shrink:0}
 .tl-grp-span{position:absolute;top:50%;transform:translateY(-50%);height:14px;border-radius:7px;background:var(--violet-100);overflow:hidden}
 .tl-grp-span-fill{height:100%;background:var(--violet-400);opacity:.55}
-.tl-grp-pct{position:absolute;top:50%;transform:translateY(-50%);font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--violet-700);white-space:nowrap;pointer-events:none}
+.tl-grp-pct{position:absolute;top:50%;transform:translateY(-50%);font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--violet-600);white-space:nowrap;pointer-events:none}
 .tl-task-row{display:flex;align-items:stretch;border-bottom:1px solid var(--ink-50);position:relative}
 .tl-task-row:hover{background:var(--ink-50)}
-.tl-task-left{display:flex;align-items:center;gap:6px;padding:4px 14px 4px 30px;border-right:1px solid var(--ink-100);position:sticky;left:0;background:var(--ink-0);z-index:3}
+.tl-task-left{display:flex;align-items:center;gap:8px;padding:7px 18px 7px 34px;border-right:1px solid var(--ink-100);position:sticky;left:0;background:var(--ink-0);z-index:3;box-sizing:border-box}
 .tl-task-row:hover .tl-task-left{background:var(--ink-50)}
 .tl-task-key{font-size:10.5px;font-family:var(--font-mono);color:var(--ink-400);flex-shrink:0}
 .tl-task-name{font-size:11.5px;font-weight:500;color:var(--ink-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative}
@@ -548,22 +553,24 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .tl-task-chev:hover{color:var(--ink-700);background:var(--ink-100)}
 .tl-task-chev.open{transform:rotate(90deg)}
 .tl-sub-row{display:flex;align-items:stretch;border-bottom:1px solid var(--ink-50);background:var(--ink-25, var(--ink-50))}
-.tl-sub-left{display:flex;align-items:center;gap:7px;padding:4px 14px 4px 52px;border-right:1px solid var(--ink-100);position:sticky;left:0;background:var(--ink-0);z-index:3;min-height:30px}
+.tl-sub-left{display:flex;align-items:center;gap:8px;padding:6px 18px 6px 56px;border-right:1px solid var(--ink-100);position:sticky;left:0;background:var(--ink-0);z-index:3;min-height:36px;box-sizing:border-box}
 .tl-task-row:hover ~ .tl-sub-row .tl-sub-left{background:var(--ink-0)}
 .tl-sub-key{font-size:9.5px;font-family:var(--font-mono);color:var(--ink-300);flex-shrink:0}
 .tl-sub-name{font-size:10.5px;color:var(--ink-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative}
 .tl-sub-bars{flex:1}
 /* Epic sub-group header (Project → Epic → Task hierarchy) — muted ochre tint
    (dedicated tokens, not the shared --amber-* ramp used elsewhere in the app)
-   so text stays readable instead of washing out against a bright yellow. */
-.tl-epic-row{display:flex;align-items:stretch;border-bottom:1px solid var(--ink-50);background:var(--tl-epic-bg);cursor:pointer;min-height:34px;position:relative}
+   so text stays readable instead of washing out against a bright yellow.
+   Deepened slightly from the original tint (was nearly indistinguishable
+   from --ink-50) so the epic band visually separates from project/task rows. */
+.tl-epic-row{display:flex;align-items:stretch;border-bottom:1px solid var(--ink-100);background:var(--tl-epic-bg);cursor:pointer;min-height:42px;position:relative}
 .tl-epic-row:hover{background:var(--tl-epic-bg-hover)}
-.tl-epic-left{display:flex;align-items:center;gap:7px;padding:5px 14px 5px 30px;border-right:1px solid var(--ink-100);position:sticky;left:0;background:var(--tl-epic-bg);z-index:3}
+.tl-epic-left{display:flex;align-items:center;gap:8px;padding:8px 18px 8px 34px;border-right:1px solid var(--ink-100);border-left:3px solid var(--tl-epic-accent);position:sticky;left:0;background:var(--tl-epic-bg);z-index:3;box-sizing:border-box}
 .tl-epic-row:hover .tl-epic-left{background:var(--tl-epic-bg-hover)}
 .tl-epic-chev{width:12px;height:12px;color:var(--tl-epic-accent);flex-shrink:0;transition:transform var(--transition)}
 .tl-epic-chev.open{transform:rotate(90deg)}
 .tl-epic-key{font-family:var(--font-mono);font-size:9.5px;font-weight:600;color:var(--tl-epic-accent);flex-shrink:0}
-.tl-epic-name{font-size:12px;font-weight:600;color:var(--ink-800);white-space:normal;overflow:visible;word-break:break-word;line-height:1.3;flex:1;min-width:0}
+.tl-epic-name{font-size:12px;font-weight:600;color:var(--ink-800);white-space:normal;overflow:visible;word-break:break-word;line-height:1.4;flex:1;min-width:0}
 .tl-epic-sub{font-size:9.5px;color:var(--ink-600);flex-shrink:0;font-family:var(--font-mono)}
 .tl-epic-track{position:relative;flex-shrink:0}
 .tl-epic-span{position:absolute;top:50%;transform:translateY(-50%);height:10px;border-radius:5px;background:var(--tl-epic-track-bg);overflow:hidden}
@@ -1376,7 +1383,7 @@ const GROUP_COLORS = {
 const PROJ_PILL_COLORS = [
   { bg:'var(--blue-50)',   color:'var(--blue-700)',   dot:'var(--blue-400)'   },
   { bg:'var(--green-50)',  color:'var(--green-700)',  dot:'var(--green-400)'  },
-  { bg:'var(--violet-50)', color:'var(--violet-700)', dot:'var(--violet-400)' },
+  { bg:'var(--violet-50)', color:'var(--violet-600)', dot:'var(--violet-400)' },
   { bg:'var(--amber-50)',  color:'var(--amber-700)',  dot:'var(--amber-400)'  },
   { bg:'var(--teal-50)',   color:'var(--teal-700)',   dot:'var(--teal-400)'   },
 ];
@@ -2241,7 +2248,7 @@ function refreshCapPillStates(accountId) {
 const STATUS_PILL_STYLE = {
   'In Progress':'background:var(--blue-50);color:var(--blue-700)','Done':'background:var(--green-50);color:var(--green-700)',
   'To Do':'background:var(--ink-100);color:var(--ink-600)','Delay':'background:var(--red-50);color:var(--red-700)',
-  'On Hold':'background:var(--violet-50);color:var(--violet-700)','Waiting telco':'background:var(--amber-50);color:var(--amber-700)'
+  'On Hold':'background:var(--violet-50);color:var(--violet-600)','Waiting telco':'background:var(--amber-50);color:var(--amber-700)'
 };
 function statusPill(raw) {
   const ds = displayStatus(raw);
@@ -3749,7 +3756,7 @@ const TL_PILL_STYLE = {
   blue:   { base:'background:var(--blue-50);color:var(--blue-700);border-color:var(--blue-200)',    active:'background:var(--blue-100);border-color:var(--blue-400)' },
   gray:   { base:'background:var(--ink-100);color:var(--ink-600);border-color:var(--ink-200)',      active:'background:var(--ink-200);border-color:var(--ink-300)' },
   red:    { base:'background:var(--red-50);color:var(--red-700);border-color:var(--red-200)',       active:'background:var(--red-100);border-color:var(--red-400)' },
-  violet: { base:'background:var(--violet-50);color:var(--violet-700);border-color:var(--violet-200)',active:'background:var(--violet-100);border-color:var(--violet-400)' },
+  violet: { base:'background:var(--violet-50);color:var(--violet-600);border-color:var(--violet-200)',active:'background:var(--violet-100);border-color:var(--violet-400)' },
   orange: { base:'background:var(--amber-50);color:var(--amber-700);border-color:var(--amber-200)',  active:'background:var(--amber-100);border-color:var(--amber-400)' },
 };
 
@@ -4012,7 +4019,7 @@ function renderTimeline(data) {
     const isProj = grp.isProject;
     const isEpic = grp.isEpic;
     const gc = isEpic ? { bg:'var(--amber-50)', color:'var(--amber-600)' }
-             : isProj ? { bg:'var(--violet-50)', color:'var(--violet-700)' }
+             : isProj ? { bg:'var(--violet-50)', color:'var(--violet-600)' }
                       : (GROUP_COLORS[grp.group] || { bg:'var(--blue-50)', color:'var(--blue-700)' });
     const initials = (isProj || isEpic)
       ? ((grp.displayName.match(/[A-Z0-9]/g) || [grp.displayName[0]]).slice(0,2).join('').toUpperCase())
@@ -4051,14 +4058,14 @@ function renderTimeline(data) {
       gTgtStart = starts[0]; gTgtEnd = ends[ends.length-1];
       gEstimated = grp.tasks.some(t => !hasOwnTarget(t));
     }
-    const gOv = tlOverlay(gTgtStart, gTgtEnd, { targetTop: 4, targetHeight: 6, barCenter: 23, done: done === total, pctDone, estimated: gEstimated });
+    const gOv = tlOverlay(gTgtStart, gTgtEnd, { targetTop: 8, targetHeight: 6, barCenter: 27, done: done === total, pctDone, estimated: gEstimated });
 
     // attrs builder for a bar
     const attrs = (t, sVal, eVal, dueVal, ov, dn) =>
       `data-key="${esc(t.key)}" data-summary="${esc(t.summary)}" data-status="${esc(t.status)}" data-project="${esc(t.project)}" data-assignee="${esc(t._assignee||grp.displayName)}" data-due="${dueVal||''}" data-overdue="${ov?'1':''}" data-done="${dn?'1':''}" data-bar-start="${sVal}" data-bar-end="${eVal}" ${t.isRescheduled?`data-orig-start="${t.origStart||''}" data-new-start="${t.newStart||''}" data-orig-due="${t.origDue||''}" data-new-due="${t.newDue||''}" data-rescheduled="1"`:''} onmouseenter="tlTooltipEnter(event,this)" onmouseleave="tlTooltipLeave()"`;
 
     let html = `<div class="tl-grp-header${gOv.delayed?' tl-row-delayed':''}" onclick="toggleTlGroup('${esc(gid)}')">
-      <div class="tl-grp-left" style="width:${PERSON_W}px;min-width:${PERSON_W}px">
+      <div class="tl-grp-left" style="width:${PERSON_W}px;min-width:${PERSON_W}px;border-left:3px solid ${gc.color}">
         <svg class="tl-grp-chev ${expanded?'open':''}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4l4 4-4 4"/></svg>
         <div class="dev-init" style="background:${gc.bg};color:${gc.color};flex-shrink:0">${initials}</div>
         <div style="min-width:0;flex:1">
@@ -4087,22 +4094,22 @@ function renderTimeline(data) {
         const isNew = task.created && new Date(task.created) > sevenAgo;
         const dueDate = task.newDue || task.origDue || oEnd || '';
         const hasResched = task.isRescheduled && task.newBarEnd;
-        const rowH = hasResched ? 46 : 30;
+        const rowH = hasResched ? 52 : 36;
         const ovOutline = (isOverdue && ds !== 'Delay') ? ';outline:1.5px solid var(--red-400);outline-offset:-1px' : '';
         // Teal target line from the roadmap Target start/end fields, above the bar,
         // + red dashed tail to Today when past Target end. No target dates ⇒ no line.
         // Chip is suppressed here (shown on project/epic rows).
-        const tOv = tlOverlay(effTS(task), effTE(task), { targetTop: 0, targetHeight: 3, barCenter: 17, done: task.isDone, statusName: ds, noChip: true, estimated: !hasOwnTarget(task) });
+        const tOv = tlOverlay(effTS(task), effTE(task), { targetTop: 2, targetHeight: 3, barCenter: 19, done: task.isDone, statusName: ds, noChip: true, estimated: !hasOwnTarget(task) });
 
         let bars = `${todayMark}${tOv.html}
-          <div class="tl-bar" style="left:${left}px;width:${width}px;top:6px;position:absolute;background:${style.bg};color:${style.text};border:1px solid ${style.border}${ovOutline}" ${attrs(task,oStart,oEnd,dueDate,isOverdue,task.isDone)}></div>
-          <div class="tl-bar-label" style="left:${left+width+6}px;top:6px">${task.summary || task.key} <span style="opacity:.5">${fmt(oStart)} → ${fmt(oEnd)}</span></div>`;
+          <div class="tl-bar" style="left:${left}px;width:${width}px;top:8px;position:absolute;background:${style.bg};color:${style.text};border:1px solid ${style.border}${ovOutline}" ${attrs(task,oStart,oEnd,dueDate,isOverdue,task.isDone)}></div>
+          <div class="tl-bar-label" style="left:${left+width+6}px;top:8px">${task.summary || task.key} <span style="opacity:.5">${fmt(oStart)} → ${fmt(oEnd)}</span></div>`;
         if (hasResched) {
           const nLeft = px(task.newBarStart), nWidth = wOf(task.newBarStart, task.newBarEnd);
           const slip = task.origDue && task.newDue ? Math.round((new Date(task.newDue) - new Date(task.origDue))/86400000) : 1;
-          bars += `<div class="tl-bar-new${slip>0?'':' slip-orange'}" style="left:${nLeft}px;width:${nWidth}px;top:27px;position:absolute" ${attrs(task,task.newBarStart,task.newBarEnd,task.newDue,false,false)}>
+          bars += `<div class="tl-bar-new${slip>0?'':' slip-orange'}" style="left:${nLeft}px;width:${nWidth}px;top:33px;position:absolute" ${attrs(task,task.newBarStart,task.newBarEnd,task.newDue,false,false)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="1 4 1 10 7 10"/><path d="M3.5 15a9 9 0 1 0 .5-3.3"/></svg></div>
-            <div class="tl-bar-label" style="left:${nLeft+nWidth+6}px;top:25px;font-size:9px;height:16px;line-height:16px;color:${slip>0?'var(--red-500)':'var(--amber-600)'}">→ ${fmt(task.newDue)} ${slip!==0?(slip>0?'+':'')+slip+'d':''}</div>`;
+            <div class="tl-bar-label" style="left:${nLeft+nWidth+6}px;top:31px;font-size:9px;height:16px;line-height:16px;color:${slip>0?'var(--red-500)':'var(--amber-600)'}">→ ${fmt(task.newDue)} ${slip!==0?(slip>0?'+':'')+slip+'d':''}</div>`;
         }
 
         const subtasks = task.subtasks || [];
@@ -4122,16 +4129,16 @@ function renderTimeline(data) {
             const se = new Date(d.barEnd); se.setHours(0,0,0,0);
             const sOver = !d.isDone && se < today;
             subBar = `${todayMark}
-              <div class="tl-bar" style="left:${sLeft}px;width:${sWidth}px;top:7px;height:16px;position:absolute;background:${bStyle.bg};color:${bStyle.text};border:1px solid ${bStyle.border}${(sOver && sd!=='Delay')?';outline:1.5px solid var(--red-400);outline-offset:-1px':''}" ${attrs({key:s.key,summary:s.summary,status:s.status,project:task.project,_assignee:task._assignee||grp.displayName},d.barStart,d.barEnd,d.newDue||d.origDue||d.barEnd,sOver,d.isDone)}></div>
-              <div class="tl-bar-label" style="left:${sLeft+sWidth+6}px;top:7px;font-size:9.5px;height:16px;line-height:16px">${fmt(d.barStart)} → ${fmt(d.barEnd)}</div>`;
+              <div class="tl-bar" style="left:${sLeft}px;width:${sWidth}px;top:10px;height:16px;position:absolute;background:${bStyle.bg};color:${bStyle.text};border:1px solid ${bStyle.border}${(sOver && sd!=='Delay')?';outline:1.5px solid var(--red-400);outline-offset:-1px':''}" ${attrs({key:s.key,summary:s.summary,status:s.status,project:task.project,_assignee:task._assignee||grp.displayName},d.barStart,d.barEnd,d.newDue||d.origDue||d.barEnd,sOver,d.isDone)}></div>
+              <div class="tl-bar-label" style="left:${sLeft+sWidth+6}px;top:10px;font-size:9.5px;height:16px;line-height:16px">${fmt(d.barStart)} → ${fmt(d.barEnd)}</div>`;
           } else if (d === undefined) {
-            subBar = `<div class="tl-sub-bar-loading" style="left:0;top:11px">·····</div>`;
+            subBar = `<div class="tl-sub-bar-loading" style="left:0;top:13px">·····</div>`;
           } else {
             // Fetched, but the subtask has no usable date — show a clear placeholder
-            subBar = `<div class="tl-sub-nodate" style="left:0;top:7px">No date</div>`;
+            subBar = `<div class="tl-sub-nodate" style="left:0;top:10px">No date</div>`;
           }
-          return `<div class="tl-sub-row" style="min-height:30px">
-            <div class="tl-sub-left" style="width:${PERSON_W}px;min-width:${PERSON_W}px;padding-left:${52+extraIndent}px">
+          return `<div class="tl-sub-row" style="min-height:36px">
+            <div class="tl-sub-left" style="width:${PERSON_W}px;min-width:${PERSON_W}px;padding-left:${56+extraIndent}px;border-left:3px solid ${sStyle.border}">
               <span style="width:7px;height:7px;border-radius:2px;background:${sStyle.bg};flex-shrink:0"></span>
               <span class="tl-sub-key">${s.key}</span>
               <span class="tl-sub-name tl-name-tip" title="${esc(s.summary||'')}" data-hint="${esc(s.summary||'')}">${s.summary || ''}</span>
@@ -4142,7 +4149,7 @@ function renderTimeline(data) {
         }).join('') : '');
 
         return `<div class="tl-task-row" style="height:${rowH}px">
-          <div class="tl-task-left" style="width:${PERSON_W}px;min-width:${PERSON_W}px;padding-left:${30+extraIndent}px">
+          <div class="tl-task-left" style="width:${PERSON_W}px;min-width:${PERSON_W}px;padding-left:${34+extraIndent}px;border-left:3px solid ${style.border}">
             ${chev}
             <span style="width:9px;height:9px;border-radius:2px;background:${style.bg};flex-shrink:0"></span>
             <span class="tl-task-key">${task.key}</span>
@@ -4180,7 +4187,7 @@ function renderTimeline(data) {
           const eRight = eEnds.length ? px(eEnds[eEnds.length-1]) + DAY_W*2 : 0;
           const eSpan  = Math.max(0, eRight - eLeft);
           const eRange = tlEpicRange(epic.key, epic.tasks);
-          const eOv = tlOverlay(eRange.start, eRange.end, { targetTop: 2.5, targetHeight: 5, barCenter: 17, done: eDone === eTotal, pctDone: ePct, estimated: eRange.estimated });
+          const eOv = tlOverlay(eRange.start, eRange.end, { targetTop: 6.5, targetHeight: 5, barCenter: 21, done: eDone === eTotal, pctDone: ePct, estimated: eRange.estimated });
           let h = `<div class="tl-epic-row${eOv.delayed?' tl-row-delayed':''}" onclick="toggleTlEpic('${esc(ekId)}',event)">
             <div class="tl-epic-left" style="width:${PERSON_W}px;min-width:${PERSON_W}px">
               <svg class="tl-epic-chev${epicOpen?' open':''}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4l4 4-4 4"/></svg>
