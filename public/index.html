@@ -573,12 +573,19 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .tl-task-bars{position:relative;flex-shrink:0}
 .tl-bar-label{position:absolute;font-size:10px;color:var(--ink-700);white-space:nowrap;pointer-events:none;line-height:20px;height:20px;display:flex;align-items:center}
 .tl-ovr-badge{background:var(--red-100);color:var(--red-700);font-size:8px;font-weight:700;padding:0 4px;border-radius:3px;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
-/* Target line (Target Start → Target End) + auto delay treatment.
-   Teal target range drawn above the progress bar; a red dashed "tail" runs from
-   Target End to Today when a row is overdue and unfinished. Colors use tokens. */
-.tl-target{position:absolute;height:0;border-top:3px solid var(--teal-500);border-radius:2px;z-index:1;pointer-events:none}
-.tl-target::before,.tl-target::after{content:'';position:absolute;top:-4px;width:2px;height:9px;background:var(--teal-600);border-radius:1px}
-.tl-target::before{left:0}.tl-target::after{right:-1px}
+/* Plan vs Actual on the timeline. Actual = the solid, status-colored progress
+   bar (unchanged, drawn by .tl-bar/.tl-grp-span/.tl-epic-span). Plan = a hollow
+   bracket bar rendered just above it: solid teal border when the item has its
+   own Target start/end in Jira, dashed ink-gray when the range is only
+   estimated (Start date/Due date fallback, no Target set) — solid-vs-dashed
+   line style, not color alone, is what separates "real" from "estimated" per
+   forecast/plan charting convention. A red dashed tail + chip marks rows that
+   are unfinished and past Plan end; hover the Plan bracket for exact dates. */
+.tl-target{position:absolute;height:6px;border-radius:3px;border:1.5px solid var(--teal-500);background:var(--teal-50);box-sizing:border-box;z-index:1;cursor:default}
+.tl-target::before,.tl-target::after{content:'';position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--teal-600);border-radius:1px}
+.tl-target::before{left:-.5px}.tl-target::after{right:-.5px}
+.tl-target-est{border-style:dashed;border-color:var(--ink-400);background:var(--ink-50)}
+.tl-target-est::before,.tl-target-est::after{background:var(--ink-400)}
 .tl-delay-tail{position:absolute;height:0;border-top:2px dashed var(--red-500);z-index:3;pointer-events:none}
 .tl-delay-chip{position:absolute;transform:translate(-50%,-50%);background:var(--ink-0);border:1px solid var(--red-400);color:var(--red-600);font-size:9px;font-weight:700;padding:1px 6px;border-radius:var(--r-pill);white-space:nowrap;z-index:6;box-shadow:var(--shadow-sm);font-variant-numeric:tabular-nums;pointer-events:none}
 .tl-delay-badge{background:var(--red-500);color:#fff;font-size:8px;font-weight:800;padding:0 4px;border-radius:3px;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0;margin-left:4px}
@@ -3802,11 +3809,14 @@ function renderTlLegend() {
     { label:'On Hold',       style:'background:var(--violet-400);border:1px solid var(--violet-500)' },
     { label:'Waiting telco', style:'background:var(--amber-400);border:1px solid var(--amber-500)' },
   ];
-  let html = items.map(i =>
+  const tag = t => `<span style="font-size:9.5px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.05em;margin-left:4px">${t}</span>`;
+  let html = tag('Actual') + items.map(i =>
     `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:18px;height:10px;border-radius:3px;${i.style};display:inline-block"></span>${i.label}</div>`
   ).join('');
-  html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:22px;height:0;border-top:3px solid var(--teal-500);display:inline-block"></span>Target start → end</div>`;
-  html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:22px;height:0;border-top:2px dashed var(--red-500);display:inline-block"></span>Delayed (past target)</div>`;
+  html += tag('Plan');
+  html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:22px;height:6px;border-radius:3px;border:1.5px solid var(--teal-500);background:var(--teal-50);display:inline-block;box-sizing:border-box"></span>Target set in Jira</div>`;
+  html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:22px;height:6px;border-radius:3px;border:1.5px dashed var(--ink-300);background:var(--ink-50);display:inline-block;box-sizing:border-box"></span>Estimated (no Target)</div>`;
+  html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:22px;height:0;border-top:2px dashed var(--red-500);display:inline-block"></span>Delayed (past Plan)</div>`;
   html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:24px;height:10px;border-radius:3px;background:transparent;border:2px dashed var(--red-400);display:inline-block"></span>New date</div>`;
   html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span class="tl-new-badge" style="margin:0">NEW</span>created ≤7 days</div>`;
   html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:2px;height:14px;background:var(--blue-400);display:inline-block;border-radius:2px"></span>Today</div>`;
@@ -3947,16 +3957,24 @@ function renderTimeline(data) {
     const endMid = new Date(e.getFullYear(), e.getMonth(), e.getDate());
     return Math.max(0, Math.floor((today - endMid) / 86400000));
   };
+  // Plan bracket (o.estimated ⇒ dashed "no Target set" style) + delay tail/chip.
+  // Tooltip on the bracket always states the exact Plan range and whether the
+  // row is on track / delayed / completed, so hovering answers "is this real or
+  // estimated, and where does Actual stand against it" without adding per-row
+  // text that would clutter hundreds of Gantt rows.
   const tlOverlay = (startIso, endIso, o) => {
     if (!startIso || !endIso) return { html: '', delayed: false, days: 0 };
     const sPx = px(startIso), ePx = px(endIso);
     const span = Math.max(6, ePx - sPx);
-    let html = `<div class="tl-target" style="left:${sPx}px;width:${span}px;top:${o.targetTop}px"></div>`;
     const unfinished = o.done === true ? false : (o.pctDone === undefined ? true : o.pctDone < 100);
     const delayed = showToday && unfinished && todayPx > ePx + 1;
-    let days = 0;
+    let days = 0, statusNote;
+    if (!unfinished) statusNote = 'Completed';
+    else if (delayed) { days = tlDelayDays(endIso); statusNote = `Delayed ${days}d`; }
+    else statusNote = 'On track';
+    const planLabel = `Plan: ${fmt(startIso)} → ${fmt(endIso)}${o.estimated ? ' (estimated — no Target set)' : ''} · ${statusNote}`;
+    let html = `<div class="tl-target${o.estimated ? ' tl-target-est' : ''}" style="left:${sPx}px;width:${span}px;top:${o.targetTop}px" title="${esc(planLabel)}"></div>`;
     if (delayed) {
-      days = tlDelayDays(endIso);
       const tailW = Math.max(4, todayPx - ePx);
       const mid = ePx + tailW / 2;
       const label = `Delayed ${days}d${o.statusName ? ' · ' + o.statusName : ''}`;
@@ -3967,22 +3985,25 @@ function renderTimeline(data) {
   };
   // Effective target dates: prefer the roadmap Target start/end fields; fall back
   // to the (window-clamped) Start date → Due date when a task has no Target set,
-  // so the target line stays useful even though few issues fill Target in Jira.
+  // so the Plan bracket stays useful even though few issues fill Target in Jira.
+  // hasOwnTarget flags exactly when the real field (not the fallback) was used.
   const effTS = t => t.targetStart || t.origBarStart || t.barStart;
   const effTE = t => t.targetEnd   || t.origBarEnd   || t.barEnd;
+  const hasOwnTarget = t => !!(t.targetStart && t.targetEnd);
 
   // An epic reaches the timeline only as a `parent` reference on its child tasks
   // (Jira's default parent embed carries summary/status, not custom fields), so
   // editing Target start/end ON THE EPIC ITSELF has to come from a dedicated
   // lookup — data.epicTargets, keyed by epic key. Prefer that over aggregating
-  // child-task dates; only fall back when the epic itself has no Target set.
+  // child-task dates; only fall back (and mark `estimated`) when the epic itself
+  // has no Target set.
   const epicTargets = data.epicTargets || {};
   const tlEpicRange = (epicKey, tasks) => {
     const own = epicKey && epicTargets[epicKey];
-    if (own && own.targetStart && own.targetEnd) return { start: own.targetStart, end: own.targetEnd };
+    if (own && own.targetStart && own.targetEnd) return { start: own.targetStart, end: own.targetEnd, estimated: false };
     const starts = tasks.map(effTS).filter(Boolean).sort();
     const ends   = tasks.map(effTE).filter(Boolean).sort();
-    return { start: starts[0], end: ends[ends.length-1] };
+    return { start: starts[0], end: ends[ends.length-1], estimated: true };
   };
 
   const groupRows = items.map(grp => {
@@ -4012,10 +4033,10 @@ function renderTimeline(data) {
     // epics' effective ranges (+ any epic-less tasks) — this is what makes an
     // epic-level Jira edit show up on the collapsed project row too. Developer
     // rows aren't epic-shaped, so they keep the plain task-level aggregate.
-    let gTgtStart, gTgtEnd;
+    let gTgtStart, gTgtEnd, gEstimated;
     if (isEpic) {
       const r = tlEpicRange(grp.epicKey, grp.tasks);
-      gTgtStart = r.start; gTgtEnd = r.end;
+      gTgtStart = r.start; gTgtEnd = r.end; gEstimated = r.estimated;
     } else if (isProj) {
       const byEpicKey = {}, noEpicTasks = [];
       for (const t of grp.tasks) (t.epicKey ? (byEpicKey[t.epicKey] = byEpicKey[t.epicKey] || []).push(t) : noEpicTasks.push(t));
@@ -4023,12 +4044,14 @@ function renderTimeline(data) {
       const starts = ranges.map(r => r.start).filter(Boolean).concat(noEpicTasks.map(effTS).filter(Boolean)).sort();
       const ends   = ranges.map(r => r.end).filter(Boolean).concat(noEpicTasks.map(effTE).filter(Boolean)).sort();
       gTgtStart = starts[0]; gTgtEnd = ends[ends.length-1];
+      gEstimated = ranges.some(r => r.estimated) || noEpicTasks.some(t => !hasOwnTarget(t));
     } else {
       const starts = grp.tasks.map(effTS).filter(Boolean).sort();
       const ends   = grp.tasks.map(effTE).filter(Boolean).sort();
       gTgtStart = starts[0]; gTgtEnd = ends[ends.length-1];
+      gEstimated = grp.tasks.some(t => !hasOwnTarget(t));
     }
-    const gOv = tlOverlay(gTgtStart, gTgtEnd, { targetTop: 9, barCenter: 23, done: done === total, pctDone });
+    const gOv = tlOverlay(gTgtStart, gTgtEnd, { targetTop: 9, barCenter: 23, done: done === total, pctDone, estimated: gEstimated });
 
     // attrs builder for a bar
     const attrs = (t, sVal, eVal, dueVal, ov, dn) =>
@@ -4069,7 +4092,7 @@ function renderTimeline(data) {
         // Teal target line from the roadmap Target start/end fields, above the bar,
         // + red dashed tail to Today when past Target end. No target dates ⇒ no line.
         // Chip is suppressed here (shown on project/epic rows).
-        const tOv = tlOverlay(effTS(task), effTE(task), { targetTop: 1, barCenter: 17, done: task.isDone, statusName: ds, noChip: true });
+        const tOv = tlOverlay(effTS(task), effTE(task), { targetTop: 0, barCenter: 17, done: task.isDone, statusName: ds, noChip: true, estimated: !hasOwnTarget(task) });
 
         let bars = `${todayMark}${tOv.html}
           <div class="tl-bar" style="left:${left}px;width:${width}px;top:6px;position:absolute;background:${style.bg};color:${style.text};border:1px solid ${style.border}${ovOutline}" ${attrs(task,oStart,oEnd,dueDate,isOverdue,task.isDone)}></div>
@@ -4157,7 +4180,7 @@ function renderTimeline(data) {
           const eRight = eEnds.length ? px(eEnds[eEnds.length-1]) + DAY_W*2 : 0;
           const eSpan  = Math.max(0, eRight - eLeft);
           const eRange = tlEpicRange(epic.key, epic.tasks);
-          const eOv = tlOverlay(eRange.start, eRange.end, { targetTop: 6, barCenter: 17, done: eDone === eTotal, pctDone: ePct });
+          const eOv = tlOverlay(eRange.start, eRange.end, { targetTop: 6, barCenter: 17, done: eDone === eTotal, pctDone: ePct, estimated: eRange.estimated });
           let h = `<div class="tl-epic-row${eOv.delayed?' tl-row-delayed':''}" onclick="toggleTlEpic('${esc(ekId)}',event)">
             <div class="tl-epic-left" style="width:${PERSON_W}px;min-width:${PERSON_W}px">
               <svg class="tl-epic-chev${epicOpen?' open':''}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4l4 4-4 4"/></svg>
