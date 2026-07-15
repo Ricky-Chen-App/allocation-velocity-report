@@ -3883,7 +3883,7 @@ function renderTimeline(data) {
   const srvStart = new Date(data.dateRange.start), srvEnd = new Date(data.dateRange.end);
   const barDates = [];
   for (const g of items) for (const t of g.tasks) {
-    [t.origBarStart, t.barStart, t.newBarStart, t.origBarEnd, t.barEnd, t.newBarEnd]
+    [t.origBarStart, t.barStart, t.newBarStart, t.origBarEnd, t.barEnd, t.newBarEnd, t.targetStart, t.targetEnd]
       .forEach(d => { if (d) barDates.push(new Date(d)); });
     for (const s of (t.subtasks || [])) {
       const sb = TL.subBars[s.key];
@@ -3965,6 +3965,11 @@ function renderTimeline(data) {
     }
     return { html, delayed, days };
   };
+  // Effective target dates: prefer the roadmap Target start/end fields; fall back
+  // to the (window-clamped) Start date → Due date when a task has no Target set,
+  // so the target line stays useful even though few issues fill Target in Jira.
+  const effTS = t => t.targetStart || t.origBarStart || t.barStart;
+  const effTE = t => t.targetEnd   || t.origBarEnd   || t.barEnd;
 
   const groupRows = items.map(grp => {
     const gid = grp.accountId;
@@ -3988,9 +3993,12 @@ function renderTimeline(data) {
     const gLeft  = allStarts.length ? px(allStarts[0]) : 0;
     const gRight = allEnds.length ? px(allEnds[allEnds.length-1]) + DAY_W*3 : 0;
     const gSpan  = Math.max(0, gRight - gLeft);
-    // Target line spans the aggregate min-start → max-end; delayed when today is
-    // past that end and the group isn't fully done.
-    const gOv = tlOverlay(allStarts[0], allEnds[allEnds.length-1], { targetTop: 9, barCenter: 23, done: done === total, pctDone });
+    // Target line uses the roadmap Target start/end fields (min start → max end
+    // across tasks that have them); delayed when today is past that end and the
+    // group isn't fully done. Rows without any Target dates get no target line.
+    const tgStarts = grp.tasks.map(effTS).filter(Boolean).sort();
+    const tgEnds   = grp.tasks.map(effTE).filter(Boolean).sort();
+    const gOv = tlOverlay(tgStarts[0], tgEnds[tgEnds.length-1], { targetTop: 9, barCenter: 23, done: done === total, pctDone });
 
     // attrs builder for a bar
     const attrs = (t, sVal, eVal, dueVal, ov, dn) =>
@@ -4028,9 +4036,10 @@ function renderTimeline(data) {
         const hasResched = task.isRescheduled && task.newBarEnd;
         const rowH = hasResched ? 46 : 30;
         const ovOutline = (isOverdue && ds !== 'Delay') ? ';outline:1.5px solid var(--red-400);outline-offset:-1px' : '';
-        // Teal target line (Target Start → End) above the bar + red dashed tail to
-        // Today when overdue. Chip is suppressed here (shown on project/epic rows).
-        const tOv = tlOverlay(oStart, oEnd, { targetTop: 1, barCenter: 17, done: task.isDone, statusName: ds, noChip: true });
+        // Teal target line from the roadmap Target start/end fields, above the bar,
+        // + red dashed tail to Today when past Target end. No target dates ⇒ no line.
+        // Chip is suppressed here (shown on project/epic rows).
+        const tOv = tlOverlay(effTS(task), effTE(task), { targetTop: 1, barCenter: 17, done: task.isDone, statusName: ds, noChip: true });
 
         let bars = `${todayMark}${tOv.html}
           <div class="tl-bar" style="left:${left}px;width:${width}px;top:6px;position:absolute;background:${style.bg};color:${style.text};border:1px solid ${style.border}${ovOutline}" ${attrs(task,oStart,oEnd,dueDate,isOverdue,task.isDone)}></div>
@@ -4117,7 +4126,9 @@ function renderTimeline(data) {
           const eLeft  = eStarts.length ? px(eStarts[0]) : 0;
           const eRight = eEnds.length ? px(eEnds[eEnds.length-1]) + DAY_W*2 : 0;
           const eSpan  = Math.max(0, eRight - eLeft);
-          const eOv = tlOverlay(eStarts[0], eEnds[eEnds.length-1], { targetTop: 6, barCenter: 17, done: eDone === eTotal, pctDone: ePct });
+          const etStarts = epic.tasks.map(effTS).filter(Boolean).sort();
+          const etEnds   = epic.tasks.map(effTE).filter(Boolean).sort();
+          const eOv = tlOverlay(etStarts[0], etEnds[etEnds.length-1], { targetTop: 6, barCenter: 17, done: eDone === eTotal, pctDone: ePct });
           let h = `<div class="tl-epic-row${eOv.delayed?' tl-row-delayed':''}" onclick="toggleTlEpic('${esc(ekId)}',event)">
             <div class="tl-epic-left" style="width:${PERSON_W}px;min-width:${PERSON_W}px">
               <svg class="tl-epic-chev${epicOpen?' open':''}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4l4 4-4 4"/></svg>

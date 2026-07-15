@@ -1352,6 +1352,8 @@ const TL_FIELDS = [
   'customfield_10049',       // New Due Date
   'customfield_10062',       // End date
   'customfield_10008',       // Change start date
+  'customfield_10028',       // Target start (roadmap) — resolved by name 2026-07-15
+  'customfield_10029',       // Target end   (roadmap) — resolved by name 2026-07-15
   'customfield_10045',       // Country (option field)
   'parent',                  // epic (for "Per Epic" grouping)
   'subtasks'
@@ -1525,6 +1527,10 @@ app.get('/api/timeline', async (req, res) => {
           country:    f.customfield_10045?.value || null,
           epicKey:    f.parent?.key || null,
           epicTitle:  f.parent?.fields?.summary || null,
+          // Roadmap Target start/end — drive the teal target line (separate from
+          // the Start date/Due date that position the progress bar). May be null.
+          targetStart: f.customfield_10028 || null,
+          targetEnd:   f.customfield_10029 || null,
           ...bars,
           // lightweight subtask list; their bar coords are fetched lazily on expand
           subtasks: (f.subtasks || [])
