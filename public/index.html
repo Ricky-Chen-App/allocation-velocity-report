@@ -576,14 +576,14 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 /* Plan vs Actual on the timeline. Actual = the solid, status-colored progress
    bar (unchanged, drawn by .tl-bar/.tl-grp-span/.tl-epic-span). Plan (Target
    start/end) uses that SAME solid-bar treatment — filled, rounded, bordered —
-   just recolored: teal when the item has its own Target start/end in Jira,
-   muted ink-gray with a dashed border when the range is only estimated
-   (Start date/Due date fallback, no Target set). A visible vertical gap (set
-   per row level in the targetTop/targetHeight passed to tlOverlay) keeps Plan
-   and Actual as two clearly separate bars instead of touching. A red dashed
-   tail + chip marks rows that are unfinished and past Plan end; hover the
-   Plan bar for exact dates. */
-.tl-target{position:absolute;border-radius:3px;background:var(--teal-400);border:1px solid var(--teal-500);box-sizing:border-box;z-index:1;cursor:default}
+   just recolored: brand teal #1D9E75 when the item has its own Target
+   start/end in Jira, muted ink-gray with a dashed border when the range is
+   only estimated (Start date/Due date fallback, no Target set). A visible
+   vertical gap (set per row level in the targetTop/targetHeight passed to
+   tlOverlay) keeps Plan and Actual as two clearly separate bars instead of
+   touching. A red dashed tail + chip marks rows that are unfinished and past
+   Plan end; hover the Plan bar for exact dates. */
+.tl-target{position:absolute;border-radius:3px;background:#1D9E75;border:1px solid #178160;box-sizing:border-box;z-index:1;cursor:default}
 .tl-target-est{background:var(--ink-200);border:1px dashed var(--ink-400)}
 .tl-delay-tail{position:absolute;height:0;border-top:2px dashed var(--red-500);z-index:3;pointer-events:none}
 .tl-delay-chip{position:absolute;transform:translate(-50%,-50%);background:var(--ink-0);border:1px solid var(--red-400);color:var(--red-600);font-size:9px;font-weight:700;padding:1px 6px;border-radius:var(--r-pill);white-space:nowrap;z-index:6;box-shadow:var(--shadow-sm);font-variant-numeric:tabular-nums;pointer-events:none}
@@ -3813,7 +3813,7 @@ function renderTlLegend() {
     `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:18px;height:10px;border-radius:3px;${i.style};display:inline-block"></span>${i.label}</div>`
   ).join('');
   html += tag('Plan');
-  html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:22px;height:6px;border-radius:3px;background:var(--teal-400);border:1px solid var(--teal-500);display:inline-block;box-sizing:border-box"></span>Target set in Jira</div>`;
+  html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:22px;height:6px;border-radius:3px;background:#1D9E75;border:1px solid #178160;display:inline-block;box-sizing:border-box"></span>Target set in Jira</div>`;
   html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:22px;height:6px;border-radius:3px;background:var(--ink-200);border:1px dashed var(--ink-400);display:inline-block;box-sizing:border-box"></span>Estimated (no Target)</div>`;
   html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:22px;height:0;border-top:2px dashed var(--red-500);display:inline-block"></span>Delayed (past Plan)</div>`;
   html += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-500)"><span style="width:24px;height:10px;border-radius:3px;background:transparent;border:2px dashed var(--red-400);display:inline-block"></span>New date</div>`;
@@ -4051,7 +4051,7 @@ function renderTimeline(data) {
       gTgtStart = starts[0]; gTgtEnd = ends[ends.length-1];
       gEstimated = grp.tasks.some(t => !hasOwnTarget(t));
     }
-    const gOv = tlOverlay(gTgtStart, gTgtEnd, { targetTop: 6, targetHeight: 6, barCenter: 23, done: done === total, pctDone, estimated: gEstimated });
+    const gOv = tlOverlay(gTgtStart, gTgtEnd, { targetTop: 4, targetHeight: 6, barCenter: 23, done: done === total, pctDone, estimated: gEstimated });
 
     // attrs builder for a bar
     const attrs = (t, sVal, eVal, dueVal, ov, dn) =>
@@ -4092,7 +4092,7 @@ function renderTimeline(data) {
         // Teal target line from the roadmap Target start/end fields, above the bar,
         // + red dashed tail to Today when past Target end. No target dates ⇒ no line.
         // Chip is suppressed here (shown on project/epic rows).
-        const tOv = tlOverlay(effTS(task), effTE(task), { targetTop: 0, targetHeight: 4, barCenter: 17, done: task.isDone, statusName: ds, noChip: true, estimated: !hasOwnTarget(task) });
+        const tOv = tlOverlay(effTS(task), effTE(task), { targetTop: 0, targetHeight: 3, barCenter: 17, done: task.isDone, statusName: ds, noChip: true, estimated: !hasOwnTarget(task) });
 
         let bars = `${todayMark}${tOv.html}
           <div class="tl-bar" style="left:${left}px;width:${width}px;top:6px;position:absolute;background:${style.bg};color:${style.text};border:1px solid ${style.border}${ovOutline}" ${attrs(task,oStart,oEnd,dueDate,isOverdue,task.isDone)}></div>
@@ -4180,7 +4180,7 @@ function renderTimeline(data) {
           const eRight = eEnds.length ? px(eEnds[eEnds.length-1]) + DAY_W*2 : 0;
           const eSpan  = Math.max(0, eRight - eLeft);
           const eRange = tlEpicRange(epic.key, epic.tasks);
-          const eOv = tlOverlay(eRange.start, eRange.end, { targetTop: 4, targetHeight: 5, barCenter: 17, done: eDone === eTotal, pctDone: ePct, estimated: eRange.estimated });
+          const eOv = tlOverlay(eRange.start, eRange.end, { targetTop: 2.5, targetHeight: 5, barCenter: 17, done: eDone === eTotal, pctDone: ePct, estimated: eRange.estimated });
           let h = `<div class="tl-epic-row${eOv.delayed?' tl-row-delayed':''}" onclick="toggleTlEpic('${esc(ekId)}',event)">
             <div class="tl-epic-left" style="width:${PERSON_W}px;min-width:${PERSON_W}px">
               <svg class="tl-epic-chev${epicOpen?' open':''}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4l4 4-4 4"/></svg>
