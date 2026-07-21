@@ -42,8 +42,9 @@ Data is **live from Jira**, not mock. Env/credentials live in `.env` /
 
 ## Information architecture
 
-Seven destinations in the sidebar, two groups. **Do not add, remove, rename,
-merge, or reorder them.**
+Eleven destinations in the sidebar, four groups. **Do not add, remove,
+rename, merge, or reorder them** without an explicit product decision (the
+Report AirPay group below was one such deliberate addition — see its note).
 
 **Dashboards**
 - `executive` (home) — KPI strip, team-utilization gauge, utilization-by-group,
@@ -58,12 +59,42 @@ merge, or reorder them.**
   week-based axis), grouped per developer or per project. A task that has
   subtasks keeps its own timeline bar **and** can expand inline to reveal its
   subtasks beneath it; expanding subtasks must never hide the parent's bar.
-  Subtasks collapse/expand without leaving the Gantt.
+  Subtasks collapse/expand without leaving the Gantt. Rows also carry a teal
+  "Plan" bar (Target start/end, falling back to Start/Due date when unset)
+  above the "Actual" bar, with red delay styling past Plan end.
 
 **Admin**
 - `members` (Team Members) — members table: group, email, position, level,
   workload; inline edit + bulk save.
 - `jirasync` (Jira Sync) — Jira sync status, issue table, sync-status badges.
+
+**Org Design**
+- `orgchart` (Structure Organization) — draw.io-style canvas mapping
+  categories → projects → people.
+- `projectteam` (Structure Project Team) — same canvas pattern, connects a
+  person to the project(s) they work on.
+
+**Report AirPay** — added for a Google-Sheet-backed report, deliberately
+**independent of Jira** (own `AIRPAY` client state, own `/api/airpay-sheet`
+route, own `lib/airpay/parseSheet.js` parser — never touches `STATE`/`TL`/
+`CAP` or any Jira-derived object). Reuses the app's existing tokens/components
+(`.card`, `.kpi-card`, `.btn`, `.error-banner`, `.pill`) — no separate theme.
+- `airpay-summary` (Summary Report) — executive one-pager: overall-% donut,
+  derived KPI cards, auto-generated Wins/Blockers/Decision-Required panels,
+  and a day-based Gantt (by DCB/Digital Payment/Platform category) with a
+  click-through detail drawer.
+- `airpay-detail` (Detail Report) — daily-standup task board for in-progress
+  items, sortable by Priority or PIC, with urgency badges, a local-only
+  "discussed" checkbox (`localStorage`, no backend — there's no per-user
+  preference store to sync it to), and a print stylesheet.
+
+Both AirPay pages poll `GET /api/airpay-sheet` every `AIRPAY_POLL_MS` (45s)
+while either is open, show a Live/Syncing/Failed sync dot, and keep
+rendering the last-known-good data (with a dismissable error banner) if a
+poll fails — the sheet is never allowed to blank the page. The sheet's own
+gid (as shared) does not resolve via Google's gid-based CSV export; the
+route fetches by **tab name** (`Detail Progress`) via the gviz endpoint
+instead — keep that in mind if the sheet is ever restructured.
 
 ## Data model
 

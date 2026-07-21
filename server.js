@@ -7,6 +7,7 @@ const fs = require('fs');
 const forecastConfig = require('./forecastConfig');
 const { getEffectiveDates, classifyLoad, LOAD_STATUS_LABEL, DEFAULT_FIELD_IDS, val, PARAMS } = forecastConfig;
 const { businessDaysBetween, addBusinessDays, toIso } = require('./businessDays');
+const { parseAirpayCsv } = require('./lib/airpay/parseSheet');
 
 const app = express();
 app.use(express.json());
@@ -1715,6 +1716,40 @@ async function warmupCache() {
     console.error('   ✗ Cache warmup failed:', e.message);
   }
 }
+
+// ——— AirPay Report — live from Google Sheets, independent of Jira ———
+// The gid originally shared for this sheet (88918681) doesn't resolve via
+// the gid-based export endpoint (Google returns its "file not found" page
+// for it) — gviz's `sheet=` name parameter is used instead, which reliably
+// targets the "Detail Progress" tab regardless of its internal gid. No
+// caching here by design: every call refetches the sheet fresh (node-fetch
+// has no built-in cache), per the "must stay live" requirement — the client
+// is what polls on an interval, not this endpoint.
+const AIRPAY_SHEET_ID = '1Eb4th4hPd0BFKi9faz6RkjyvbfrhQTrqjZ8_R0Xpwmw';
+const AIRPAY_SHEET_TAB = 'Detail Progress';
+
+async function fetchAirpayCsv() {
+  const url = `https://docs.google.com/spreadsheets/d/${AIRPAY_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(AIRPAY_SHEET_TAB)}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`Google Sheets responded ${r.status}`);
+  const text = await r.text();
+  // A dead/renamed sheet or tab still returns HTTP 200 with an HTML error
+  // page — detect that instead of trying to CSV-parse markup.
+  if (text.trim().startsWith('<')) throw new Error('Sheet returned HTML instead of CSV (bad sheet ID or tab name)');
+  return text;
+}
+
+app.get('/api/airpay-sheet', async (req, res) => {
+  try {
+    const csv = await fetchAirpayCsv();
+    const { tasks, summary, error } = parseAirpayCsv(csv);
+    if (error) return res.status(502).json({ error });
+    res.json({ tasks, summary, fetchedAt: new Date().toISOString() });
+  } catch (e) {
+    console.error('airpay-sheet error:', e.message);
+    res.status(502).json({ error: e.message });
+  }
+});
 
 // On serverless (Vercel) we export the app as the request handler.
 // Locally we start a persistent server and warm the cache.

@@ -788,6 +788,107 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .oc-node.kind-project .oc-node-key{font-family:var(--font-mono);font-size:9.5px;color:var(--violet-600);font-weight:600}
 .oc-node.kind-person .oc-node-sub{font-size:10px;color:var(--ink-400)}
 .oc-empty-hint{position:absolute;top:24px;left:32px;font-size:12px;color:var(--ink-300);pointer-events:none}
+
+/* ===== AirPay Report (Summary + Detail) ===== */
+/* Reuses the app's existing tokens/components (.card,.kpi-card,.btn,.empty-state,
+   .error-banner, ink/blue/green/amber/red ramps) — no new theme, per product
+   direction. Only semantic status colors (green=delivered, amber=in-progress,
+   red=blocker/overdue) and --accent for interactive elements are distinct,
+   same convention the rest of the app already uses (e.g. workload heat-bar). */
+.ap-sync{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-500)}
+.ap-sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.ap-sync-dot.live{background:var(--green-500)}
+.ap-sync-dot.syncing{background:var(--amber-500);animation:blink 1.2s ease-in-out infinite}
+.ap-sync-dot.error{background:var(--red-500)}
+
+.ap-hero{display:flex;gap:28px;align-items:center;padding:22px 24px;flex-wrap:wrap}
+.ap-donut-wrap{position:relative;width:148px;height:148px;flex-shrink:0}
+.ap-donut-val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ap-donut-val b{font-size:28px;font-weight:700;color:var(--ink-900);letter-spacing:-.02em}
+.ap-donut-val span{font-size:10px;color:var(--ink-400);text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+.ap-hero-stats{display:flex;gap:24px;flex-wrap:wrap}
+.ap-hero-stat b{font-size:22px;font-weight:700;display:block;line-height:1.1}
+.ap-hero-stat span{font-size:11px;color:var(--ink-400)}
+.ap-hero-ctx{width:100%;font-size:11.5px;color:var(--ink-400);padding-top:4px;border-top:1px solid var(--ink-100);margin-top:4px}
+
+.ap-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:0 24px 20px}
+
+.ap-2col{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 24px 20px}
+.ap-panel{background:var(--ink-0);border:1px solid var(--ink-100);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-xs)}
+.ap-panel-head{padding:12px 16px;border-bottom:1px solid var(--ink-100);font-size:12.5px;font-weight:600;color:var(--ink-800);display:flex;align-items:center;justify-content:space-between}
+.ap-item-row{padding:11px 16px;border-bottom:1px solid var(--ink-50);font-size:12px}
+.ap-item-row:last-child{border-bottom:none}
+.ap-item-name{font-weight:600;color:var(--ink-800);margin-bottom:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ap-item-sub{color:var(--ink-500);line-height:1.5}
+
+.ap-badge{font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.03em;flex-shrink:0}
+.ap-badge.ext{background:var(--amber-50);color:var(--amber-600)}
+.ap-badge.int{background:var(--blue-50);color:var(--blue-600)}
+.ap-prio{font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:3px;flex-shrink:0}
+.ap-prio.p0{background:var(--red-50);color:var(--red-600)}
+.ap-prio.p1{background:var(--amber-50);color:var(--amber-600)}
+.ap-prio.p2{background:var(--blue-50);color:var(--blue-600)}
+
+.ap-decision{margin:0 24px 20px;background:var(--amber-50);border:1px solid var(--amber-100);border-radius:var(--radius-lg);padding:14px 18px}
+.ap-decision-title{font-size:12.5px;font-weight:600;color:var(--amber-600);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.ap-decision ul{margin:0;padding-left:18px;font-size:12px;color:var(--ink-700);line-height:1.7}
+.ap-decision .ap-note{font-size:10.5px;color:var(--ink-400);margin-top:8px;font-style:italic}
+
+/* Gantt (Summary Report) — day-based bars, same left/width math as Timeline */
+.ap-gantt-toolbar{display:flex;gap:10px;align-items:center;padding:14px 24px;flex-wrap:wrap}
+.ap-gantt-wrap{overflow-x:auto;margin:0 24px 24px;border:1px solid var(--ink-100);border-radius:var(--radius-lg)}
+.ap-gantt-header-row{display:flex;border-bottom:1px solid var(--ink-100);background:var(--ink-50)}
+.ap-gantt-name-col{width:250px;min-width:250px;padding:9px 14px;font-size:10.5px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.04em;border-right:1px solid var(--ink-100);flex-shrink:0}
+.ap-gantt-cat-row{display:flex;background:var(--ink-50);border-bottom:1px solid var(--ink-100)}
+.ap-gantt-cat-label{width:250px;min-width:250px;padding:7px 14px;font-size:11px;font-weight:700;color:var(--ink-600);border-right:1px solid var(--ink-100);flex-shrink:0}
+.ap-gantt-row{display:flex;border-bottom:1px solid var(--ink-50);cursor:pointer;transition:background var(--transition)}
+.ap-gantt-row:hover{background:var(--ink-50)}
+.ap-gantt-name{width:250px;min-width:250px;padding:8px 14px;font-size:11.5px;color:var(--ink-700);border-right:1px solid var(--ink-100);flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ap-gantt-track{position:relative;flex-shrink:0;height:32px}
+.ap-gantt-bar{position:absolute;top:9px;height:14px;border-radius:4px}
+.ap-gantt-bar.delivered{background:var(--green-400)}
+.ap-gantt-bar.inprogress{background:var(--amber-400)}
+.ap-gantt-bar.waiting{background:repeating-linear-gradient(45deg,var(--ink-200),var(--ink-200) 4px,var(--ink-100) 4px,var(--ink-100) 8px)}
+.ap-gantt-today{position:absolute;top:0;bottom:0;width:2px;background:var(--accent);opacity:.6;z-index:2;pointer-events:none}
+
+/* Drawer (shared) */
+.ap-drawer-overlay{position:fixed;inset:0;background:rgba(10,13,18,.35);z-index:200;display:flex;justify-content:flex-end;opacity:0;pointer-events:none;transition:opacity .2s}
+.ap-drawer-overlay.show{opacity:1;pointer-events:all}
+.ap-drawer{width:380px;max-width:92vw;height:100%;background:var(--ink-0);box-shadow:var(--shadow-lg);padding:22px;overflow-y:auto;transform:translateX(20px);transition:transform .2s}
+.ap-drawer-overlay.show .ap-drawer{transform:translateX(0)}
+.ap-drawer-close{float:right;cursor:pointer;color:var(--ink-400);background:none;border:none;font-size:18px;line-height:1}
+
+/* Detail Report (standup board) */
+.ap-metric-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:0 24px 16px}
+.ap-sort-toggle{display:flex;gap:10px;align-items:center;padding:0 24px 14px;flex-wrap:wrap}
+.ap-task-board{display:flex;flex-direction:column;gap:12px;padding:0 24px 24px}
+.ap-task-card{background:var(--ink-0);border:1px solid var(--ink-100);border-radius:var(--radius-lg);padding:14px 16px;box-shadow:var(--shadow-xs);transition:opacity var(--transition)}
+.ap-task-card.discussed{opacity:.55}
+.ap-task-card-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
+.ap-task-ring{width:38px;height:38px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;border:3px solid var(--ink-100)}
+.ap-task-title{font-size:13px;font-weight:600;color:var(--ink-900);line-height:1.3}
+.ap-task-meta-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;align-items:center}
+.ap-urgency{font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:20px;flex-shrink:0}
+.ap-urgency.overdue{background:var(--red-50);color:var(--red-600)}
+.ap-urgency.today{background:var(--amber-50);color:var(--amber-600)}
+.ap-urgency.soon{background:var(--blue-50);color:var(--blue-600)}
+.ap-urgency.ok{background:var(--ink-50);color:var(--ink-500)}
+.ap-task-field{font-size:11.5px;color:var(--ink-600);line-height:1.6;margin-top:6px}
+.ap-task-field b{color:var(--ink-800);font-weight:600}
+.ap-task-field.blocker{background:var(--red-50);border-radius:var(--radius-sm);padding:6px 10px;color:var(--red-600)}
+.ap-task-checkbox{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-400);margin-top:10px;cursor:pointer;user-select:none}
+
+@media (max-width:840px){
+  .ap-hero{flex-direction:column;align-items:flex-start}
+  .ap-kpi-grid,.ap-metric-strip{grid-template-columns:1fr 1fr}
+  .ap-2col{grid-template-columns:1fr}
+}
+
+@media print{
+  .sidebar,.topbar,#top-loader,.ap-noprint,.ap-sort-toggle,.ap-task-checkbox{display:none!important}
+  #page-airpay-detail .ap-task-card{break-inside:avoid;box-shadow:none;border:1px solid #ccc}
+  body{background:#fff}
+}
 </style>
 </head>
 <body>
@@ -859,6 +960,18 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
     <button class="nav-item" data-navid="projectteam" onclick="showPage('projectteam',this)">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="7" height="5" rx="1"/><circle cx="12" cy="4" r="2.3"/><path d="M9.5 14c0-2.2 1.6-3.3 3-3.3s3 1.1 3 3.3"/><path d="M1 11h6M1 14h4"/></svg>
       Structure Project Team
+    </button>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Report AirPay</div>
+    <button class="nav-item" data-navid="airpay-summary" onclick="showPage('airpay-summary',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><path d="M8 8V3.2A4.8 4.8 0 0112.8 8H8z"/></svg>
+      Summary Report
+    </button>
+    <button class="nav-item" data-navid="airpay-detail" onclick="showPage('airpay-detail',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="13" height="13" rx="1.5"/><path d="M4.5 5.5h7M4.5 8h7M4.5 10.5h4.5"/></svg>
+      Detail Report
     </button>
   </div>
 
@@ -1317,6 +1430,51 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
       </div>
     </div>
 
+    <!-- ======== AIRPAY — SUMMARY REPORT ======== -->
+    <!-- Independent data source (Google Sheet, not Jira) — kept visually on the
+         same design system as the rest of the app per product direction, but
+         never mixed with Jira-derived state (STATE/TL/etc). See AIRPAY below. -->
+    <div class="page" id="page-airpay-summary">
+      <div class="page-header">
+        <div>
+          <div class="page-title">AirPay — Summary Report</div>
+          <div class="page-sub" id="ap-sum-scope">Executive one-pager · live from Google Sheet</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="ap-sync" id="ap-sync-summary"></div>
+          <button class="btn btn-ghost" onclick="airpayManualRefresh()">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8A6 6 0 0114 8M14 8a6 6 0 01-12 0"/><path d="M14 4v4h-4"/></svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+      <div id="ap-sum-error"></div>
+      <div id="ap-sum-body"></div>
+    </div>
+
+    <!-- ======== AIRPAY — DETAIL REPORT (daily standup board) ======== -->
+    <div class="page" id="page-airpay-detail">
+      <div class="page-header">
+        <div>
+          <div class="page-title">AirPay — Detail Report</div>
+          <div class="page-sub">Daily standup board · live from Google Sheet</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px" class="ap-noprint">
+          <div class="ap-sync" id="ap-sync-detail"></div>
+          <button class="btn btn-ghost" onclick="airpayManualRefresh()">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8A6 6 0 0114 8M14 8a6 6 0 01-12 0"/><path d="M14 4v4h-4"/></svg>
+            Refresh
+          </button>
+          <button class="btn btn-ghost" onclick="window.print()">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6V2h8v4M4 11h8v3H4z"/><rect x="2" y="6" width="12" height="5" rx="1"/></svg>
+            Print
+          </button>
+        </div>
+      </div>
+      <div id="ap-det-error" class="ap-noprint"></div>
+      <div id="ap-det-body"></div>
+    </div>
+
   </div>
 </div>
 
@@ -1446,6 +1604,8 @@ function showPage(id, btn) {
   if (id === 'members') loadMembersPage();
   if (id === 'orgchart') loadOrgChartPage();
   if (id === 'projectteam') loadProjectTeamPage();
+  if (id === 'airpay-summary') loadAirpaySummaryPage();
+  if (id === 'airpay-detail') loadAirpayDetailPage();
 
   toggleSidebar(false); // close mobile drawer after navigating
 }
@@ -1461,7 +1621,9 @@ const NAV_ITEMS = [
   { id: 'members',     label: 'Team Members' },
   { id: 'jirasync',    label: 'Jira Sync' },
   { id: 'orgchart',    label: 'Structure Organization' },
-  { id: 'projectteam', label: 'Structure Project Team' }
+  { id: 'projectteam', label: 'Structure Project Team' },
+  { id: 'airpay-summary', label: 'Summary Report' },
+  { id: 'airpay-detail',  label: 'Detail Report' }
 ];
 
 function getHiddenNav() {
@@ -5476,6 +5638,461 @@ function ptRender() {
   nodesEl.innerHTML = PT.nodes.map(ptNodeHtml).join('') ||
     `<div class="oc-empty-hint">Nothing mapped yet — add a category, project, or person above.</div>`;
   ocRenderEdges(PT, 'projectteam');
+}
+
+// ============================================================
+// AIRPAY REPORT — Summary + Detail. Independent data source (Google Sheet,
+// not Jira) — deliberately never touches STATE/TL/CAP or any Jira-derived
+// object. Server route: GET /api/airpay-sheet -> { tasks, summary, fetchedAt }.
+// ============================================================
+const AIRPAY_POLL_MS = 45000; // how often to re-fetch while an AirPay page is open
+const AIRPAY = {
+  data: null,               // last known-good { tasks, summary, fetchedAt }
+  status: 'idle',           // idle | loading | live | syncing | error
+  errorMsg: null,
+  pollTimer: null,
+  detailSort: 'priority',   // 'priority' | 'pic'
+  detailFilter: 'active',   // 'active' | 'due' | 'blocker'
+  detailSearch: '',
+  summaryCategory: '',
+  summaryStatus: '',
+  summarySearch: ''
+};
+
+function apEsc(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function apToday() {
+  const d = new Date();
+  return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+}
+function apFmtDate(isoOrDate) {
+  if (!isoOrDate) return '—';
+  return new Date(isoOrDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+// True when `iso` falls within [today-back, today+fwd] inclusive.
+function apWithinDays(iso, today, back, fwd) {
+  const diff = Math.round((today - new Date(iso + 'T00:00:00Z')) / 86400000);
+  return diff >= -fwd && diff <= back;
+}
+function apUrgencyBadge(targetIso) {
+  if (!targetIso) return { cls: 'ok', label: 'No target' };
+  const days = Math.round((new Date(targetIso + 'T00:00:00Z') - apToday()) / 86400000);
+  if (days < 0) return { cls: 'overdue', label: `Terlambat ${Math.abs(days)}d` };
+  if (days === 0) return { cls: 'today', label: 'Jatuh tempo hari ini' };
+  if (days === 1) return { cls: 'soon', label: 'H-1' };
+  return { cls: 'ok', label: `H-${days}` };
+}
+function apDonutColor(pct) {
+  return pct >= 70 ? 'var(--green-500)' : pct >= 40 ? 'var(--amber-500)' : 'var(--red-500)';
+}
+function apDonutSvg(pct, color) {
+  const r = 60, c = 2 * Math.PI * r, fill = c * (Math.max(0, Math.min(100, pct)) / 100);
+  return `<svg viewBox="0 0 148 148" width="148" height="148">
+    <circle cx="74" cy="74" r="${r}" fill="none" stroke="var(--ink-100)" stroke-width="14"/>
+    <circle cx="74" cy="74" r="${r}" fill="none" stroke="${color}" stroke-width="14" stroke-linecap="round"
+      stroke-dasharray="${fill.toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 74 74)"/>
+  </svg>`;
+}
+
+// ——— "Discussed" checkbox state — local-only preference (repo has no
+// per-user preference storage backend to sync this to; see prompt note). ———
+function airpayDiscussedSet() {
+  try { return new Set(JSON.parse(localStorage.getItem('airpayDiscussed') || '[]')); }
+  catch (e) { return new Set(); }
+}
+function airpaySetDiscussed(set) {
+  try { localStorage.setItem('airpayDiscussed', JSON.stringify([...set])); } catch (e) { /* storage unavailable */ }
+}
+function airpayToggleDiscussed(id) {
+  const set = airpayDiscussedSet();
+  if (set.has(id)) set.delete(id); else set.add(id);
+  airpaySetDiscussed(set);
+  renderAirpayDetail();
+}
+
+// ——— Fetch / poll / sync indicator ———
+function airpaySyncHtml(dotClass, label) {
+  return `<span class="ap-sync-dot ${dotClass}"></span>${label}`;
+}
+function airpayRenderSync() {
+  let html;
+  if (AIRPAY.status === 'loading') html = airpaySyncHtml('syncing', 'Loading…');
+  else if (AIRPAY.status === 'syncing') html = airpaySyncHtml('syncing', 'Syncing…');
+  else if (AIRPAY.status === 'error') html = airpaySyncHtml('error', 'Gagal sync — data terakhir');
+  else if (AIRPAY.data) html = airpaySyncHtml('live', `Live · ${new Date(AIRPAY.data.fetchedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`);
+  else html = airpaySyncHtml('syncing', 'Loading…');
+  const a = document.getElementById('ap-sync-summary'); if (a) a.innerHTML = html;
+  const b = document.getElementById('ap-sync-detail'); if (b) b.innerHTML = html;
+}
+function airpayRenderErrorBanner() {
+  const html = AIRPAY.status === 'error'
+    ? `<div class="error-banner" style="margin:12px 24px 0">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><path d="M8 5v4M8 11h.01"/></svg>
+        Gagal sync ke Google Sheet (${apEsc(AIRPAY.errorMsg || '')}) — menampilkan data terakhir yang berhasil diambil.
+        <a href="https://docs.google.com/spreadsheets/d/1Eb4th4hPd0BFKi9faz6RkjyvbfrhQTrqjZ8_R0Xpwmw/edit" target="_blank" rel="noopener" style="margin-left:auto;color:var(--red-600);font-weight:600">Buka sheet →</a>
+      </div>`
+    : '';
+  const a = document.getElementById('ap-sum-error'); if (a) a.innerHTML = html;
+  const b = document.getElementById('ap-det-error'); if (b) b.innerHTML = html;
+}
+async function airpayFetch() {
+  AIRPAY.status = AIRPAY.data ? 'syncing' : 'loading';
+  airpayRenderSync();
+  try {
+    const res = await fetch('/api/airpay-sheet');
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
+    AIRPAY.data = json;
+    AIRPAY.status = 'live';
+    AIRPAY.errorMsg = null;
+  } catch (e) {
+    AIRPAY.status = 'error';
+    AIRPAY.errorMsg = e.message;
+  }
+  airpayRenderSync();
+  airpayRenderErrorBanner();
+  if (document.getElementById('page-airpay-summary')?.classList.contains('active')) renderAirpaySummary();
+  if (document.getElementById('page-airpay-detail')?.classList.contains('active')) renderAirpayDetail();
+}
+function airpayManualRefresh() { airpayFetch(); }
+function ensureAirpayPolling() {
+  if (AIRPAY.pollTimer) return;
+  airpayFetch();
+  AIRPAY.pollTimer = setInterval(airpayFetch, AIRPAY_POLL_MS);
+}
+function loadAirpaySummaryPage() { ensureAirpayPolling(); renderAirpaySummary(); }
+function loadAirpayDetailPage() { ensureAirpayPolling(); renderAirpayDetail(); }
+
+// ——— Summary Report ———
+function apWinsHtml(tasks, today) {
+  const wins = tasks.filter(t => t.group === 'delivered' && t.target && apWithinDays(t.target, today, 7, 0))
+    .sort((a, b) => (b.target || '').localeCompare(a.target || ''))
+    .slice(0, 6);
+  if (!wins.length) return `<div class="ap-item-row" style="color:var(--ink-400)">Belum ada item selesai dalam 7 hari terakhir.</div>`;
+  return wins.map(t => `
+    <div class="ap-item-row">
+      <div class="ap-item-name">${apEsc(t.name)} <span style="font-family:var(--font-mono);font-size:10px;color:var(--ink-400);font-weight:400">${apEsc(t.id)}</span></div>
+      <div class="ap-item-sub">${apEsc(t.detail || t.category || '')}</div>
+    </div>`).join('');
+}
+// EXTERNAL/INTERNAL badge: no explicit column for this in the sheet, so this
+// is a light heuristic (bottleneck/dependency text naming an outside party).
+// Defaults to INTERNAL when the signal isn't there, per the prompt's own
+// fallback rule — replace with a real signal if the sheet ever adds one.
+function apBlockersHtml(tasks) {
+  const prioRank = { P0: 0, P1: 1, P2: 2 };
+  const blockers = tasks.filter(t => t.group === 'inprogress' && t.bottleneck && t.bottleneck !== '-')
+    .sort((a, b) => (prioRank[a.prio] ?? 3) - (prioRank[b.prio] ?? 3));
+  if (!blockers.length) return `<div class="ap-item-row" style="color:var(--ink-400)">Tidak ada blocker aktif saat ini.</div>`;
+  return blockers.slice(0, 8).map(t => {
+    const isExt = /pihak |dari pihak|vendor|partner/i.test((t.bottleneck || '') + ' ' + (t.dependency || '') + ' ' + (t.nextAction || ''));
+    return `<div class="ap-item-row">
+      <div class="ap-item-name">
+        ${t.prio ? `<span class="ap-prio ${t.prio.toLowerCase()}">${t.prio}</span>` : ''}
+        <span class="ap-badge ${isExt ? 'ext' : 'int'}">${isExt ? 'EXTERNAL' : 'INTERNAL'}</span>
+        ${apEsc(t.name)}
+      </div>
+      <div class="ap-item-sub"><b>Bottleneck:</b> ${apEsc(t.bottleneck)}</div>
+      <div class="ap-item-sub"><b>Next:</b> ${apEsc(t.nextAction)}</div>
+    </div>`;
+  }).join('');
+}
+function apDecisionHtml(tasks, today) {
+  const p0Blockers = tasks.filter(t => t.group === 'inprogress' && t.prio === 'P0' && t.bottleneck && t.bottleneck !== '-')
+    .sort((a, b) => {
+      const aOver = a.target && new Date(a.target + 'T00:00:00Z') < today;
+      const bOver = b.target && new Date(b.target + 'T00:00:00Z') < today;
+      if (aOver !== bOver) return aOver ? -1 : 1;
+      return (a.target || '').localeCompare(b.target || '');
+    })
+    .slice(0, 3);
+  if (!p0Blockers.length) return '';
+  return `<div class="ap-decision">
+    <div class="ap-decision-title">⚡ Decision Required</div>
+    <ul>${p0Blockers.map(t => `<li><b>${apEsc(t.name)}</b> — ${apEsc(t.bottleneck)} <span style="color:var(--ink-400)">(target ${apFmtDate(t.target)}${t.pic && t.pic !== '-' ? ', PIC ' + apEsc(t.pic) : ''})</span></li>`).join('')}</ul>
+    <div class="ap-note">Saran otomatis berbasis data saat ini (P0 dengan bottleneck aktif, diurutkan overdue → target terdekat) — bukan kurasi manual.</div>
+  </div>`;
+}
+function apFilteredGanttTasks(tasks) {
+  return tasks.filter(t => {
+    if (AIRPAY.summaryCategory && t.category !== AIRPAY.summaryCategory) return false;
+    if (AIRPAY.summaryStatus && t.group !== AIRPAY.summaryStatus) return false;
+    if (AIRPAY.summarySearch) {
+      const q = AIRPAY.summarySearch.toLowerCase();
+      if (!(t.name.toLowerCase().includes(q) || (t.pic || '').toLowerCase().includes(q) || t.id.toLowerCase().includes(q))) return false;
+    }
+    return true;
+  });
+}
+function apGanttHtml(allTasks) {
+  const tasks = apFilteredGanttTasks(allTasks).filter(t => t.startDate && t.target);
+  if (!tasks.length) return `<div style="padding:8px">${emptyState({ icon: '📅', title: 'Tidak ada task untuk filter ini', description: 'Coba ubah kategori/status/pencarian.' })}</div>`;
+
+  const minD = new Date(Math.min(...tasks.map(t => new Date(t.startDate + 'T00:00:00Z'))));
+  const maxD = new Date(Math.max(...tasks.map(t => new Date(t.target + 'T00:00:00Z'))));
+  minD.setUTCDate(minD.getUTCDate() - 1);
+  maxD.setUTCDate(maxD.getUTCDate() + 1);
+  const totalDays = Math.max(1, Math.round((maxD - minD) / 86400000) + 1);
+  const DAY_W = Math.max(16, Math.min(34, Math.round(900 / totalDays)));
+  const chartW = totalDays * DAY_W;
+  const px = iso => Math.round((new Date(iso + 'T00:00:00Z') - minD) / 86400000) * DAY_W;
+  const wOf = (a, b) => Math.max(10, (Math.round((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / 86400000) + 1) * DAY_W);
+
+  const today = apToday();
+  const todayOffset = Math.round((today - minD) / 86400000);
+  const showToday = todayOffset >= 0 && todayOffset <= totalDays;
+  const todayMark = showToday ? `<div class="ap-gantt-today" style="left:${todayOffset * DAY_W}px"></div>` : '';
+
+  const months = [];
+  let mc = new Date(Date.UTC(minD.getUTCFullYear(), minD.getUTCMonth(), 1));
+  const endMonth = new Date(Date.UTC(maxD.getUTCFullYear(), maxD.getUTCMonth(), 1));
+  while (mc <= endMonth) {
+    const dim = new Date(Date.UTC(mc.getUTCFullYear(), mc.getUTCMonth() + 1, 0)).getUTCDate();
+    const segStart = mc < minD ? minD : mc;
+    const segEndOfMonth = new Date(Date.UTC(mc.getUTCFullYear(), mc.getUTCMonth(), dim));
+    const segEnd = segEndOfMonth > maxD ? maxD : segEndOfMonth;
+    const w = (Math.round((segEnd - segStart) / 86400000) + 1) * DAY_W;
+    months.push({ label: mc.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }), w });
+    mc = new Date(Date.UTC(mc.getUTCFullYear(), mc.getUTCMonth() + 1, 1));
+  }
+  const headerCols = months.map(m => `<div style="width:${m.w}px;min-width:${m.w}px;text-align:center;padding:9px 0;font-size:10.5px;font-weight:600;color:var(--ink-500);border-right:1px solid var(--ink-100)">${m.label}</div>`).join('');
+
+  const byCategory = {};
+  tasks.forEach(t => { const c = t.category || 'Other'; (byCategory[c] = byCategory[c] || []).push(t); });
+
+  let rows = '';
+  Object.keys(byCategory).sort().forEach(cat => {
+    rows += `<div class="ap-gantt-cat-row"><div class="ap-gantt-cat-label">${apEsc(cat)} (${byCategory[cat].length})</div><div style="position:relative;width:${chartW}px">${todayMark}</div></div>`;
+    byCategory[cat].sort((a, b) => (a.target || '').localeCompare(b.target || '')).forEach(t => {
+      const left = px(t.startDate), width = wOf(t.startDate, t.target);
+      const barCls = t.group === 'delivered' ? 'delivered' : (t.waiting ? 'waiting' : 'inprogress');
+      rows += `<div class="ap-gantt-row" onclick="apOpenDrawer('${apEsc(t.id)}')">
+        <div class="ap-gantt-name" title="${apEsc(t.name)}">${apEsc(t.name)}</div>
+        <div class="ap-gantt-track" style="width:${chartW}px">
+          ${todayMark}
+          <div class="ap-gantt-bar ${barCls}" style="left:${left}px;width:${width}px" title="${apEsc(t.name)} · ${t.pct != null ? t.pct + '%' : apEsc(t.progressRaw)}"></div>
+        </div>
+      </div>`;
+    });
+  });
+
+  return `<div style="min-width:${250 + chartW}px">
+    <div class="ap-gantt-header-row"><div class="ap-gantt-name-col">Item</div><div style="display:flex;width:${chartW}px">${headerCols}</div></div>
+    ${rows}
+  </div>`;
+}
+function apOpenDrawer(id) {
+  if (!AIRPAY.data) return;
+  const t = AIRPAY.data.tasks.find(x => x.id === id);
+  if (!t) return;
+  let overlay = document.getElementById('ap-drawer-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'ap-drawer-overlay';
+    overlay.className = 'ap-drawer-overlay';
+    overlay.onclick = (e) => { if (e.target === overlay) apCloseDrawer(); };
+    document.body.appendChild(overlay);
+  }
+  const ds = t.group === 'delivered' ? { bg: 'var(--green-50)', color: 'var(--green-600)' } : { bg: 'var(--amber-50)', color: 'var(--amber-600)' };
+  overlay.innerHTML = `<div class="ap-drawer">
+    <button class="ap-drawer-close" onclick="apCloseDrawer()">✕</button>
+    <div style="font-family:var(--font-mono);font-size:11px;color:var(--ink-400);margin-bottom:4px">${apEsc(t.id)}</div>
+    <div style="font-size:16px;font-weight:700;color:var(--ink-900);margin-bottom:10px">${apEsc(t.name)}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+      <span class="ap-badge" style="background:${ds.bg};color:${ds.color}">${apEsc(t.status)}</span>
+      ${t.prio ? `<span class="ap-prio ${t.prio.toLowerCase()}">${t.prio}</span>` : ''}
+      ${t.category ? `<span class="ap-badge int">${apEsc(t.category)}${t.subcategory ? ' / ' + apEsc(t.subcategory) : ''}</span>` : ''}
+    </div>
+    <div class="ap-task-field"><b>Progress:</b> ${apEsc(t.progressRaw)}${t.pct != null ? ' (' + t.pct + '%)' : ''}</div>
+    <div class="ap-task-field"><b>Timeline:</b> ${apFmtDate(t.startDate)} → ${apFmtDate(t.target)}</div>
+    <div class="ap-task-field"><b>PIC:</b> ${apEsc(t.pic || '-')}</div>
+    ${t.bottleneck && t.bottleneck !== '-' ? `<div class="ap-task-field blocker"><b>Bottleneck:</b> ${apEsc(t.bottleneck)}</div>` : ''}
+    <div class="ap-task-field"><b>Next Action:</b> ${apEsc(t.nextAction)}</div>
+    ${t.dependency ? `<div class="ap-task-field"><b>Dependency:</b> ${apEsc(t.dependency)}</div>` : ''}
+    <div class="ap-task-field"><b>Detail:</b> ${apEsc(t.detail || '-')}</div>
+  </div>`;
+  requestAnimationFrame(() => overlay.classList.add('show'));
+}
+function apCloseDrawer() {
+  const overlay = document.getElementById('ap-drawer-overlay');
+  if (overlay) overlay.classList.remove('show');
+}
+function renderAirpaySummary() {
+  const body = document.getElementById('ap-sum-body');
+  if (!body) return;
+  if (!AIRPAY.data) {
+    body.innerHTML = emptyState({ icon: '📊', title: 'Loading AirPay data…', description: 'Fetching the latest sheet from Google…' });
+    return;
+  }
+  const { tasks, summary } = AIRPAY.data;
+  const today = apToday();
+  const scopeEl = document.getElementById('ap-sum-scope');
+  if (scopeEl) scopeEl.textContent = `Executive one-pager · live from Google Sheet · ${summary.total} task (DCB + Digital Payment + Platform)`;
+
+  const closedThisWeek = tasks.filter(t => t.group === 'delivered' && t.target && apWithinDays(t.target, today, 7, 0)).length;
+  const p0Open = tasks.filter(t => t.group === 'inprogress' && t.prio === 'P0').length;
+  const overdueToday = tasks.filter(t => t.group === 'inprogress' && t.target && new Date(t.target + 'T00:00:00Z') < today).length;
+  const extDep = tasks.filter(t => t.dependency).length;
+  const donutColor = apDonutColor(summary.overallPct);
+
+  body.innerHTML = `
+    <div class="ap-hero">
+      <div class="ap-donut-wrap">
+        ${apDonutSvg(summary.overallPct, donutColor)}
+        <div class="ap-donut-val"><b>${summary.overallPct}%</b><span>Overall</span></div>
+      </div>
+      <div class="ap-hero-stats">
+        <div class="ap-hero-stat"><b style="color:var(--green-600)">${summary.delivered}</b><span>Delivered</span></div>
+        <div class="ap-hero-stat"><b style="color:var(--amber-600)">${summary.inprogress}</b><span>In Progress</span></div>
+        <div class="ap-hero-stat"><b style="color:var(--red-600)">${summary.blocked}</b><span>Blocked / TBD</span></div>
+      </div>
+      <div class="ap-hero-ctx">Scope: ${summary.total} task (DCB + Digital Payment + Platform) · status per ${apFmtDate(AIRPAY.data.fetchedAt)}</div>
+    </div>
+
+    <div class="ap-kpi-grid">
+      <div class="kpi-card"><div class="kpi-label">Closed this week</div><div class="kpi-value">${closedThisWeek}</div><div class="kpi-delta up">Target ≤7 hari lalu</div></div>
+      <div class="kpi-card"><div class="kpi-label">P0 open</div><div class="kpi-value" style="${p0Open > 0 ? 'color:var(--red-600)' : ''}">${p0Open}</div><div class="kpi-delta ${p0Open > 0 ? 'down' : 'up'}">Prioritas tertinggi</div></div>
+      <div class="kpi-card"><div class="kpi-label">Overdue today</div><div class="kpi-value" style="${overdueToday > 0 ? 'color:var(--red-600)' : ''}">${overdueToday}</div><div class="kpi-delta ${overdueToday > 0 ? 'down' : 'up'}">Lewat target</div></div>
+      <div class="kpi-card"><div class="kpi-label">Ext. dependency</div><div class="kpi-value">${extDep}</div><div class="kpi-delta info">Dependency terisi</div></div>
+    </div>
+
+    <div class="ap-2col">
+      <div class="ap-panel"><div class="ap-panel-head">🏆 Wins (7 hari terakhir)</div>${apWinsHtml(tasks, today)}</div>
+      <div class="ap-panel"><div class="ap-panel-head">🚧 Blockers &amp; Dependencies</div>${apBlockersHtml(tasks)}</div>
+    </div>
+
+    ${apDecisionHtml(tasks, today)}
+
+    <div class="ap-gantt-toolbar">
+      <div class="search-input" style="max-width:220px">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5"/></svg>
+        <input type="text" placeholder="Cari task…" value="${apEsc(AIRPAY.summarySearch)}" oninput="AIRPAY.summarySearch=this.value;renderAirpaySummary()">
+      </div>
+      <select class="select-filter" onchange="AIRPAY.summaryCategory=this.value;renderAirpaySummary()">
+        <option value="">Semua Kategori</option>
+        ${['DCB', 'Digital Payment', 'Platform'].map(c => `<option value="${c}" ${AIRPAY.summaryCategory === c ? 'selected' : ''}>${c}</option>`).join('')}
+      </select>
+      <select class="select-filter" onchange="AIRPAY.summaryStatus=this.value;renderAirpaySummary()">
+        <option value="">Semua Status</option>
+        <option value="delivered" ${AIRPAY.summaryStatus === 'delivered' ? 'selected' : ''}>Delivered</option>
+        <option value="inprogress" ${AIRPAY.summaryStatus === 'inprogress' ? 'selected' : ''}>In Progress</option>
+      </select>
+    </div>
+    <div class="ap-gantt-wrap">${apGanttHtml(tasks)}</div>
+  `;
+}
+
+// ——— Detail Report (daily standup board) ———
+function apTaskCardHtml(t, discussed) {
+  const urgency = apUrgencyBadge(t.target);
+  const isDiscussed = discussed.has(t.id);
+  const ringColor = t.pct != null ? (t.pct >= 80 ? 'var(--green-500)' : t.pct >= 40 ? 'var(--amber-500)' : 'var(--red-500)') : 'var(--ink-300)';
+  return `<div class="ap-task-card ${isDiscussed ? 'discussed' : ''}">
+    <div class="ap-task-card-head">
+      <div class="ap-task-ring" style="border-color:${ringColor};color:${ringColor}">${t.pct != null ? t.pct + '%' : '·'}</div>
+      <div style="flex:1;min-width:0">
+        <div class="ap-task-title">${apEsc(t.name)} <span style="font-family:var(--font-mono);font-size:10px;color:var(--ink-400);font-weight:400">${apEsc(t.id)}</span></div>
+        <div class="ap-task-meta-row">
+          <span style="font-size:11px;color:var(--ink-500)">${apEsc(t.category || '')}${t.subcategory ? ' / ' + apEsc(t.subcategory) : ''}</span>
+          <span class="ap-urgency ${urgency.cls}">${urgency.label}</span>
+          ${t.prio ? `<span class="ap-prio ${t.prio.toLowerCase()}">${t.prio}</span>` : ''}
+          ${t.pic && t.pic !== '-' ? `<span style="font-size:11px;color:var(--ink-500)">👤 ${apEsc(t.pic)}</span>` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="ap-task-field"><b>Progress:</b> ${apEsc(t.detail || t.progressRaw || '-')}</div>
+    ${t.bottleneck && t.bottleneck !== '-' ? `<div class="ap-task-field blocker"><b>Blocker:</b> ${apEsc(t.bottleneck)}</div>` : ''}
+    <div class="ap-task-field"><b>Next Action:</b> ${apEsc(t.nextAction)}</div>
+    ${t.dependency ? `<div class="ap-task-field"><b>Dependency:</b> ${apEsc(t.dependency)}</div>` : ''}
+    <label class="ap-task-checkbox ap-noprint">
+      <input type="checkbox" ${isDiscussed ? 'checked' : ''} onchange="airpayToggleDiscussed('${apEsc(t.id)}')">
+      Sudah dibahas
+    </label>
+  </div>`;
+}
+function renderAirpayDetail() {
+  const body = document.getElementById('ap-det-body');
+  if (!body) return;
+  if (!AIRPAY.data) {
+    body.innerHTML = emptyState({ icon: '📋', title: 'Loading AirPay data…', description: 'Fetching the latest sheet from Google…' });
+    return;
+  }
+  const { tasks } = AIRPAY.data;
+  const today = apToday();
+  const discussed = airpayDiscussedSet();
+
+  const active = tasks.filter(t => t.group === 'inprogress');
+  const p0 = active.filter(t => t.prio === 'P0').length;
+  const p1 = active.filter(t => t.prio === 'P1').length;
+  const p2 = active.filter(t => t.prio === 'P2').length;
+  const dueToday = active.filter(t => t.target && new Date(t.target + 'T00:00:00Z').getTime() === today.getTime()).length;
+  const overdue = active.filter(t => t.target && new Date(t.target + 'T00:00:00Z') < today).length;
+
+  let filtered = active;
+  if (AIRPAY.detailFilter === 'due') filtered = filtered.filter(t => t.target && Math.round((new Date(t.target + 'T00:00:00Z') - today) / 86400000) <= 2);
+  if (AIRPAY.detailFilter === 'blocker') filtered = filtered.filter(t => t.bottleneck && t.bottleneck !== '-');
+  if (AIRPAY.detailSearch) {
+    const q = AIRPAY.detailSearch.toLowerCase();
+    filtered = filtered.filter(t => t.name.toLowerCase().includes(q) || (t.pic || '').toLowerCase().includes(q));
+  }
+
+  let groupsHtml = '';
+  if (AIRPAY.detailSort === 'priority') {
+    const buckets = {};
+    filtered.forEach(t => { const k = t.prio || '—'; (buckets[k] = buckets[k] || []).push(t); });
+    ['P0', 'P1', 'P2', '—'].forEach(k => {
+      if (!buckets[k] || !buckets[k].length) return;
+      groupsHtml += `<div style="font-size:11px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.04em;padding:4px 0">${k === '—' ? 'No priority' : k} (${buckets[k].length})</div>`;
+      groupsHtml += buckets[k].map(t => apTaskCardHtml(t, discussed)).join('');
+    });
+  } else {
+    const byPic = {};
+    filtered.forEach(t => { const k = t.pic && t.pic !== '-' ? t.pic : 'Unassigned'; (byPic[k] = byPic[k] || []).push(t); });
+    Object.keys(byPic).sort((a, b) => byPic[b].length - byPic[a].length).forEach(pic => {
+      groupsHtml += `<div style="font-size:11px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.04em;padding:4px 0">${apEsc(pic)} (${byPic[pic].length})</div>`;
+      groupsHtml += byPic[pic].map(t => apTaskCardHtml(t, discussed)).join('');
+    });
+  }
+  if (!filtered.length) groupsHtml = emptyState({ icon: '✅', title: 'Tidak ada task untuk filter ini', description: 'Coba ubah filter atau kata kunci pencarian.' });
+
+  const recentlyDone = tasks.filter(t => t.group === 'delivered' && t.target && apWithinDays(t.target, today, 4, 0))
+    .sort((a, b) => (b.target || '').localeCompare(a.target || ''));
+
+  body.innerHTML = `
+    <div class="ap-metric-strip">
+      <div class="kpi-card"><div class="kpi-label">Total task aktif</div><div class="kpi-value">${active.length}</div></div>
+      <div class="kpi-card"><div class="kpi-label">P0 / P1 / P2</div><div class="kpi-value" style="font-size:22px">${p0} / ${p1} / ${p2}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Due hari ini</div><div class="kpi-value" style="${dueToday > 0 ? 'color:var(--amber-600)' : ''}">${dueToday}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Terlambat</div><div class="kpi-value" style="${overdue > 0 ? 'color:var(--red-600)' : ''}">${overdue}</div></div>
+    </div>
+
+    <div class="ap-sort-toggle">
+      <div class="pill-group">
+        <button class="pill ${AIRPAY.detailSort === 'priority' ? 'active' : ''}" onclick="AIRPAY.detailSort='priority';renderAirpayDetail()">Per Prioritas</button>
+        <button class="pill ${AIRPAY.detailSort === 'pic' ? 'active' : ''}" onclick="AIRPAY.detailSort='pic';renderAirpayDetail()">Per PIC</button>
+      </div>
+      <select class="select-filter" onchange="AIRPAY.detailFilter=this.value;renderAirpayDetail()">
+        <option value="active" ${AIRPAY.detailFilter === 'active' ? 'selected' : ''}>Semua aktif</option>
+        <option value="due" ${AIRPAY.detailFilter === 'due' ? 'selected' : ''}>Due ≤ 2 hari / telat</option>
+        <option value="blocker" ${AIRPAY.detailFilter === 'blocker' ? 'selected' : ''}>Ada blocker</option>
+      </select>
+      <div class="search-input ap-noprint" style="max-width:220px">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5"/></svg>
+        <input type="text" placeholder="Cari nama / PIC…" value="${apEsc(AIRPAY.detailSearch)}" oninput="AIRPAY.detailSearch=this.value;renderAirpayDetail()">
+      </div>
+    </div>
+
+    <div class="ap-task-board">${groupsHtml}</div>
+
+    ${recentlyDone.length ? `
+    <div class="ap-panel" style="margin:0 24px 24px">
+      <div class="ap-panel-head">✅ Baru Selesai (4 hari terakhir)</div>
+      ${recentlyDone.map(t => `<div class="ap-item-row"><div class="ap-item-name">${apEsc(t.name)} <span style="font-family:var(--font-mono);font-size:10px;color:var(--ink-400);font-weight:400">${apEsc(t.id)}</span></div><div class="ap-item-sub">Target ${apFmtDate(t.target)}${t.pic && t.pic !== '-' ? ' · ' + apEsc(t.pic) : ''}</div></div>`).join('')}
+    </div>` : ''}
+  `;
 }
 
 // ——— START ———
