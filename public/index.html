@@ -5683,13 +5683,66 @@ function apWithinDays(iso, today, back, fwd) {
 function apUrgencyBadge(targetIso) {
   if (!targetIso) return { cls: 'ok', label: 'No target' };
   const days = Math.round((new Date(targetIso + 'T00:00:00Z') - apToday()) / 86400000);
-  if (days < 0) return { cls: 'overdue', label: `Terlambat ${Math.abs(days)}d` };
-  if (days === 0) return { cls: 'today', label: 'Jatuh tempo hari ini' };
-  if (days === 1) return { cls: 'soon', label: 'H-1' };
-  return { cls: 'ok', label: `H-${days}` };
+  if (days < 0) return { cls: 'overdue', label: `Overdue ${Math.abs(days)}d` };
+  if (days === 0) return { cls: 'today', label: 'Due today' };
+  if (days === 1) return { cls: 'soon', label: 'Due in 1d' };
+  return { cls: 'ok', label: `Due in ${days}d` };
 }
 function apDonutColor(pct) {
   return pct >= 70 ? 'var(--green-500)' : pct >= 40 ? 'var(--amber-500)' : 'var(--red-500)';
+}
+
+// ——— Clickable filter pills — same look/behavior as the Timeline's status
+// pills (.status-pill/.sp-dot/.sp-count, reused as-is), just AirPay's own
+// counts/keys. Only confirmed-existing color tokens are used here (some of
+// Timeline's own pill colors reference tokens — e.g. --amber-700,
+// --violet-200 — that were never defined in :root; not fixing that
+// pre-existing bug here, just not repeating it).
+const AP_PILL_STYLE = {
+  active: { base: 'background:var(--blue-700);color:#fff;border-color:var(--blue-700)' },
+  green:  { base: 'background:var(--green-50);color:var(--green-600);border-color:var(--green-100)', active: 'background:var(--green-100);border-color:var(--green-400)' },
+  amber:  { base: 'background:var(--amber-50);color:var(--amber-600);border-color:var(--amber-100)', active: 'background:var(--amber-100);border-color:var(--amber-400)' },
+  red:    { base: 'background:var(--red-50);color:var(--red-600);border-color:var(--red-100)', active: 'background:var(--red-100);border-color:var(--red-400)' },
+  gray:   { base: 'background:var(--ink-100);color:var(--ink-600);border-color:var(--ink-200)', active: 'background:var(--ink-200);border-color:var(--ink-300)' }
+};
+function apPillBtn(label, count, dot, isActive, colorCls, onclickCall) {
+  const st = AP_PILL_STYLE[colorCls];
+  const style = st.base + (colorCls !== 'active' && isActive ? ';' + st.active : '');
+  const countBg = colorCls === 'active' ? 'background:rgba(255,255,255,.22);color:#fff' : 'background:rgba(0,0,0,.08)';
+  const zero = count === 0 && colorCls !== 'active' ? ' sp-zero' : '';
+  return `<button class="status-pill${zero}" style="${style}" onclick="${onclickCall}">
+    ${dot ? `<span class="sp-dot" style="background:${dot}"></span>` : ''}
+    ${label}
+    <span class="sp-count" style="${countBg}">${count}</span>
+  </button>`;
+}
+function apSetSummaryCategory(v) { AIRPAY.summaryCategory = v; renderAirpaySummary(); }
+function apSetSummaryStatus(v) { AIRPAY.summaryStatus = v; renderAirpaySummary(); }
+function apSetDetailFilter(v) { AIRPAY.detailFilter = v; renderAirpayDetail(); }
+function apCategoryPillsHtml(tasks) {
+  const cats = ['DCB', 'Digital Payment', 'Platform'];
+  let html = apPillBtn('All', tasks.length, null, AIRPAY.summaryCategory === '', 'active', `apSetSummaryCategory('')`);
+  cats.forEach(c => {
+    const count = tasks.filter(t => t.category === c).length;
+    html += apPillBtn(c, count, null, AIRPAY.summaryCategory === c, AIRPAY.summaryCategory === c ? 'active' : 'gray', `apSetSummaryCategory('${c}')`);
+  });
+  return html;
+}
+function apStatusPillsHtml(tasks) {
+  const delivered = tasks.filter(t => t.group === 'delivered').length;
+  const inprogress = tasks.filter(t => t.group === 'inprogress').length;
+  let html = apPillBtn('All', tasks.length, null, AIRPAY.summaryStatus === '', 'active', `apSetSummaryStatus('')`);
+  html += apPillBtn('Delivered', delivered, 'var(--green-400)', AIRPAY.summaryStatus === 'delivered', 'green', `apSetSummaryStatus('delivered')`);
+  html += apPillBtn('In Progress', inprogress, 'var(--amber-400)', AIRPAY.summaryStatus === 'inprogress', 'amber', `apSetSummaryStatus('inprogress')`);
+  return html;
+}
+function apDetailFilterPillsHtml(active) {
+  const dueSoon = active.filter(t => t.target && Math.round((new Date(t.target + 'T00:00:00Z') - apToday()) / 86400000) <= 2).length;
+  const hasBlocker = active.filter(t => t.bottleneck && t.bottleneck !== '-').length;
+  let html = apPillBtn('All active', active.length, null, AIRPAY.detailFilter === 'active', AIRPAY.detailFilter === 'active' ? 'active' : 'gray', `apSetDetailFilter('active')`);
+  html += apPillBtn('Due ≤2d / overdue', dueSoon, 'var(--amber-400)', AIRPAY.detailFilter === 'due', 'amber', `apSetDetailFilter('due')`);
+  html += apPillBtn('Has blocker', hasBlocker, 'var(--red-400)', AIRPAY.detailFilter === 'blocker', 'red', `apSetDetailFilter('blocker')`);
+  return html;
 }
 function apDonutSvg(pct, color) {
   const r = 60, c = 2 * Math.PI * r, fill = c * (Math.max(0, Math.min(100, pct)) / 100);
@@ -5724,7 +5777,7 @@ function airpayRenderSync() {
   let html;
   if (AIRPAY.status === 'loading') html = airpaySyncHtml('syncing', 'Loading…');
   else if (AIRPAY.status === 'syncing') html = airpaySyncHtml('syncing', 'Syncing…');
-  else if (AIRPAY.status === 'error') html = airpaySyncHtml('error', 'Gagal sync — data terakhir');
+  else if (AIRPAY.status === 'error') html = airpaySyncHtml('error', 'Sync failed — showing last data');
   else if (AIRPAY.data) html = airpaySyncHtml('live', `Live · ${new Date(AIRPAY.data.fetchedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`);
   else html = airpaySyncHtml('syncing', 'Loading…');
   const a = document.getElementById('ap-sync-summary'); if (a) a.innerHTML = html;
@@ -5734,8 +5787,8 @@ function airpayRenderErrorBanner() {
   const html = AIRPAY.status === 'error'
     ? `<div class="error-banner" style="margin:12px 24px 0">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><path d="M8 5v4M8 11h.01"/></svg>
-        Gagal sync ke Google Sheet (${apEsc(AIRPAY.errorMsg || '')}) — menampilkan data terakhir yang berhasil diambil.
-        <a href="https://docs.google.com/spreadsheets/d/1Eb4th4hPd0BFKi9faz6RkjyvbfrhQTrqjZ8_R0Xpwmw/edit" target="_blank" rel="noopener" style="margin-left:auto;color:var(--red-600);font-weight:600">Buka sheet →</a>
+        Failed to sync with Google Sheet (${apEsc(AIRPAY.errorMsg || '')}) — showing the last successfully fetched data.
+        <a href="https://docs.google.com/spreadsheets/d/1Eb4th4hPd0BFKi9faz6RkjyvbfrhQTrqjZ8_R0Xpwmw/edit" target="_blank" rel="noopener" style="margin-left:auto;color:var(--red-600);font-weight:600">Open sheet →</a>
       </div>`
     : '';
   const a = document.getElementById('ap-sum-error'); if (a) a.innerHTML = html;
@@ -5774,7 +5827,7 @@ function apWinsHtml(tasks, today) {
   const wins = tasks.filter(t => t.group === 'delivered' && t.target && apWithinDays(t.target, today, 7, 0))
     .sort((a, b) => (b.target || '').localeCompare(a.target || ''))
     .slice(0, 6);
-  if (!wins.length) return `<div class="ap-item-row" style="color:var(--ink-400)">Belum ada item selesai dalam 7 hari terakhir.</div>`;
+  if (!wins.length) return `<div class="ap-item-row" style="color:var(--ink-400)">No items completed in the last 7 days.</div>`;
   return wins.map(t => `
     <div class="ap-item-row">
       <div class="ap-item-name">${apEsc(t.name)} <span style="font-family:var(--font-mono);font-size:10px;color:var(--ink-400);font-weight:400">${apEsc(t.id)}</span></div>
@@ -5789,7 +5842,7 @@ function apBlockersHtml(tasks) {
   const prioRank = { P0: 0, P1: 1, P2: 2 };
   const blockers = tasks.filter(t => t.group === 'inprogress' && t.bottleneck && t.bottleneck !== '-')
     .sort((a, b) => (prioRank[a.prio] ?? 3) - (prioRank[b.prio] ?? 3));
-  if (!blockers.length) return `<div class="ap-item-row" style="color:var(--ink-400)">Tidak ada blocker aktif saat ini.</div>`;
+  if (!blockers.length) return `<div class="ap-item-row" style="color:var(--ink-400)">No active blockers right now.</div>`;
   return blockers.slice(0, 8).map(t => {
     const isExt = /pihak |dari pihak|vendor|partner/i.test((t.bottleneck || '') + ' ' + (t.dependency || '') + ' ' + (t.nextAction || ''));
     return `<div class="ap-item-row">
@@ -5816,7 +5869,7 @@ function apDecisionHtml(tasks, today) {
   return `<div class="ap-decision">
     <div class="ap-decision-title">⚡ Decision Required</div>
     <ul>${p0Blockers.map(t => `<li><b>${apEsc(t.name)}</b> — ${apEsc(t.bottleneck)} <span style="color:var(--ink-400)">(target ${apFmtDate(t.target)}${t.pic && t.pic !== '-' ? ', PIC ' + apEsc(t.pic) : ''})</span></li>`).join('')}</ul>
-    <div class="ap-note">Saran otomatis berbasis data saat ini (P0 dengan bottleneck aktif, diurutkan overdue → target terdekat) — bukan kurasi manual.</div>
+    <div class="ap-note">Auto-generated suggestion based on current data (P0 items with an active bottleneck, sorted overdue → nearest target) — not manual curation.</div>
   </div>`;
 }
 function apFilteredGanttTasks(tasks) {
@@ -5832,7 +5885,7 @@ function apFilteredGanttTasks(tasks) {
 }
 function apGanttHtml(allTasks) {
   const tasks = apFilteredGanttTasks(allTasks).filter(t => t.startDate && t.target);
-  if (!tasks.length) return `<div style="padding:8px">${emptyState({ icon: '📅', title: 'Tidak ada task untuk filter ini', description: 'Coba ubah kategori/status/pencarian.' })}</div>`;
+  if (!tasks.length) return `<div style="padding:8px">${emptyState({ icon: '📅', title: 'No tasks match this filter', description: 'Try changing the category, status, or search.' })}</div>`;
 
   const minD = new Date(Math.min(...tasks.map(t => new Date(t.startDate + 'T00:00:00Z'))));
   const maxD = new Date(Math.max(...tasks.map(t => new Date(t.target + 'T00:00:00Z'))));
@@ -5995,37 +6048,36 @@ function renderAirpaySummary() {
         <div class="ap-hero-stat"><b style="color:var(--amber-600)">${summary.inprogress}</b><span>In Progress</span></div>
         <div class="ap-hero-stat"><b style="color:var(--red-600)">${summary.blocked}</b><span>Blocked / TBD</span></div>
       </div>
-      <div class="ap-hero-ctx">Scope: ${summary.total} task (DCB + Digital Payment + Platform) · status per ${apFmtDate(AIRPAY.data.fetchedAt)}</div>
+      <div class="ap-hero-ctx">Scope: ${summary.total} task (DCB + Digital Payment + Platform) · status as of ${apFmtDate(AIRPAY.data.fetchedAt)}</div>
     </div>
 
     <div class="ap-kpi-grid">
-      <div class="kpi-card"><div class="kpi-label">Closed this week</div><div class="kpi-value">${closedThisWeek}</div><div class="kpi-delta up">Target ≤7 hari lalu</div></div>
-      <div class="kpi-card"><div class="kpi-label">P0 open</div><div class="kpi-value" style="${p0Open > 0 ? 'color:var(--red-600)' : ''}">${p0Open}</div><div class="kpi-delta ${p0Open > 0 ? 'down' : 'up'}">Prioritas tertinggi</div></div>
-      <div class="kpi-card"><div class="kpi-label">Overdue today</div><div class="kpi-value" style="${overdueToday > 0 ? 'color:var(--red-600)' : ''}">${overdueToday}</div><div class="kpi-delta ${overdueToday > 0 ? 'down' : 'up'}">Lewat target</div></div>
-      <div class="kpi-card"><div class="kpi-label">Ext. dependency</div><div class="kpi-value">${extDep}</div><div class="kpi-delta info">Dependency terisi</div></div>
+      <div class="kpi-card"><div class="kpi-label">Closed this week</div><div class="kpi-value">${closedThisWeek}</div><div class="kpi-delta up">Target within last 7 days</div></div>
+      <div class="kpi-card"><div class="kpi-label">P0 open</div><div class="kpi-value" style="${p0Open > 0 ? 'color:var(--red-600)' : ''}">${p0Open}</div><div class="kpi-delta ${p0Open > 0 ? 'down' : 'up'}">Highest priority</div></div>
+      <div class="kpi-card"><div class="kpi-label">Overdue today</div><div class="kpi-value" style="${overdueToday > 0 ? 'color:var(--red-600)' : ''}">${overdueToday}</div><div class="kpi-delta ${overdueToday > 0 ? 'down' : 'up'}">Past target</div></div>
+      <div class="kpi-card"><div class="kpi-label">Ext. dependency</div><div class="kpi-value">${extDep}</div><div class="kpi-delta info">Has a dependency</div></div>
     </div>
 
     <div class="ap-2col">
-      <div class="ap-panel"><div class="ap-panel-head">🏆 Wins (7 hari terakhir)</div>${apWinsHtml(tasks, today)}</div>
+      <div class="ap-panel"><div class="ap-panel-head">🏆 Wins (last 7 days)</div>${apWinsHtml(tasks, today)}</div>
       <div class="ap-panel"><div class="ap-panel-head">🚧 Blockers &amp; Dependencies</div>${apBlockersHtml(tasks)}</div>
     </div>
 
     ${apDecisionHtml(tasks, today)}
 
-    <div class="ap-gantt-toolbar">
-      <div class="search-input" style="max-width:220px">
+    <div class="ap-gantt-toolbar" style="flex-direction:column;align-items:stretch;gap:12px">
+      <div class="search-input" style="max-width:260px">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5"/></svg>
-        <input type="text" placeholder="Cari task…" value="${apEsc(AIRPAY.summarySearch)}" oninput="AIRPAY.summarySearch=this.value;renderAirpaySummary()">
+        <input type="text" placeholder="Search tasks…" value="${apEsc(AIRPAY.summarySearch)}" oninput="AIRPAY.summarySearch=this.value;renderAirpaySummary()">
       </div>
-      <select class="select-filter" onchange="AIRPAY.summaryCategory=this.value;renderAirpaySummary()">
-        <option value="">Semua Kategori</option>
-        ${['DCB', 'Digital Payment', 'Platform'].map(c => `<option value="${c}" ${AIRPAY.summaryCategory === c ? 'selected' : ''}>${c}</option>`).join('')}
-      </select>
-      <select class="select-filter" onchange="AIRPAY.summaryStatus=this.value;renderAirpaySummary()">
-        <option value="">Semua Status</option>
-        <option value="delivered" ${AIRPAY.summaryStatus === 'delivered' ? 'selected' : ''}>Delivered</option>
-        <option value="inprogress" ${AIRPAY.summaryStatus === 'inprogress' ? 'selected' : ''}>In Progress</option>
-      </select>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:10px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0">Category</span>
+        ${apCategoryPillsHtml(tasks)}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:10px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0">Status</span>
+        ${apStatusPillsHtml(tasks)}
+      </div>
     </div>
     <div class="ap-gantt-wrap">${apGanttHtml(tasks)}</div>
   `;
@@ -6055,7 +6107,7 @@ function apTaskCardHtml(t, discussed) {
     ${t.dependency ? `<div class="ap-task-field"><b>Dependency:</b> ${apEsc(t.dependency)}</div>` : ''}
     <label class="ap-task-checkbox ap-noprint">
       <input type="checkbox" ${isDiscussed ? 'checked' : ''} onchange="airpayToggleDiscussed('${apEsc(t.id)}')">
-      Sudah dibahas
+      Discussed
     </label>
   </div>`;
 }
@@ -6102,32 +6154,28 @@ function renderAirpayDetail() {
       groupsHtml += byPic[pic].map(t => apTaskCardHtml(t, discussed)).join('');
     });
   }
-  if (!filtered.length) groupsHtml = emptyState({ icon: '✅', title: 'Tidak ada task untuk filter ini', description: 'Coba ubah filter atau kata kunci pencarian.' });
+  if (!filtered.length) groupsHtml = emptyState({ icon: '✅', title: 'No tasks match this filter', description: 'Try adjusting the filter or search keywords.' });
 
   const recentlyDone = tasks.filter(t => t.group === 'delivered' && t.target && apWithinDays(t.target, today, 4, 0))
     .sort((a, b) => (b.target || '').localeCompare(a.target || ''));
 
   body.innerHTML = `
     <div class="ap-metric-strip">
-      <div class="kpi-card"><div class="kpi-label">Total task aktif</div><div class="kpi-value">${active.length}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Total active tasks</div><div class="kpi-value">${active.length}</div></div>
       <div class="kpi-card"><div class="kpi-label">P0 / P1 / P2</div><div class="kpi-value" style="font-size:22px">${p0} / ${p1} / ${p2}</div></div>
-      <div class="kpi-card"><div class="kpi-label">Due hari ini</div><div class="kpi-value" style="${dueToday > 0 ? 'color:var(--amber-600)' : ''}">${dueToday}</div></div>
-      <div class="kpi-card"><div class="kpi-label">Terlambat</div><div class="kpi-value" style="${overdue > 0 ? 'color:var(--red-600)' : ''}">${overdue}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Due today</div><div class="kpi-value" style="${dueToday > 0 ? 'color:var(--amber-600)' : ''}">${dueToday}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Overdue</div><div class="kpi-value" style="${overdue > 0 ? 'color:var(--red-600)' : ''}">${overdue}</div></div>
     </div>
 
     <div class="ap-sort-toggle">
       <div class="pill-group">
-        <button class="pill ${AIRPAY.detailSort === 'priority' ? 'active' : ''}" onclick="AIRPAY.detailSort='priority';renderAirpayDetail()">Per Prioritas</button>
-        <button class="pill ${AIRPAY.detailSort === 'pic' ? 'active' : ''}" onclick="AIRPAY.detailSort='pic';renderAirpayDetail()">Per PIC</button>
+        <button class="pill ${AIRPAY.detailSort === 'priority' ? 'active' : ''}" onclick="AIRPAY.detailSort='priority';renderAirpayDetail()">By Priority</button>
+        <button class="pill ${AIRPAY.detailSort === 'pic' ? 'active' : ''}" onclick="AIRPAY.detailSort='pic';renderAirpayDetail()">By PIC</button>
       </div>
-      <select class="select-filter" onchange="AIRPAY.detailFilter=this.value;renderAirpayDetail()">
-        <option value="active" ${AIRPAY.detailFilter === 'active' ? 'selected' : ''}>Semua aktif</option>
-        <option value="due" ${AIRPAY.detailFilter === 'due' ? 'selected' : ''}>Due ≤ 2 hari / telat</option>
-        <option value="blocker" ${AIRPAY.detailFilter === 'blocker' ? 'selected' : ''}>Ada blocker</option>
-      </select>
+      ${apDetailFilterPillsHtml(active)}
       <div class="search-input ap-noprint" style="max-width:220px">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5"/></svg>
-        <input type="text" placeholder="Cari nama / PIC…" value="${apEsc(AIRPAY.detailSearch)}" oninput="AIRPAY.detailSearch=this.value;renderAirpayDetail()">
+        <input type="text" placeholder="Search name / PIC…" value="${apEsc(AIRPAY.detailSearch)}" oninput="AIRPAY.detailSearch=this.value;renderAirpayDetail()">
       </div>
     </div>
 
@@ -6135,7 +6183,7 @@ function renderAirpayDetail() {
 
     ${recentlyDone.length ? `
     <div class="ap-panel" style="margin:0 24px 24px">
-      <div class="ap-panel-head">✅ Baru Selesai (4 hari terakhir)</div>
+      <div class="ap-panel-head">✅ Recently Completed (last 4 days)</div>
       ${recentlyDone.map(t => `<div class="ap-item-row"><div class="ap-item-name">${apEsc(t.name)} <span style="font-family:var(--font-mono);font-size:10px;color:var(--ink-400);font-weight:400">${apEsc(t.id)}</span></div><div class="ap-item-sub">Target ${apFmtDate(t.target)}${t.pic && t.pic !== '-' ? ' · ' + apEsc(t.pic) : ''}</div></div>`).join('')}
     </div>` : ''}
   `;
