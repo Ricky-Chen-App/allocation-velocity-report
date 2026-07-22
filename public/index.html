@@ -5656,6 +5656,8 @@ const AIRPAY = {
   pollTimer: null,
   detailSort: 'priority',   // 'priority' | 'pic'
   detailFilter: 'active',   // 'active' | 'due' | 'blocker'
+  detailStatus: 'inprogress', // '' (all) | 'inprogress' | 'delivered' | 'blocked'
+  detailPrio: '',           // '' (all) | 'P0' | 'P1' | 'P2' | 'none'
   detailSearch: '',
   summaryCategory: '',
   summaryStatus: '',
@@ -5703,6 +5705,7 @@ const AP_PILL_STYLE = {
   green:  { base: 'background:var(--green-50);color:var(--green-600);border-color:var(--green-100)', active: 'background:var(--green-100);border-color:var(--green-400)' },
   amber:  { base: 'background:var(--amber-50);color:var(--amber-600);border-color:var(--amber-100)', active: 'background:var(--amber-100);border-color:var(--amber-400)' },
   red:    { base: 'background:var(--red-50);color:var(--red-600);border-color:var(--red-100)', active: 'background:var(--red-100);border-color:var(--red-400)' },
+  blue:   { base: 'background:var(--blue-50);color:var(--blue-600);border-color:var(--blue-100)', active: 'background:var(--blue-100);border-color:var(--blue-400)' },
   gray:   { base: 'background:var(--ink-100);color:var(--ink-600);border-color:var(--ink-200)', active: 'background:var(--ink-200);border-color:var(--ink-300)' }
 };
 function apPillBtn(label, count, dot, isActive, colorCls, onclickCall) {
@@ -5736,12 +5739,36 @@ function apStatusPillsHtml(tasks) {
   html += apPillBtn('In Progress', inprogress, 'var(--amber-400)', AIRPAY.summaryStatus === 'inprogress', 'amber', `apSetSummaryStatus('inprogress')`);
   return html;
 }
-function apDetailFilterPillsHtml(active) {
-  const dueSoon = active.filter(t => t.target && Math.round((new Date(t.target + 'T00:00:00Z') - apToday()) / 86400000) <= 2).length;
-  const hasBlocker = active.filter(t => t.bottleneck && t.bottleneck !== '-').length;
-  let html = apPillBtn('All active', active.length, null, AIRPAY.detailFilter === 'active', AIRPAY.detailFilter === 'active' ? 'active' : 'gray', `apSetDetailFilter('active')`);
+function apDetailFilterPillsHtml(base) {
+  const dueSoon = base.filter(t => t.target && Math.round((new Date(t.target + 'T00:00:00Z') - apToday()) / 86400000) <= 2).length;
+  const hasBlocker = base.filter(t => t.bottleneck && t.bottleneck !== '-').length;
+  let html = apPillBtn('All', base.length, null, AIRPAY.detailFilter === 'active', 'active', `apSetDetailFilter('active')`);
   html += apPillBtn('Due ≤2d / overdue', dueSoon, 'var(--amber-400)', AIRPAY.detailFilter === 'due', 'amber', `apSetDetailFilter('due')`);
   html += apPillBtn('Has blocker', hasBlocker, 'var(--red-400)', AIRPAY.detailFilter === 'blocker', 'red', `apSetDetailFilter('blocker')`);
+  return html;
+}
+function apSetDetailStatus(v) { AIRPAY.detailStatus = v; renderAirpayDetail(); }
+function apSetDetailPrio(v) { AIRPAY.detailPrio = v; renderAirpayDetail(); }
+function apDetailStatusPillsHtml(tasks) {
+  const delivered = tasks.filter(t => t.group === 'delivered').length;
+  const inprogress = tasks.filter(t => t.group === 'inprogress').length;
+  const blocked = tasks.filter(t => t.group === 'blocked').length;
+  let html = apPillBtn('All', tasks.length, null, AIRPAY.detailStatus === '', 'active', `apSetDetailStatus('')`);
+  html += apPillBtn('In Progress', inprogress, 'var(--amber-400)', AIRPAY.detailStatus === 'inprogress', 'amber', `apSetDetailStatus('inprogress')`);
+  html += apPillBtn('Delivered', delivered, 'var(--green-400)', AIRPAY.detailStatus === 'delivered', 'green', `apSetDetailStatus('delivered')`);
+  html += apPillBtn('Blocked', blocked, 'var(--red-400)', AIRPAY.detailStatus === 'blocked', 'red', `apSetDetailStatus('blocked')`);
+  return html;
+}
+function apDetailPrioPillsHtml(base) {
+  const p0 = base.filter(t => t.prio === 'P0').length;
+  const p1 = base.filter(t => t.prio === 'P1').length;
+  const p2 = base.filter(t => t.prio === 'P2').length;
+  const none = base.filter(t => !t.prio).length;
+  let html = apPillBtn('All', base.length, null, AIRPAY.detailPrio === '', 'active', `apSetDetailPrio('')`);
+  html += apPillBtn('P0', p0, null, AIRPAY.detailPrio === 'P0', 'red', `apSetDetailPrio('P0')`);
+  html += apPillBtn('P1', p1, null, AIRPAY.detailPrio === 'P1', 'amber', `apSetDetailPrio('P1')`);
+  html += apPillBtn('P2', p2, null, AIRPAY.detailPrio === 'P2', 'blue', `apSetDetailPrio('P2')`);
+  html += apPillBtn('No priority', none, null, AIRPAY.detailPrio === 'none', 'gray', `apSetDetailPrio('none')`);
   return html;
 }
 function apDonutSvg(pct, color) {
@@ -6129,9 +6156,18 @@ function renderAirpayDetail() {
   const dueToday = active.filter(t => t.target && new Date(t.target + 'T00:00:00Z').getTime() === today.getTime()).length;
   const overdue = active.filter(t => t.target && new Date(t.target + 'T00:00:00Z') < today).length;
 
-  let filtered = active;
+  // The metric strip above always describes "active" (in-progress) vitals,
+  // fixed regardless of the filters below — same convention as Summary
+  // Report's hero donut staying put while its Gantt filters. The board list
+  // itself starts from the Status pill's scope (defaults to In Progress, so
+  // existing behavior is unchanged until the user picks something else) and
+  // narrows from there.
+  const statusBase = AIRPAY.detailStatus === '' ? tasks : tasks.filter(t => t.group === AIRPAY.detailStatus);
+  let filtered = statusBase;
   if (AIRPAY.detailFilter === 'due') filtered = filtered.filter(t => t.target && Math.round((new Date(t.target + 'T00:00:00Z') - today) / 86400000) <= 2);
   if (AIRPAY.detailFilter === 'blocker') filtered = filtered.filter(t => t.bottleneck && t.bottleneck !== '-');
+  if (AIRPAY.detailPrio === 'none') filtered = filtered.filter(t => !t.prio);
+  else if (AIRPAY.detailPrio) filtered = filtered.filter(t => t.prio === AIRPAY.detailPrio);
   if (AIRPAY.detailSearch) {
     const q = AIRPAY.detailSearch.toLowerCase();
     filtered = filtered.filter(t => t.name.toLowerCase().includes(q) || (t.pic || '').toLowerCase().includes(q));
@@ -6167,15 +6203,28 @@ function renderAirpayDetail() {
       <div class="kpi-card"><div class="kpi-label">Overdue</div><div class="kpi-value" style="${overdue > 0 ? 'color:var(--red-600)' : ''}">${overdue}</div></div>
     </div>
 
-    <div class="ap-sort-toggle">
-      <div class="pill-group">
-        <button class="pill ${AIRPAY.detailSort === 'priority' ? 'active' : ''}" onclick="AIRPAY.detailSort='priority';renderAirpayDetail()">By Priority</button>
-        <button class="pill ${AIRPAY.detailSort === 'pic' ? 'active' : ''}" onclick="AIRPAY.detailSort='pic';renderAirpayDetail()">By PIC</button>
+    <div class="ap-sort-toggle" style="flex-direction:column;align-items:stretch;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div class="pill-group">
+          <button class="pill ${AIRPAY.detailSort === 'priority' ? 'active' : ''}" onclick="AIRPAY.detailSort='priority';renderAirpayDetail()">By Priority</button>
+          <button class="pill ${AIRPAY.detailSort === 'pic' ? 'active' : ''}" onclick="AIRPAY.detailSort='pic';renderAirpayDetail()">By PIC</button>
+        </div>
+        <div class="search-input ap-noprint" style="max-width:220px">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5"/></svg>
+          <input type="text" placeholder="Search name / PIC…" value="${apEsc(AIRPAY.detailSearch)}" oninput="AIRPAY.detailSearch=this.value;renderAirpayDetail()">
+        </div>
       </div>
-      ${apDetailFilterPillsHtml(active)}
-      <div class="search-input ap-noprint" style="max-width:220px">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5"/></svg>
-        <input type="text" placeholder="Search name / PIC…" value="${apEsc(AIRPAY.detailSearch)}" oninput="AIRPAY.detailSearch=this.value;renderAirpayDetail()">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:10px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0">Status</span>
+        ${apDetailStatusPillsHtml(tasks)}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:10px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0">Priority</span>
+        ${apDetailPrioPillsHtml(statusBase)}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:10px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0">Quick filter</span>
+        ${apDetailFilterPillsHtml(statusBase)}
       </div>
     </div>
 
