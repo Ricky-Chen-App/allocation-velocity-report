@@ -226,6 +226,7 @@ app.get('/api/refresh', (req, res) => {
   cache.forecast = null;
   cache.forecastByFilter = {};
   cache.timeline = {};
+  cache.airpayIssues = null;
   cache.ts = {};
   console.log('↻ Cache cleared — next requests re-fetch fresh from Jira');
   res.json({ ok: true, clearedAt: new Date().toISOString() });
@@ -1747,6 +1748,188 @@ app.get('/api/airpay-sheet', async (req, res) => {
     res.json({ tasks, summary, fetchedAt: new Date().toISOString() });
   } catch (e) {
     console.error('airpay-sheet error:', e.message);
+    res.status(502).json({ error: e.message });
+  }
+});
+
+// ——— AirPay Wins & Blockers — manually curated, stored in Supabase ———
+// Deliberately NOT derived from the sheet or Jira: every row is typed by a
+// human through the Summary Report UI. Jira is only consulted for a list of
+// issue key+summary to populate the "pick a task" dropdown.
+//
+// All access goes through this server, never straight from the browser. The
+// app has no authentication of any kind, so an anon key + permissive RLS
+// would leave the tables writable (and deletable) by anyone who loads the
+// page. RLS is enabled on both tables with NO policies; the service role key
+// bypasses it and stays server-side.
+const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const SUPABASE_READY = !!(SUPABASE_URL && SUPABASE_KEY);
+
+async function supabaseRequest(method, pathQuery, body) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${pathQuery}`, {
+    method,
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    },
+    body: body === undefined ? undefined : JSON.stringify(body)
+  });
+  const text = await r.text();
+  let data = null;
+  if (text) { try { data = JSON.parse(text); } catch (e) { data = text; } }
+  if (!r.ok) {
+    const msg = (data && data.message) || (typeof data === 'string' && data) || `Supabase responded ${r.status}`;
+    const err = new Error(msg);
+    err.status = r.status;
+    throw err;
+  }
+  return data;
+}
+
+// Every Supabase-backed route returns a clear 503 rather than crashing when
+// the env vars aren't set — same spirit as the Jira env guard above.
+function requireSupabase(req, res, next) {
+  if (!SUPABASE_READY) {
+    return res.status(503).json({
+      error: 'Supabase belum dikonfigurasi: set SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY ' +
+             '(lokal di .env, production di Vercel → Project Settings → Environment Variables).'
+    });
+  }
+  next();
+}
+
+const WIN_CATEGORIES = ['Platform', 'DCB', 'Digital Payment'];
+const BLOCKER_PRIORITIES = ['P0', 'P1', 'P2', 'P3', 'P4'];
+const BLOCKER_STATUSES = ['Open', 'In Progress', 'Resolved'];
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const trimmed = v => (typeof v === 'string' ? v.trim() : '');
+
+// Validate server-side rather than leaning on the table CHECK constraints:
+// a 400 naming the bad field is far more useful to the form than a raw
+// Postgres constraint-violation string surfaced from Supabase.
+function validateWin(body) {
+  const errors = [];
+  const b = body || {};
+  const title = trimmed(b.title);
+  const category = trimmed(b.category);
+  const winDate = trimmed(b.win_date);
+
+  if (!title) errors.push('title is required');
+  if (!WIN_CATEGORIES.includes(category)) errors.push(`category must be one of: ${WIN_CATEGORIES.join(', ')}`);
+  if (!winDate) errors.push('win_date is required');
+  else if (!ISO_DATE_RE.test(winDate)) errors.push('win_date must be YYYY-MM-DD');
+
+  return {
+    errors,
+    row: {
+      win_date: winDate,
+      category,
+      title,
+      description: trimmed(b.description) || null,
+      jira_issue_key: trimmed(b.jira_issue_key) || null
+    }
+  };
+}
+
+function validateBlocker(body) {
+  const errors = [];
+  const b = body || {};
+  const title = trimmed(b.title);
+  const pic = trimmed(b.pic);
+  const priority = trimmed(b.priority);
+  const status = trimmed(b.status) || 'Open';
+  const bottleneck = trimmed(b.bottleneck);
+  const nextAction = trimmed(b.next_action);
+  const targetDate = trimmed(b.target_date);
+
+  if (!title) errors.push('title is required');
+  if (!pic) errors.push('pic is required');
+  if (!bottleneck) errors.push('bottleneck is required');
+  if (!nextAction) errors.push('next_action is required');
+  if (!BLOCKER_PRIORITIES.includes(priority)) errors.push(`priority must be one of: ${BLOCKER_PRIORITIES.join(', ')}`);
+  if (!BLOCKER_STATUSES.includes(status)) errors.push(`status must be one of: ${BLOCKER_STATUSES.join(', ')}`);
+  if (targetDate && !ISO_DATE_RE.test(targetDate)) errors.push('target_date must be YYYY-MM-DD');
+
+  return {
+    errors,
+    row: {
+      title,
+      jira_issue_key: trimmed(b.jira_issue_key) || null,
+      pic,
+      priority,
+      status,
+      bottleneck,
+      next_action: nextAction,
+      target_date: targetDate || null
+    }
+  };
+}
+
+function sendSupabaseError(res, e, label) {
+  console.error(`${label} error:`, e.message);
+  res.status(e.status && e.status >= 400 && e.status < 600 ? e.status : 502).json({ error: e.message });
+}
+
+// Generates GET/POST/PUT for one table — wins and blockers differ only by
+// table name, validator and sort order, so the routes are built from one
+// definition instead of six near-identical handlers.
+function registerCrudRoutes(routeName, table, validate, order) {
+  app.get(`/api/${routeName}`, requireSupabase, async (req, res) => {
+    try {
+      res.json(await supabaseRequest('GET', `${table}?select=*&order=${order}`));
+    } catch (e) { sendSupabaseError(res, e, routeName); }
+  });
+
+  app.post(`/api/${routeName}`, requireSupabase, async (req, res) => {
+    const { errors, row } = validate(req.body);
+    if (errors.length) return res.status(400).json({ error: errors.join('; ') });
+    try {
+      const created = await supabaseRequest('POST', table, row);
+      res.status(201).json(Array.isArray(created) ? created[0] : created);
+    } catch (e) { sendSupabaseError(res, e, routeName); }
+  });
+
+  app.put(`/api/${routeName}/:id`, requireSupabase, async (req, res) => {
+    if (!UUID_RE.test(req.params.id)) return res.status(400).json({ error: 'Invalid id' });
+    const { errors, row } = validate(req.body);
+    if (errors.length) return res.status(400).json({ error: errors.join('; ') });
+    row.updated_at = new Date().toISOString();
+    try {
+      const updated = await supabaseRequest('PATCH', `${table}?id=eq.${req.params.id}`, row);
+      if (!updated || !updated.length) return res.status(404).json({ error: 'Not found' });
+      res.json(updated[0]);
+    } catch (e) { sendSupabaseError(res, e, routeName); }
+  });
+
+  // No DELETE route by design: entries are corrected by editing, never
+  // removed. A blocker that no longer applies is set to Resolved, which
+  // hides it from the panel while keeping the record.
+}
+
+registerCrudRoutes('airpay-wins', 'wins', validateWin, 'win_date.desc,created_at.desc');
+registerCrudRoutes('airpay-blockers', 'blockers', validateBlocker, 'priority.asc,created_at.desc');
+
+// Reference list for the "pick a task" dropdown in both forms. /api/sync-status
+// can't serve this: its JQL is capped at `updated >= 7 days`, maxResults=100,
+// then sliced to 50 across up to 30 projects. /api/tasks can't either — it
+// always ANDs an assignee filter, so unassigned AIRPAY issues would vanish.
+const AIRPAY_JIRA_PROJECT = 'AIRPAY';
+
+app.get('/api/airpay-issues', async (req, res) => {
+  try {
+    if (isFresh('airpayIssues') && cache.airpayIssues) return res.json(cache.airpayIssues);
+    const issues = await jiraSearchAll(`project = ${AIRPAY_JIRA_PROJECT} ORDER BY updated DESC`, 'summary');
+    const list = issues.map(i => ({ key: i.key, summary: i.fields?.summary || '' }));
+    cache.airpayIssues = list;
+    cache.ts.airpayIssues = Date.now();
+    res.json(list);
+  } catch (e) {
+    console.error('airpay-issues error:', e.message);
     res.status(502).json({ error: e.message });
   }
 });

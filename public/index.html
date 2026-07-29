@@ -828,6 +828,38 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .ap-prio.p0{background:var(--red-50);color:var(--red-600)}
 .ap-prio.p1{background:var(--amber-50);color:var(--amber-600)}
 .ap-prio.p2{background:var(--blue-50);color:var(--blue-600)}
+/* P3/P4 exist in the Blocker form's priority list, so they need chips too —
+   without these they'd render as unstyled text next to the coloured P0–P2. */
+.ap-prio.p3{background:var(--ink-50);color:var(--ink-500)}
+.ap-prio.p4{background:var(--ink-50);color:var(--ink-400)}
+
+/* Status chip on a blocker row — replaces the old INTERNAL/EXTERNAL badge,
+   which was a regex guess over sheet prose with no equivalent in the schema. */
+.ap-bstatus{font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:3px;flex-shrink:0;text-transform:uppercase;letter-spacing:.03em}
+.ap-bstatus.open{background:var(--red-50);color:var(--red-600)}
+.ap-bstatus.progress{background:var(--amber-50);color:var(--amber-600)}
+.ap-bstatus.resolved{background:var(--green-50);color:var(--green-600)}
+
+/* Inline add/edit form — lives inside the panel (CLAUDE.md: modals are a last
+   resort, prefer progressive disclosure like the Capacity rows). */
+.ap-form{padding:14px 16px;border-bottom:1px solid var(--ink-100);background:var(--ink-50);display:grid;gap:10px}
+.ap-form-row{display:grid;gap:4px}
+.ap-form-row.two{grid-template-columns:1fr 1fr;gap:10px}
+.ap-form label{font-size:10px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.05em}
+.ap-form input,.ap-form select,.ap-form textarea{width:100%;font:inherit;font-size:12px;padding:7px 9px;border:1px solid var(--ink-100);border-radius:var(--radius-sm);background:var(--ink-0);color:var(--ink-800)}
+.ap-form input:focus,.ap-form select:focus,.ap-form textarea:focus{outline:2px solid var(--blue-500);outline-offset:-1px;border-color:transparent}
+.ap-form textarea{resize:vertical;min-height:52px;line-height:1.5}
+.ap-form-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ap-form-err{font-size:11.5px;color:var(--red-600);font-weight:600;line-height:1.45}
+.ap-form-hint{font-size:10.5px;color:var(--ink-400);font-style:italic}
+.ap-row-actions{display:flex;gap:4px;margin-left:auto;flex-shrink:0}
+.ap-icon-btn{border:1px solid var(--ink-100);background:var(--ink-0);color:var(--ink-500);font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:var(--radius-sm);cursor:pointer;transition:all .15s var(--ease)}
+.ap-icon-btn:hover{background:var(--ink-50);color:var(--ink-800);border-color:var(--ink-200)}
+.ap-icon-btn:focus-visible{outline:2px solid var(--blue-500);outline-offset:1px}
+.ap-icon-btn:disabled{opacity:.5;cursor:not-allowed}
+.ap-panel-add{border:1px solid var(--ink-100);background:var(--ink-0);color:var(--ink-600);font-size:11px;font-weight:700;padding:3px 10px;border-radius:var(--r-pill);cursor:pointer;transition:all .15s var(--ease)}
+.ap-panel-add:hover{background:var(--blue-50);color:var(--blue-600);border-color:var(--blue-100)}
+.ap-panel-add:focus-visible{outline:2px solid var(--blue-500);outline-offset:1px}
 
 .ap-decision{margin:0 24px 20px;background:var(--amber-50);border:1px solid var(--amber-100);border-radius:var(--radius-lg);padding:14px 18px}
 .ap-decision-title{font-size:12.5px;font-weight:600;color:var(--amber-600);margin-bottom:8px;display:flex;align-items:center;gap:6px}
@@ -889,6 +921,8 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 
 @media print{
   .sidebar,.topbar,#top-loader,.ap-noprint,.ap-sort-toggle,.ap-task-checkbox{display:none!important}
+  /* Editing chrome is screen-only — a printed report shouldn't show controls */
+  .ap-form,.ap-panel-add,.ap-row-actions{display:none!important}
   #page-airpay-detail .ap-task-card{break-inside:avoid;box-shadow:none;border:1px solid #ccc}
   body{background:#fff}
 }
@@ -5661,7 +5695,22 @@ const AIRPAY = {
   detailSearch: '',
   summaryCategory: '',
   summaryStatus: '',
-  summarySearch: ''
+  summarySearch: '',
+
+  // ——— Manually curated Wins & Blockers (Supabase, not the sheet) ———
+  wins: null,               // last known-good array, null until first load
+  blockers: null,
+  curStatus: 'idle',        // idle | loading | live | error  (curated data only)
+  curErrorMsg: null,
+  winsCategory: '',         // '' (all) | Platform | DCB | Digital Payment
+  blockerPrio: '',          // '' (all) | P0..P4
+  jiraIssues: null,         // dropdown reference, fetched once
+  picOptions: null,         // dropdown reference, fetched once
+  // Which inline form is open, if any: { kind:'win'|'blocker', id:null|uuid }.
+  // Polling is paused while this is set so a refresh can't wipe what's typed.
+  form: null,
+  formBusy: false,
+  formError: null
 };
 
 function apEsc(v) {
@@ -5822,6 +5871,10 @@ function airpayRenderErrorBanner() {
   const b = document.getElementById('ap-det-error'); if (b) b.innerHTML = html;
 }
 async function airpayFetch() {
+  // Curated rows live in Supabase and refresh on the same cadence as the
+  // sheet, but apFetchCurated() no-ops while a form is open so a poll can
+  // never wipe what the user is typing.
+  const curated = apFetchCurated();
   AIRPAY.status = AIRPAY.data ? 'syncing' : 'loading';
   airpayRenderSync();
   try {
@@ -5835,9 +5888,11 @@ async function airpayFetch() {
     AIRPAY.status = 'error';
     AIRPAY.errorMsg = e.message;
   }
+  await curated;
   airpayRenderSync();
   airpayRenderErrorBanner();
-  if (document.getElementById('page-airpay-summary')?.classList.contains('active')) renderAirpaySummary();
+  // Re-rendering the summary would tear down an open form mid-edit.
+  if (!AIRPAY.form && document.getElementById('page-airpay-summary')?.classList.contains('active')) renderAirpaySummary();
   if (document.getElementById('page-airpay-detail')?.classList.contains('active')) renderAirpayDetail();
 }
 function airpayManualRefresh() { airpayFetch(); }
@@ -5850,53 +5905,388 @@ function loadAirpaySummaryPage() { ensureAirpayPolling(); renderAirpaySummary();
 function loadAirpayDetailPage() { ensureAirpayPolling(); renderAirpayDetail(); }
 
 // ——— Summary Report ———
-function apWinsHtml(tasks, today) {
-  const wins = tasks.filter(t => t.group === 'delivered' && t.target && apWithinDays(t.target, today, 7, 0))
-    .sort((a, b) => (b.target || '').localeCompare(a.target || ''))
-    .slice(0, 6);
-  if (!wins.length) return `<div class="ap-item-row" style="color:var(--ink-400)">No items completed in the last 7 days.</div>`;
-  return wins.map(t => `
+// Wins, Blockers and Decision Required are manually curated and live in
+// Supabase (see /api/airpay-wins, /api/airpay-blockers). They are NOT derived
+// from the sheet — the sheet still drives the donut, the KPI cards and the
+// Gantt below, which is why those KPI labels say "from sheet".
+const AP_WIN_CATEGORIES = ['Platform', 'DCB', 'Digital Payment'];
+const AP_PRIORITIES = ['P0', 'P1', 'P2', 'P3', 'P4'];
+const AP_BLOCKER_STATUSES = ['Open', 'In Progress', 'Resolved'];
+const AP_PRIO_RANK = { P0: 0, P1: 1, P2: 2, P3: 3, P4: 4 };
+const AP_WINS_WINDOW_DAYS = 7;
+const AP_PANEL_CAP = 12;
+
+function apJiraKeyHtml(key) {
+  return key ? ` <span style="font-family:var(--font-mono);font-size:10px;color:var(--ink-400);font-weight:400">${apEsc(key)}</span>` : '';
+}
+// Edit only — there is deliberately no delete. Entries are corrected in place;
+// a blocker that no longer applies is set to Resolved, which hides it from the
+// panel without destroying the record.
+function apRowActions(kind, id) {
+  return `<span class="ap-row-actions">
+    <button class="ap-icon-btn" onclick="apOpenForm('${kind}','${apEsc(id)}')">Edit</button>
+  </span>`;
+}
+function apCuratedEmpty(msg) {
+  return `<div class="ap-item-row" style="color:var(--ink-400)">${apEsc(msg)}</div>`;
+}
+
+function apWinsHtml() {
+  if (AIRPAY.wins === null) return apCuratedEmpty('Loading wins…');
+  const today = apToday();
+  let rows = AIRPAY.wins.filter(w => w.win_date && apWithinDays(w.win_date, today, AP_WINS_WINDOW_DAYS, 0));
+  if (AIRPAY.winsCategory) rows = rows.filter(w => w.category === AIRPAY.winsCategory);
+  rows = rows.sort((a, b) => (b.win_date || '').localeCompare(a.win_date || '')).slice(0, AP_PANEL_CAP);
+
+  if (!rows.length) {
+    return apCuratedEmpty(AIRPAY.winsCategory
+      ? `No ${AIRPAY.winsCategory} wins in the last 7 days.`
+      : 'No wins recorded in the last 7 days. Use “+ Add” to log one.');
+  }
+  return rows.map(w => `
     <div class="ap-item-row">
-      <div class="ap-item-name">${apEsc(t.name)} <span style="font-family:var(--font-mono);font-size:10px;color:var(--ink-400);font-weight:400">${apEsc(t.id)}</span></div>
-      <div class="ap-item-sub">${apEsc(t.detail || t.category || '')}</div>
+      <div class="ap-item-name">
+        <span class="ap-badge int">${apEsc(w.category)}</span>
+        ${apEsc(w.title)}${apJiraKeyHtml(w.jira_issue_key)}
+        ${apRowActions('win', w.id)}
+      </div>
+      <div class="ap-item-sub">${apEsc(w.description || w.category || '')} <span style="color:var(--ink-400)">· ${apFmtDate(w.win_date)}</span></div>
     </div>`).join('');
 }
-// EXTERNAL/INTERNAL badge: no explicit column for this in the sheet, so this
-// is a light heuristic (bottleneck/dependency text naming an outside party).
-// Defaults to INTERNAL when the signal isn't there, per the prompt's own
-// fallback rule — replace with a real signal if the sheet ever adds one.
-function apBlockersHtml(tasks) {
-  const prioRank = { P0: 0, P1: 1, P2: 2 };
-  const blockers = tasks.filter(t => t.group === 'inprogress' && t.bottleneck && t.bottleneck !== '-')
-    .sort((a, b) => (prioRank[a.prio] ?? 3) - (prioRank[b.prio] ?? 3));
-  if (!blockers.length) return `<div class="ap-item-row" style="color:var(--ink-400)">No active blockers right now.</div>`;
-  return blockers.slice(0, 8).map(t => {
-    const isExt = /pihak |dari pihak|vendor|partner/i.test((t.bottleneck || '') + ' ' + (t.dependency || '') + ' ' + (t.nextAction || ''));
-    return `<div class="ap-item-row">
-      <div class="ap-item-name">
-        ${t.prio ? `<span class="ap-prio ${t.prio.toLowerCase()}">${t.prio}</span>` : ''}
-        <span class="ap-badge ${isExt ? 'ext' : 'int'}">${isExt ? 'EXTERNAL' : 'INTERNAL'}</span>
-        ${apEsc(t.name)}
-      </div>
-      <div class="ap-item-sub"><b>Bottleneck:</b> ${apEsc(t.bottleneck)}</div>
-      <div class="ap-item-sub"><b>Next:</b> ${apEsc(t.nextAction)}</div>
-    </div>`;
-  }).join('');
+
+// Resolved blockers are hidden from the panel but still editable via the list
+// the form works from — resolving is not deleting.
+function apBlockerStatusClass(s) {
+  return s === 'Resolved' ? 'resolved' : s === 'In Progress' ? 'progress' : 'open';
 }
-function apDecisionHtml(tasks, today) {
-  const p0Blockers = tasks.filter(t => t.group === 'inprogress' && t.prio === 'P0' && t.bottleneck && t.bottleneck !== '-')
+function apBlockersHtml() {
+  if (AIRPAY.blockers === null) return apCuratedEmpty('Loading blockers…');
+  let rows = AIRPAY.blockers.filter(b => b.status !== 'Resolved');
+  if (AIRPAY.blockerPrio) rows = rows.filter(b => b.priority === AIRPAY.blockerPrio);
+  rows = rows.sort((a, b) => {
+    const d = (AP_PRIO_RANK[a.priority] ?? 9) - (AP_PRIO_RANK[b.priority] ?? 9);
+    return d !== 0 ? d : (b.created_at || '').localeCompare(a.created_at || '');
+  }).slice(0, AP_PANEL_CAP);
+
+  if (!rows.length) {
+    return apCuratedEmpty(AIRPAY.blockerPrio
+      ? `No open ${AIRPAY.blockerPrio} blockers.`
+      : 'No active blockers right now. Use “+ Add” to log one.');
+  }
+  return rows.map(b => `
+    <div class="ap-item-row">
+      <div class="ap-item-name">
+        <span class="ap-prio ${b.priority.toLowerCase()}">${apEsc(b.priority)}</span>
+        <span class="ap-bstatus ${apBlockerStatusClass(b.status)}">${apEsc(b.status)}</span>
+        ${apEsc(b.title)}${apJiraKeyHtml(b.jira_issue_key)}
+        ${apRowActions('blocker', b.id)}
+      </div>
+      <div class="ap-item-sub"><b>Bottleneck:</b> ${apEsc(b.bottleneck)}</div>
+      <div class="ap-item-sub"><b>Next:</b> ${apEsc(b.next_action)}</div>
+      <div class="ap-item-sub" style="color:var(--ink-400)">PIC ${apEsc(b.pic)}${b.target_date ? ` · target ${apFmtDate(b.target_date)}` : ''}</div>
+    </div>`).join('');
+}
+
+function apDecisionHtml() {
+  if (!AIRPAY.blockers) return '';
+  const today = apToday();
+  const rows = AIRPAY.blockers
+    .filter(b => b.priority === 'P0' && b.status !== 'Resolved')
     .sort((a, b) => {
-      const aOver = a.target && new Date(a.target + 'T00:00:00Z') < today;
-      const bOver = b.target && new Date(b.target + 'T00:00:00Z') < today;
+      // Overdue first, then nearest target; undated entries sink to the bottom.
+      const aOver = a.target_date && new Date(a.target_date + 'T00:00:00Z') < today;
+      const bOver = b.target_date && new Date(b.target_date + 'T00:00:00Z') < today;
       if (aOver !== bOver) return aOver ? -1 : 1;
-      return (a.target || '').localeCompare(b.target || '');
+      if (!a.target_date !== !b.target_date) return a.target_date ? -1 : 1;
+      return (a.target_date || '').localeCompare(b.target_date || '');
     })
     .slice(0, 3);
-  if (!p0Blockers.length) return '';
+  if (!rows.length) return '';
   return `<div class="ap-decision">
     <div class="ap-decision-title">⚡ Decision Required</div>
-    <ul>${p0Blockers.map(t => `<li><b>${apEsc(t.name)}</b> — ${apEsc(t.bottleneck)} <span style="color:var(--ink-400)">(target ${apFmtDate(t.target)}${t.pic && t.pic !== '-' ? ', PIC ' + apEsc(t.pic) : ''})</span></li>`).join('')}</ul>
-    <div class="ap-note">Auto-generated suggestion based on current data (P0 items with an active bottleneck, sorted overdue → nearest target) — not manual curation.</div>
+    <ul>${rows.map(b => `<li><b>${apEsc(b.title)}</b> — ${apEsc(b.bottleneck)} <span style="color:var(--ink-400)">(${b.target_date ? 'target ' + apFmtDate(b.target_date) + ', ' : ''}PIC ${apEsc(b.pic)})</span></li>`).join('')}</ul>
+    <div class="ap-note">Open P0 blockers, sorted overdue → nearest target. Entries are curated manually in the Blockers panel above.</div>
+  </div>`;
+}
+
+// ——— Curated data: fetch, forms, CRUD ———
+async function apFetchCurated() {
+  // Never clobber a form the user is filling in.
+  if (AIRPAY.form) return;
+  try {
+    const [winsRes, blockersRes] = await Promise.all([
+      fetch('/api/airpay-wins'),
+      fetch('/api/airpay-blockers')
+    ]);
+    const wins = await winsRes.json();
+    const blockers = await blockersRes.json();
+    if (!winsRes.ok) throw new Error(wins.error || ('HTTP ' + winsRes.status));
+    if (!blockersRes.ok) throw new Error(blockers.error || ('HTTP ' + blockersRes.status));
+    AIRPAY.wins = wins;
+    AIRPAY.blockers = blockers;
+    AIRPAY.curStatus = 'live';
+    AIRPAY.curErrorMsg = null;
+  } catch (e) {
+    // Keep last known-good rows on screen; surface the failure in the panel.
+    AIRPAY.curStatus = 'error';
+    AIRPAY.curErrorMsg = e.message;
+    if (AIRPAY.wins === null) AIRPAY.wins = [];
+    if (AIRPAY.blockers === null) AIRPAY.blockers = [];
+  }
+}
+
+// Dropdown reference data — fetched once, on first form open, so opening the
+// page costs nothing extra.
+async function apEnsureFormRefs() {
+  const jobs = [];
+  if (AIRPAY.jiraIssues === null) {
+    jobs.push(fetch('/api/airpay-issues')
+      .then(r => r.ok ? r.json() : [])
+      .then(list => { AIRPAY.jiraIssues = Array.isArray(list) ? list : []; })
+      .catch(() => { AIRPAY.jiraIssues = []; }));
+  }
+  if (AIRPAY.picOptions === null) {
+    jobs.push(fetch('/api/members')
+      .then(r => r.ok ? r.json() : [])
+      .then(list => { AIRPAY.picOptions = (Array.isArray(list) ? list : []).map(m => m.displayName).filter(Boolean).sort(); })
+      .catch(() => { AIRPAY.picOptions = []; }));
+  }
+  if (jobs.length) await Promise.all(jobs);
+}
+
+function apFindEntry(kind, id) {
+  const list = kind === 'win' ? AIRPAY.wins : AIRPAY.blockers;
+  return (list || []).find(x => x.id === id) || null;
+}
+
+async function apOpenForm(kind, id) {
+  AIRPAY.form = { kind, id: id || null };
+  AIRPAY.formError = null;
+  AIRPAY.formBusy = false;
+  renderAirpaySummary();          // paint the form immediately…
+  await apEnsureFormRefs();
+  if (AIRPAY.form) renderAirpaySummary();  // …then again once dropdowns land
+}
+function apCloseForm() {
+  AIRPAY.form = null;
+  AIRPAY.formError = null;
+  AIRPAY.formBusy = false;
+  renderAirpaySummary();
+}
+
+function apOptionsHtml(values, selected) {
+  return values.map(v => `<option value="${apEsc(v)}"${v === selected ? ' selected' : ''}>${apEsc(v)}</option>`).join('');
+}
+// Task picker: a list of AIRPAY issues plus an "Other" escape hatch, because
+// plenty of real work in this report has no Jira issue behind it.
+function apTaskPickerHtml(idPrefix, currentTitle, currentKey) {
+  const issues = AIRPAY.jiraIssues || [];
+  const matched = currentKey && issues.some(i => i.key === currentKey);
+  const loading = AIRPAY.jiraIssues === null;
+  return `
+    <div class="ap-form-row">
+      <label for="${idPrefix}-issue">Task name</label>
+      <select id="${idPrefix}-issue" onchange="apOnTaskPick('${idPrefix}')">
+        <option value="">${loading ? 'Loading AIRPAY issues…' : '— Select an AIRPAY issue —'}</option>
+        ${issues.map(i => `<option value="${apEsc(i.key)}"${i.key === currentKey ? ' selected' : ''}>${apEsc(i.key)} — ${apEsc(i.summary)}</option>`).join('')}
+        <option value="__other__"${(!matched && currentTitle) ? ' selected' : ''}>Other (type manually)</option>
+      </select>
+    </div>
+    <div class="ap-form-row" id="${idPrefix}-title-row" style="${(!matched && currentTitle) || !currentKey ? '' : 'display:none'}">
+      <label for="${idPrefix}-title">Title</label>
+      <input id="${idPrefix}-title" type="text" value="${apEsc(currentTitle || '')}" placeholder="Describe the item">
+    </div>`;
+}
+function apOnTaskPick(idPrefix) {
+  const sel = document.getElementById(idPrefix + '-issue');
+  const row = document.getElementById(idPrefix + '-title-row');
+  const title = document.getElementById(idPrefix + '-title');
+  if (!sel || !row || !title) return;
+  if (sel.value === '__other__' || sel.value === '') {
+    row.style.display = '';
+    if (sel.value === '__other__') title.focus();
+  } else {
+    // Prefill from the issue summary but keep the field visible-free: the
+    // title is derived, and the user can still switch to "Other" to edit it.
+    const issue = (AIRPAY.jiraIssues || []).find(i => i.key === sel.value);
+    title.value = issue ? issue.summary : '';
+    row.style.display = 'none';
+  }
+}
+
+function apFormButtonsHtml() {
+  return `
+    ${AIRPAY.formError ? `<div class="ap-form-err">${apEsc(AIRPAY.formError)}</div>` : ''}
+    <div class="ap-form-actions">
+      <button class="btn btn-primary" onclick="apSubmitForm()" ${AIRPAY.formBusy ? 'disabled' : ''}>${AIRPAY.formBusy ? 'Saving…' : 'Save'}</button>
+      <button class="btn btn-ghost" onclick="apCloseForm()" ${AIRPAY.formBusy ? 'disabled' : ''}>Cancel</button>
+    </div>`;
+}
+
+function apWinFormHtml() {
+  const w = AIRPAY.form.id ? apFindEntry('win', AIRPAY.form.id) : null;
+  const todayIso = new Date().toISOString().slice(0, 10);
+  return `<div class="ap-form">
+    <div class="ap-form-row two">
+      <div class="ap-form-row">
+        <label for="win-date">Date</label>
+        <input id="win-date" type="date" value="${apEsc(w ? w.win_date : todayIso)}">
+      </div>
+      <div class="ap-form-row">
+        <label for="win-category">Category</label>
+        <select id="win-category">${apOptionsHtml(AP_WIN_CATEGORIES, w ? w.category : 'Platform')}</select>
+      </div>
+    </div>
+    ${apTaskPickerHtml('win', w ? w.title : '', w ? w.jira_issue_key : '')}
+    <div class="ap-form-row">
+      <label for="win-description">Description <span style="text-transform:none;font-weight:400">(optional)</span></label>
+      <textarea id="win-description" placeholder="What was delivered?">${apEsc(w ? (w.description || '') : '')}</textarea>
+    </div>
+    ${apFormButtonsHtml()}
+  </div>`;
+}
+
+function apBlockerFormHtml() {
+  const b = AIRPAY.form.id ? apFindEntry('blocker', AIRPAY.form.id) : null;
+  const pics = AIRPAY.picOptions || [];
+  const picKnown = b && pics.includes(b.pic);
+  return `<div class="ap-form">
+    ${apTaskPickerHtml('blk', b ? b.title : '', b ? b.jira_issue_key : '')}
+    <div class="ap-form-row">
+      <label for="blk-pic">PIC</label>
+      <select id="blk-pic" onchange="apOnPicPick()">
+        <option value="">${AIRPAY.picOptions === null ? 'Loading members…' : '— Select a team member —'}</option>
+        ${pics.map(p => `<option value="${apEsc(p)}"${picKnown && p === b.pic ? ' selected' : ''}>${apEsc(p)}</option>`).join('')}
+        <option value="__other__"${b && !picKnown ? ' selected' : ''}>Other…</option>
+      </select>
+    </div>
+    <div class="ap-form-row" id="blk-pic-other-row" style="${b && !picKnown ? '' : 'display:none'}">
+      <label for="blk-pic-other">PIC name</label>
+      <input id="blk-pic-other" type="text" value="${apEsc(b && !picKnown ? b.pic : '')}" placeholder="Name (not a Jira user)">
+    </div>
+    <div class="ap-form-row two">
+      <div class="ap-form-row">
+        <label for="blk-priority">Priority</label>
+        <select id="blk-priority">${apOptionsHtml(AP_PRIORITIES, b ? b.priority : 'P1')}</select>
+      </div>
+      <div class="ap-form-row">
+        <label for="blk-status">Status</label>
+        <select id="blk-status">${apOptionsHtml(AP_BLOCKER_STATUSES, b ? b.status : 'Open')}</select>
+      </div>
+    </div>
+    <div class="ap-form-row">
+      <label for="blk-bottleneck">Bottleneck</label>
+      <textarea id="blk-bottleneck" placeholder="What is blocking this?">${apEsc(b ? b.bottleneck : '')}</textarea>
+    </div>
+    <div class="ap-form-row">
+      <label for="blk-next">Next action</label>
+      <textarea id="blk-next" placeholder="What happens next, and who moves it?">${apEsc(b ? b.next_action : '')}</textarea>
+    </div>
+    <div class="ap-form-row">
+      <label for="blk-target">Target date <span style="text-transform:none;font-weight:400">(optional)</span></label>
+      <input id="blk-target" type="date" value="${apEsc(b && b.target_date ? b.target_date : '')}">
+      <div class="ap-form-hint">Drives the ordering in the Decision Required panel.</div>
+    </div>
+    ${apFormButtonsHtml()}
+  </div>`;
+}
+function apOnPicPick() {
+  const sel = document.getElementById('blk-pic');
+  const row = document.getElementById('blk-pic-other-row');
+  if (!sel || !row) return;
+  row.style.display = sel.value === '__other__' ? '' : 'none';
+  if (sel.value === '__other__') document.getElementById('blk-pic-other')?.focus();
+}
+
+function apReadTaskPicker(idPrefix) {
+  const sel = document.getElementById(idPrefix + '-issue');
+  const titleEl = document.getElementById(idPrefix + '-title');
+  const picked = sel ? sel.value : '';
+  if (picked && picked !== '__other__') {
+    const issue = (AIRPAY.jiraIssues || []).find(i => i.key === picked);
+    return { title: (issue && issue.summary) || (titleEl ? titleEl.value : ''), jira_issue_key: picked };
+  }
+  return { title: titleEl ? titleEl.value.trim() : '', jira_issue_key: null };
+}
+
+async function apSubmitForm() {
+  if (!AIRPAY.form || AIRPAY.formBusy) return;
+  const { kind, id } = AIRPAY.form;
+  let payload;
+
+  if (kind === 'win') {
+    const picked = apReadTaskPicker('win');
+    payload = {
+      win_date: document.getElementById('win-date')?.value || '',
+      category: document.getElementById('win-category')?.value || '',
+      title: picked.title,
+      jira_issue_key: picked.jira_issue_key,
+      description: document.getElementById('win-description')?.value || ''
+    };
+  } else {
+    const picked = apReadTaskPicker('blk');
+    const picSel = document.getElementById('blk-pic')?.value || '';
+    payload = {
+      title: picked.title,
+      jira_issue_key: picked.jira_issue_key,
+      pic: picSel === '__other__' ? (document.getElementById('blk-pic-other')?.value || '') : picSel,
+      priority: document.getElementById('blk-priority')?.value || '',
+      status: document.getElementById('blk-status')?.value || 'Open',
+      bottleneck: document.getElementById('blk-bottleneck')?.value || '',
+      next_action: document.getElementById('blk-next')?.value || '',
+      target_date: document.getElementById('blk-target')?.value || ''
+    };
+  }
+
+  AIRPAY.formBusy = true;
+  AIRPAY.formError = null;
+  renderAirpaySummary();
+
+  const route = kind === 'win' ? 'airpay-wins' : 'airpay-blockers';
+  try {
+    const res = await fetch(id ? `/api/${route}/${id}` : `/api/${route}`, {
+      method: id ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
+    // Success: close the form first so the refetch isn't skipped by the guard.
+    AIRPAY.form = null;
+    AIRPAY.formBusy = false;
+    await apFetchCurated();
+    renderAirpaySummary();
+  } catch (e) {
+    // Keep the form open — losing what was typed is worse than the error.
+    AIRPAY.formBusy = false;
+    AIRPAY.formError = e.message;
+    renderAirpaySummary();
+  }
+}
+
+// Filter pills for the curated panels, reusing the existing pill vocabulary.
+function apCuratedPill(label, active, onclick) {
+  const style = active
+    ? 'background:var(--blue-700);color:#fff;border-color:var(--blue-700)'
+    : 'background:var(--ink-0);color:var(--ink-500)';
+  return `<button class="status-pill" style="${style}" onclick="${onclick}">${apEsc(label)}</button>`;
+}
+function apWinsFilterHtml() {
+  return `<div style="display:flex;gap:5px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--ink-50)">
+    ${apCuratedPill('All', AIRPAY.winsCategory === '', `AIRPAY.winsCategory='';renderAirpaySummary()`)}
+    ${AP_WIN_CATEGORIES.map(c => apCuratedPill(c, AIRPAY.winsCategory === c, `AIRPAY.winsCategory='${c}';renderAirpaySummary()`)).join('')}
+  </div>`;
+}
+function apBlockersFilterHtml() {
+  return `<div style="display:flex;gap:5px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--ink-50)">
+    ${apCuratedPill('All', AIRPAY.blockerPrio === '', `AIRPAY.blockerPrio='';renderAirpaySummary()`)}
+    ${AP_PRIORITIES.map(p => apCuratedPill(p, AIRPAY.blockerPrio === p, `AIRPAY.blockerPrio='${p}';renderAirpaySummary()`)).join('')}
+  </div>`;
+}
+function apCuratedErrorHtml() {
+  if (AIRPAY.curStatus !== 'error') return '';
+  return `<div class="ap-item-row" style="background:var(--red-50);color:var(--red-600);font-weight:600">
+    ${apEsc(AIRPAY.curErrorMsg || 'Could not reach the database.')}
   </div>`;
 }
 function apFilteredGanttTasks(tasks) {
@@ -6079,18 +6469,36 @@ function renderAirpaySummary() {
     </div>
 
     <div class="ap-kpi-grid">
-      <div class="kpi-card"><div class="kpi-label">Closed this week</div><div class="kpi-value">${closedThisWeek}</div><div class="kpi-delta up">Target within last 7 days</div></div>
-      <div class="kpi-card"><div class="kpi-label">P0 open</div><div class="kpi-value" style="${p0Open > 0 ? 'color:var(--red-600)' : ''}">${p0Open}</div><div class="kpi-delta ${p0Open > 0 ? 'down' : 'up'}">Highest priority</div></div>
-      <div class="kpi-card"><div class="kpi-label">Overdue today</div><div class="kpi-value" style="${overdueToday > 0 ? 'color:var(--red-600)' : ''}">${overdueToday}</div><div class="kpi-delta ${overdueToday > 0 ? 'down' : 'up'}">Past target</div></div>
-      <div class="kpi-card"><div class="kpi-label">Ext. dependency</div><div class="kpi-value">${extDep}</div><div class="kpi-delta info">Has a dependency</div></div>
+      <div class="kpi-card"><div class="kpi-label">Closed this week</div><div class="kpi-value">${closedThisWeek}</div><div class="kpi-delta up">Target within last 7 days · from sheet</div></div>
+      <div class="kpi-card"><div class="kpi-label">P0 open</div><div class="kpi-value" style="${p0Open > 0 ? 'color:var(--red-600)' : ''}">${p0Open}</div><div class="kpi-delta ${p0Open > 0 ? 'down' : 'up'}">Highest priority · from sheet</div></div>
+      <div class="kpi-card"><div class="kpi-label">Overdue today</div><div class="kpi-value" style="${overdueToday > 0 ? 'color:var(--red-600)' : ''}">${overdueToday}</div><div class="kpi-delta ${overdueToday > 0 ? 'down' : 'up'}">Past target · from sheet</div></div>
+      <div class="kpi-card"><div class="kpi-label">Ext. dependency</div><div class="kpi-value">${extDep}</div><div class="kpi-delta info">Has a dependency · from sheet</div></div>
     </div>
 
     <div class="ap-2col">
-      <div class="ap-panel"><div class="ap-panel-head">🏆 Wins (last 7 days)</div>${apWinsHtml(tasks, today)}</div>
-      <div class="ap-panel"><div class="ap-panel-head">🚧 Blockers &amp; Dependencies</div>${apBlockersHtml(tasks)}</div>
+      <div class="ap-panel">
+        <div class="ap-panel-head">
+          <span>🏆 Wins (last 7 days)</span>
+          <button class="ap-panel-add" onclick="apOpenForm('win')">+ Add</button>
+        </div>
+        ${apCuratedErrorHtml()}
+        ${AIRPAY.form && AIRPAY.form.kind === 'win' ? apWinFormHtml() : ''}
+        ${apWinsFilterHtml()}
+        ${apWinsHtml()}
+      </div>
+      <div class="ap-panel">
+        <div class="ap-panel-head">
+          <span>🚧 Blockers &amp; Dependencies</span>
+          <button class="ap-panel-add" onclick="apOpenForm('blocker')">+ Add</button>
+        </div>
+        ${apCuratedErrorHtml()}
+        ${AIRPAY.form && AIRPAY.form.kind === 'blocker' ? apBlockerFormHtml() : ''}
+        ${apBlockersFilterHtml()}
+        ${apBlockersHtml()}
+      </div>
     </div>
 
-    ${apDecisionHtml(tasks, today)}
+    ${apDecisionHtml()}
 
     <div class="ap-gantt-toolbar" style="flex-direction:column;align-items:stretch;gap:12px">
       <div class="search-input" style="max-width:260px">
