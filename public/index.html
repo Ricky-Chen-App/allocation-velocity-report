@@ -919,8 +919,78 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
   .ap-2col{grid-template-columns:1fr}
 }
 
+/* ——— Login screen ——— */
+/* Sits above the whole app shell; the shell stays in the DOM but is only
+   revealed once /api/auth/me confirms a session. */
+#login-screen{position:fixed;inset:0;z-index:400;display:none;align-items:center;justify-content:center;padding:24px;
+  background:var(--bg);background-image:radial-gradient(60% 50% at 85% 0%,oklch(0.62 0.2 300/.13),transparent 70%),radial-gradient(50% 45% at 10% 0%,oklch(0.68 0.2 30/.10),transparent 70%)}
+#login-screen.show{display:flex}
+.login-card{width:100%;max-width:380px;background:var(--ink-0);border:1px solid var(--ink-100);border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);padding:30px 28px}
+.login-brand{display:flex;align-items:center;gap:11px;margin-bottom:22px}
+.login-brand-mark{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.login-brand h1{font-family:var(--font-display);font-size:16px;font-weight:700;letter-spacing:-.02em;color:var(--ink-800);margin:0;line-height:1.2}
+.login-brand p{font-size:11.5px;color:var(--ink-400);margin:2px 0 0}
+.login-field{display:grid;gap:5px;margin-bottom:13px}
+.login-field label{font-size:10px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.05em}
+.login-field input{width:100%;font:inherit;font-size:13px;padding:9px 11px;border:1px solid var(--ink-100);border-radius:var(--radius-sm);background:var(--ink-0);color:var(--ink-800)}
+.login-field input:focus{outline:2px solid var(--blue-500);outline-offset:-1px;border-color:transparent}
+.login-btn{width:100%;margin-top:7px;padding:10px;border:none;border-radius:var(--r-pill);font:inherit;font-size:13px;font-weight:700;color:#fff;cursor:pointer;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));transition:transform .15s var(--ease),opacity .15s var(--ease)}
+.login-btn:hover:not(:disabled){transform:translateY(-1px)}
+.login-btn:focus-visible{outline:2px solid var(--blue-500);outline-offset:2px}
+.login-btn:disabled{opacity:.6;cursor:not-allowed}
+.login-err{margin-top:12px;font-size:12px;font-weight:600;color:var(--red-600);line-height:1.45;display:none}
+.login-err.show{display:block}
+/* body is the flex row that lays out .sidebar + .main, so this wrapper has to
+   take over that role rather than introducing a plain block in between. */
+.app-shell{display:none}
+.app-shell.ready{display:flex;flex:1;min-width:0;height:100vh;overflow:hidden}
+
+/* ——— Topbar user menu ——— */
+.avatar-wrap{position:relative}
+.avatar-btn{border:none;background:none;padding:0;cursor:pointer;border-radius:50%}
+.avatar-btn:focus-visible{outline:2px solid var(--blue-500);outline-offset:2px}
+.user-menu{position:absolute;right:0;top:calc(100% + 8px);min-width:210px;background:var(--ink-0);border:1px solid var(--ink-100);border-radius:var(--radius-md);box-shadow:var(--shadow-lg);padding:6px;z-index:150;display:none}
+.user-menu.show{display:block}
+.user-menu-head{padding:9px 10px 10px;border-bottom:1px solid var(--ink-50);margin-bottom:5px}
+.user-menu-head b{display:block;font-size:12.5px;font-weight:700;color:var(--ink-800)}
+.user-menu-head span{display:block;font-size:11px;color:var(--ink-400);margin-top:2px;word-break:break-all}
+.user-menu button{display:block;width:100%;text-align:left;border:none;background:none;font:inherit;font-size:12.5px;color:var(--ink-700);padding:8px 10px;border-radius:var(--radius-sm);cursor:pointer}
+.user-menu button:hover{background:var(--ink-50);color:var(--ink-800)}
+.user-menu button:focus-visible{outline:2px solid var(--blue-500);outline-offset:-2px}
+.pw-warning{margin:12px 24px 0;padding:10px 14px;border-radius:var(--radius-md);background:var(--amber-50);border:1px solid var(--amber-100);color:var(--amber-700);font-size:12px;font-weight:600;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.pw-warning button{border:1px solid var(--amber-200);background:var(--ink-0);color:var(--amber-700);font:inherit;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:var(--r-pill);cursor:pointer;margin-left:auto}
+.pw-warning button:hover{background:var(--amber-100)}
+
+/* ——— User Management ——— */
+.um-perm-group{border:1px solid var(--ink-100);border-radius:var(--radius-md);overflow:hidden;margin-bottom:8px;background:var(--ink-0)}
+.um-perm-head{padding:8px 11px;background:var(--ink-50);border-bottom:1px solid var(--ink-100);display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:700;color:var(--ink-700)}
+.um-perm-head .um-count{margin-left:auto;font-weight:600;color:var(--ink-400);font-size:10.5px}
+.um-perm-body{padding:8px 11px;display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:5px 12px}
+.um-check{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-700);cursor:pointer;line-height:1.35}
+.um-check input{flex-shrink:0;cursor:pointer}
+/* .ap-form sets width:100% on every input for text fields — a checkbox must
+   opt out or it stretches across the cell and shoves its label away. */
+.ap-form input[type="checkbox"]{width:auto;min-width:0;padding:0;border:none;background:none}
+/* .ap-form label is styled as a tiny uppercase field caption; these checkbox
+   labels are body text and must opt out of it. */
+.ap-form label.um-check{font-size:12px;font-weight:500;text-transform:none;letter-spacing:normal;color:var(--ink-700);width:100%}
+.ap-form .um-perm-head label.um-check{font-size:11.5px;font-weight:700;color:var(--ink-700);width:auto}
+.ap-form .um-perm-body label.um-check{align-items:flex-start}
+.ap-form .um-perm-body label.um-check input{margin-top:2px}
+.um-scroll{max-height:270px;overflow-y:auto;border:1px solid var(--ink-100);border-radius:var(--radius-md);padding:8px;background:var(--surface-2)}
+.um-collapse-btn{border:1px solid var(--ink-100);background:var(--ink-0);color:var(--ink-600);font:inherit;font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:var(--r-pill);cursor:pointer}
+.um-collapse-btn:hover{background:var(--ink-50);color:var(--ink-800)}
+.um-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:var(--r-pill);text-transform:uppercase;letter-spacing:.03em}
+.um-status.active{background:var(--green-50);color:var(--green-600)}
+.um-status.inactive{background:var(--ink-50);color:var(--ink-400)}
+.um-role{font-size:10px;font-weight:700;padding:2px 8px;border-radius:var(--r-pill);background:var(--violet-50);color:var(--violet-600)}
+.um-sub{font-size:10.5px;color:var(--ink-400);margin-top:2px}
+.scoped-note{font-size:11px;color:var(--ink-400);font-style:italic;margin-top:6px;line-height:1.45}
+
 @media print{
   .sidebar,.topbar,#top-loader,.ap-noprint,.ap-sort-toggle,.ap-task-checkbox{display:none!important}
+  #login-screen,.user-menu,.pw-warning{display:none!important}
   /* Editing chrome is screen-only — a printed report shouldn't show controls */
   .ap-form,.ap-panel-add,.ap-row-actions{display:none!important}
   #page-airpay-detail .ap-task-card{break-inside:avoid;box-shadow:none;border:1px solid #ccc}
@@ -929,6 +999,36 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 </style>
 </head>
 <body>
+
+<!-- LOGIN SCREEN — shown until GET /api/auth/me confirms a session -->
+<div id="login-screen">
+  <form class="login-card" onsubmit="event.preventDefault();doLogin()">
+    <div class="login-brand">
+      <div class="login-brand-mark">
+        <svg viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="1.5" width="19" height="19">
+          <rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/>
+          <rect x="2" y="9" width="5" height="5" rx="1"/><circle cx="11.5" cy="11.5" r="2.5"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Resource Portal</h1>
+        <p>Linkit360 · sign in to continue</p>
+      </div>
+    </div>
+    <div class="login-field">
+      <label for="login-username">Username</label>
+      <input id="login-username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+    </div>
+    <div class="login-field">
+      <label for="login-password">Password</label>
+      <input id="login-password" type="password" autocomplete="current-password" required>
+    </div>
+    <button class="login-btn" id="login-btn" type="submit">Sign in</button>
+    <div class="login-err" id="login-err"></div>
+  </form>
+</div>
+
+<div class="app-shell" id="app-shell">
 
 <!-- MOBILE SIDEBAR OVERLAY -->
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar(false)"></div>
@@ -986,6 +1086,10 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
       Jira Sync
       <span class="nav-badge red" id="nav-sync-badge" style="display:none"></span>
     </button>
+    <button class="nav-item" data-navid="usermgmt" onclick="showPage('usermgmt',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="5" r="3"/><path d="M1 14c0-3 2-4 5-4s5 1 5 4"/><path d="M12.5 8.5v4M10.5 10.5h4"/></svg>
+      User Management
+    </button>
   </div>
 
   <div class="nav-section">
@@ -1036,7 +1140,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
     </button>
     <span style="font-weight:600;font-size:14px;color:var(--ink-900);flex:1">Resource Portal</span>
-    <div class="avatar" style="width:28px;height:28px;font-size:10px">RA</div>
+    <div class="avatar" id="avatar-mobile" style="width:28px;height:28px;font-size:10px">··</div>
   </div>
   <header class="topbar">
     <div class="sync-status">
@@ -1045,7 +1149,19 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
     </div>
     <div class="topbar-actions">
       <span style="font-size:12px;color:var(--ink-400)" id="period-label"></span>
-      <div class="avatar">RA</div>
+      <div class="avatar-wrap">
+        <button class="avatar-btn" onclick="toggleUserMenu(event)" aria-label="Account menu">
+          <div class="avatar" id="avatar-desktop">··</div>
+        </button>
+        <div class="user-menu" id="user-menu">
+          <div class="user-menu-head">
+            <b id="user-menu-name">—</b>
+            <span id="user-menu-email"></span>
+          </div>
+          <button onclick="openChangePassword()">Change password</button>
+          <button onclick="doLogout()">Sign out</button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -1056,11 +1172,19 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
       <span id="error-msg"></span>
     </div>
 
+    <!-- Shown while the signed-in user still has a password set by an admin -->
+    <div class="pw-warning" id="pw-warning" style="display:none">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="15" height="15" style="flex-shrink:0"><path d="M8 1.5l6.5 12h-13z"/><path d="M8 6v3.5M8 11.2v.5"/></svg>
+      <span>Your password still needs to be changed — set your own before sharing this dashboard.</span>
+      <button onclick="openChangePassword()">Change password</button>
+    </div>
+
     <!-- ======== EXECUTIVE ======== -->
     <div class="page active" id="page-executive">
       <div class="exec-hero">
         <h1>Executive Overview</h1>
         <p id="exec-subtitle">Loading data from Jira…</p>
+        <div id="exec-scoped-note"></div>
       </div>
       <div id="exec-alert"></div>
       <div class="kpi-grid" id="kpi-grid">
@@ -1083,6 +1207,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
         <div>
           <div class="page-title">Developer Capacity</div>
           <div class="page-sub" id="cap-subtitle">Loading…</div>
+          <div id="cap-scoped-note"></div>
         </div>
         <button class="btn btn-ghost" onclick="exportCapacityCSV()">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v9M4 8l4 4 4-4"/><path d="M2 14h12"/></svg>
@@ -1512,6 +1637,21 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
       <div id="ap-det-body"></div>
     </div>
 
+    <div class="page" id="page-usermgmt">
+      <div class="page-header">
+        <div>
+          <div class="page-title">User Management</div>
+          <div class="page-sub" id="um-subtitle">Register users and choose which projects each of them can see</div>
+        </div>
+        <button class="btn btn-primary" onclick="umOpenForm()">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3.5v9M3.5 8h9"/></svg>
+          Add user
+        </button>
+      </div>
+      <div id="um-form-slot" style="padding:0 24px"></div>
+      <div id="um-body" style="padding:0 24px 24px"></div>
+    </div>
+
   </div>
 </div>
 
@@ -1536,6 +1676,8 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 <!-- LOADING OVERLAY -->
 <div id="top-loader" role="status" aria-label="Loading"></div>
 
+</div><!-- /app-shell -->
+
 <script>
 /*
  * ——— KONVENSI BAHASA (bilingual, konsisten) ———
@@ -1550,6 +1692,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 
 // ——— State ———
 const STATE = {
+  user: null,               // signed-in user from GET /api/auth/me
   projects: null,
   members: null,
   capacity: null,
@@ -1627,8 +1770,19 @@ function emptyState(opts) {
   </div>`;
 }
 
+// Nav button lookup by id. Several call sites used to index the .nav-item
+// NodeList positionally, which broke silently whenever a nav button was added
+// anywhere above them — resolve by data-navid instead.
+function navBtn(id) {
+  return document.querySelector(`.nav-item[data-navid="${id}"]`);
+}
+
 // ——— Navigation ———
 function showPage(id, btn) {
+  // Menu permissions are enforced here too, not just by hiding the button —
+  // otherwise showPage('usermgmt') from the console would still open it.
+  if (!canSeeNav(id)) return;
+
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
@@ -1643,12 +1797,15 @@ function showPage(id, btn) {
   if (id === 'projectteam') loadProjectTeamPage();
   if (id === 'airpay-summary') loadAirpaySummaryPage();
   if (id === 'airpay-detail') loadAirpayDetailPage();
+  if (id === 'usermgmt') loadUserMgmtPage();
 
   toggleSidebar(false); // close mobile drawer after navigating
 }
 
 // ——— Customize Menu: hide/show individual sidebar nav items ———
-// Purely a client-side UI preference (localStorage) — nothing server-side to sync.
+// Two layers stack here: what the signed-in user is PERMITTED to see (from the
+// server) and what they personally chose to hide (localStorage). The personal
+// preference can only narrow the permitted set, never widen it.
 const NAV_ITEMS = [
   { id: 'executive',   label: 'Executive' },
   { id: 'capacity',    label: 'Developer Capacity' },
@@ -1657,11 +1814,24 @@ const NAV_ITEMS = [
   { id: 'timeline',    label: 'Timeline' },
   { id: 'members',     label: 'Team Members' },
   { id: 'jirasync',    label: 'Jira Sync' },
+  { id: 'usermgmt',    label: 'User Management' },
   { id: 'orgchart',    label: 'Structure Organization' },
   { id: 'projectteam', label: 'Structure Project Team' },
   { id: 'airpay-summary', label: 'Summary Report' },
   { id: 'airpay-detail',  label: 'Detail Report' }
 ];
+
+// User Management is admin-only regardless of the granted menu list.
+function canSeeNav(id) {
+  const u = STATE.user;
+  if (!u) return false;
+  if (id === 'usermgmt') return !!u.is_admin;
+  if (u.is_admin) return true;
+  return (u.allowed_nav_ids || []).includes(id);
+}
+function permittedNavItems() {
+  return NAV_ITEMS.filter(it => canSeeNav(it.id));
+}
 
 function getHiddenNav() {
   try { return JSON.parse(localStorage.getItem('navHidden') || '[]'); }
@@ -1674,8 +1844,25 @@ function setHiddenNav(arr) {
 function applyNavVisibility() {
   const hidden = new Set(getHiddenNav());
   document.querySelectorAll('.nav-item[data-navid]').forEach(btn => {
-    btn.style.display = hidden.has(btn.dataset.navid) ? 'none' : '';
+    const id = btn.dataset.navid;
+    btn.style.display = (!canSeeNav(id) || hidden.has(id)) ? 'none' : '';
   });
+  // Hide a whole sidebar group once every button inside it is hidden, so a
+  // scoped user doesn't see a bare "ADMIN" heading with nothing under it.
+  document.querySelectorAll('.nav-section').forEach(sec => {
+    const items = sec.querySelectorAll('.nav-item[data-navid]');
+    if (!items.length) return; // the Customize Menu group has no data-navid
+    const anyVisible = [...items].some(b => b.style.display !== 'none');
+    sec.style.display = anyVisible ? '' : 'none';
+  });
+  // If the active page just became off-limits, fall back to the first one the
+  // user can actually open rather than leaving a blank screen.
+  const active = document.querySelector('.page.active');
+  const activeId = active ? active.id.replace(/^page-/, '') : null;
+  if (activeId && !canSeeNav(activeId)) {
+    const first = permittedNavItems()[0];
+    if (first) showPage(first.id, navBtn(first.id));
+  }
 }
 
 function toggleMenuCustomizer() {
@@ -1689,7 +1876,9 @@ function toggleMenuCustomizer() {
 function renderMenuCustomizer() {
   const hidden = new Set(getHiddenNav());
   const panel = document.getElementById('menu-customizer-panel');
-  panel.innerHTML = NAV_ITEMS.map(it => `
+  // Only offer what this user is permitted to see — listing a menu they can't
+  // open would suggest ticking it might reveal it.
+  panel.innerHTML = permittedNavItems().map(it => `
     <label class="nav-cust-row">
       <input type="checkbox" ${hidden.has(it.id) ? '' : 'checked'} onchange="onNavVisToggle('${it.id}', this.checked)">
       <span>${it.label}</span>
@@ -1733,8 +1922,496 @@ function showError(msg) {
 // ——— API calls ———
 async function api(path) {
   const r = await fetch(path);
+  // A session that died mid-visit (expired cookie, or the account was
+  // deactivated) should drop straight back to the login screen rather than
+  // spraying "API error 401" banners across every page.
+  if (r.status === 401) { onSessionLost(); throw new Error('Session expired'); }
   if (!r.ok) throw new Error(`API error ${r.status}`);
   return r.json();
+}
+
+// ============================================================
+// AUTH — login gate, session, account menu
+// ============================================================
+async function postJson(path, body) {
+  const r = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body || {})
+  });
+  const json = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(json.error || `HTTP ${r.status}`);
+  return json;
+}
+
+function showLoginScreen(message) {
+  STATE.user = null;
+  document.getElementById('app-shell')?.classList.remove('ready');
+  document.getElementById('login-screen')?.classList.add('show');
+  const err = document.getElementById('login-err');
+  if (err) {
+    err.textContent = message || '';
+    err.classList.toggle('show', !!message);
+  }
+  const u = document.getElementById('login-username');
+  if (u) u.focus();
+}
+
+let sessionLostHandled = false;
+function onSessionLost() {
+  if (sessionLostHandled) return;   // many parallel calls can 401 at once
+  sessionLostHandled = true;
+  showLoginScreen('Your session ended. Please sign in again.');
+}
+
+async function doLogin() {
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-err');
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+
+  btn.disabled = true;
+  btn.textContent = 'Signing in…';
+  err.classList.remove('show');
+  try {
+    const res = await postJson('/api/auth/login', { username, password });
+    document.getElementById('login-password').value = '';
+    sessionLostHandled = false;
+    enterApp(res.user);
+  } catch (e) {
+    err.textContent = e.message;
+    err.classList.add('show');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Sign in';
+  }
+}
+
+async function doLogout() {
+  try { await postJson('/api/auth/logout'); } catch (e) { /* sign out locally regardless */ }
+  location.reload();
+}
+
+function userInitials(u) {
+  const name = (u.display_name || u.username || '').trim();
+  if (!name) return '··';
+  return name.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+}
+
+function applyUserChrome() {
+  const u = STATE.user;
+  if (!u) return;
+  const initials = userInitials(u);
+  const d = document.getElementById('avatar-desktop'); if (d) d.textContent = initials;
+  const m = document.getElementById('avatar-mobile');  if (m) m.textContent = initials;
+  const n = document.getElementById('user-menu-name'); if (n) n.textContent = u.display_name || u.username;
+  const e = document.getElementById('user-menu-email'); if (e) e.textContent = u.email || '';
+  const warn = document.getElementById('pw-warning');
+  if (warn) warn.style.display = u.must_change_password ? 'flex' : 'none';
+}
+
+function toggleUserMenu(ev) {
+  if (ev) ev.stopPropagation();
+  document.getElementById('user-menu')?.classList.toggle('show');
+}
+document.addEventListener('click', () => document.getElementById('user-menu')?.classList.remove('show'));
+
+async function openChangePassword() {
+  document.getElementById('user-menu')?.classList.remove('show');
+  const current = prompt('Current password:');
+  if (current === null) return;
+  const next = prompt('New password (at least 6 characters):');
+  if (next === null) return;
+  const confirmNext = prompt('Confirm new password:');
+  if (confirmNext === null) return;
+  if (next !== confirmNext) { showError('The new passwords do not match.'); return; }
+  try {
+    await postJson('/api/auth/change-password', { current_password: current, new_password: next });
+    STATE.user.must_change_password = false;
+    applyUserChrome();
+    showError('✓ Password changed');
+  } catch (e) {
+    showError('Could not change password: ' + e.message);
+  }
+}
+
+// Signed in: reveal the shell, apply permissions, then load the dashboards.
+function enterApp(user) {
+  STATE.user = user;
+  document.getElementById('login-screen')?.classList.remove('show');
+  document.getElementById('app-shell')?.classList.add('ready');
+  applyUserChrome();
+
+  // Land on a page this user is actually allowed to open.
+  const active = document.querySelector('.page.active');
+  const activeId = active ? active.id.replace(/^page-/, '') : null;
+  if (!activeId || !canSeeNav(activeId)) {
+    const first = permittedNavItems()[0];
+    if (first) showPage(first.id, navBtn(first.id));
+  }
+  applyNavVisibility();
+  init();
+}
+
+async function bootstrap() {
+  try {
+    const r = await fetch('/api/auth/me');
+    if (r.status === 401) { showLoginScreen(); return; }
+    const json = await r.json();
+    if (!r.ok || !json.user) { showLoginScreen(json.error || ''); return; }
+    enterApp(json.user);
+  } catch (e) {
+    showLoginScreen('Could not reach the server. Please try again.');
+  }
+}
+
+// ——— Per-user scoping of capacity aggregates ———
+// The server still computes utilization across every project (project scoping
+// is display-only), so recompute it here from projectAllocations — which is
+// already a per-project % of the same capacity base — and rebuild the summary.
+// Mirrors buildSummary() and the status thresholds in server.js.
+function scopeCapacity(payload) {
+  const u = STATE.user;
+  if (!payload || !u || u.is_admin) return payload;
+  const allowed = new Set(u.allowed_project_keys || []);
+
+  const developers = (payload.developers || []).map(d => {
+    const allocations = (d.projectAllocations || []).filter(p => allowed.has(p.key));
+    const utilization = allocations.reduce((s, p) => s + (p.pct || 0), 0);
+    return {
+      ...d,
+      utilization,
+      available: Math.max(0, 100 - utilization),
+      overload: utilization > 100 ? utilization - 100 : 0,
+      taskCount: allocations.reduce((s, p) => s + (p.count || 0), 0),
+      activeTaskCount: allocations.reduce((s, p) => s + (p.count || 0), 0),
+      projectAllocations: allocations,
+      status: utilization > 100 ? 'overload' : utilization >= 80 ? 'high' : utilization >= 30 ? 'ok' : 'idle'
+    };
+  }).sort((a, b) => b.utilization - a.utilization);
+
+  const total = developers.length;
+  const summary = {
+    total,
+    overloaded: developers.filter(d => d.utilization > 100).length,
+    healthy: developers.filter(d => d.utilization >= 70 && d.utilization <= 100).length,
+    high: developers.filter(d => d.utilization >= 80 && d.utilization <= 100).length,
+    idle: developers.filter(d => d.utilization < 30).length,
+    avgUtilization: total ? Math.round(developers.reduce((s, d) => s + d.utilization, 0) / total) : 0
+  };
+  return { ...payload, developers, summary, scoped: true };
+}
+
+// Utilization for a scoped user counts only the projects they can see, so it is
+// NOT that person's real workload. Say so rather than letting "80%" be misread.
+function scopedNoteHtml() {
+  if (!STATE.user || STATE.user.is_admin) return '';
+  return `<div class="scoped-note">Figures cover only the projects you have access to — a developer's real workload may be higher.</div>`;
+}
+function applyScopedNotes() {
+  const html = scopedNoteHtml();
+  const a = document.getElementById('exec-scoped-note'); if (a) a.innerHTML = html;
+  const b = document.getElementById('cap-scoped-note');  if (b) b.innerHTML = html;
+}
+
+// ============================================================
+// USER MANAGEMENT (admin only)
+// ============================================================
+const UM = {
+  users: null,
+  form: null,        // { id: null | uuid }
+  busy: false,
+  error: null,
+  menuOpen: false    // collapsible menu-permissions section
+};
+
+function umEsc(v) { return apEsc(v); }
+
+async function loadUserMgmtPage() {
+  if (!STATE.user?.is_admin) return;
+  const body = document.getElementById('um-body');
+  if (!UM.users) body.innerHTML = emptyState({ icon: '👥', title: 'Loading users…', description: '' });
+  try {
+    UM.users = await api('/api/users');
+    renderUserMgmt();
+  } catch (e) {
+    body.innerHTML = emptyState({ icon: '⚠️', title: 'Could not load users', description: e.message });
+  }
+}
+
+function umFmtWhen(iso) {
+  if (!iso) return 'Never';
+  return new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+function umProjectSummary(u) {
+  if (u.is_admin) return 'All projects (admin)';
+  const keys = u.allowed_project_keys || [];
+  if (!keys.length) return 'No projects';
+  const cats = new Set((STATE.projects?.projects || []).filter(p => keys.includes(p.key)).map(p => p.category));
+  return `${keys.length} project${keys.length === 1 ? '' : 's'}${cats.size ? ` · ${cats.size} categor${cats.size === 1 ? 'y' : 'ies'}` : ''}`;
+}
+
+function renderUserMgmt() {
+  document.getElementById('um-form-slot').innerHTML = UM.form ? umFormHtml() : '';
+  const rows = (UM.users || []).map(u => `
+    <tr>
+      <td>
+        <div style="font-weight:600;color:var(--ink-800)">${umEsc(u.username)}
+          ${u.is_admin ? '<span class="um-role">Admin</span>' : ''}
+        </div>
+        ${u.display_name ? `<div class="um-sub">${umEsc(u.display_name)}</div>` : ''}
+      </td>
+      <td>${umEsc(u.email)}</td>
+      <td><span class="um-status ${u.is_active ? 'active' : 'inactive'}">${u.is_active ? 'Active' : 'Inactive'}</span></td>
+      <td>${umEsc(umProjectSummary(u))}</td>
+      <td>
+        <div>${umFmtWhen(u.last_login_at)}</div>
+        ${u.last_login_device ? `<div class="um-sub">${umEsc(u.last_login_device)}</div>` : ''}
+      </td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="ap-icon-btn" onclick="umOpenForm('${u.id}')">Edit</button>
+        <button class="ap-icon-btn" onclick="umResetPassword('${u.id}')">Change password</button>
+      </td>
+    </tr>`).join('');
+
+  document.getElementById('um-body').innerHTML = `
+    <div class="members-table-wrap" style="margin:0">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:210px">User</th>
+            <th>Email</th>
+            <th style="width:100px">Status</th>
+            <th style="width:190px">Projects</th>
+            <th style="width:200px">Last login</th>
+            <th style="width:190px"></th>
+          </tr>
+        </thead>
+        <tbody>${rows || `<tr><td colspan="6" style="padding:40px;text-align:center;color:var(--ink-400)">No users yet.</td></tr>`}</tbody>
+      </table>
+    </div>`;
+}
+
+function umFindUser(id) { return (UM.users || []).find(u => u.id === id) || null; }
+
+function umOpenForm(id) {
+  UM.form = { id: id || null };
+  UM.error = null;
+  UM.busy = false;
+  UM.menuOpen = false;
+  renderUserMgmt();
+  document.getElementById('um-form-slot')?.scrollIntoView({ block: 'nearest' });
+}
+function umCloseForm() {
+  UM.form = null;
+  UM.error = null;
+  UM.busy = false;
+  renderUserMgmt();
+}
+
+// Projects grouped by their Jira category, each group with a select-all.
+function umProjectPickerHtml(selectedKeys) {
+  const projects = STATE.projects?.projects || [];
+  if (!projects.length) {
+    return `<div class="um-scroll" style="color:var(--ink-400);font-size:12px">No projects loaded yet.</div>`;
+  }
+  const selected = new Set(selectedKeys || []);
+  const byCat = {};
+  projects.forEach(p => { (byCat[p.category] = byCat[p.category] || []).push(p); });
+
+  const groups = Object.keys(byCat).sort().map(cat => {
+    const list = byCat[cat];
+    const allOn = list.every(p => selected.has(p.key));
+    return `<div class="um-perm-group">
+      <div class="um-perm-head">
+        <label class="um-check" style="font-weight:700">
+          <input type="checkbox" ${allOn ? 'checked' : ''} onchange="umToggleCategory('${umEsc(cat)}', this.checked)">
+          <span>${umEsc(cat)}</span>
+        </label>
+        <span class="um-count">${list.filter(p => selected.has(p.key)).length}/${list.length}</span>
+      </div>
+      <div class="um-perm-body">
+        ${list.map(p => `
+          <label class="um-check">
+            <input type="checkbox" class="um-proj" data-cat="${umEsc(p.category)}" value="${umEsc(p.key)}" ${selected.has(p.key) ? 'checked' : ''} onchange="umSyncCategoryCounts()">
+            <span>${umEsc(p.name)} <span style="color:var(--ink-400);font-family:var(--font-mono);font-size:10.5px">${umEsc(p.key)}</span></span>
+          </label>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div class="um-scroll">${groups}</div>`;
+}
+function umToggleCategory(cat, on) {
+  document.querySelectorAll(`.um-proj[data-cat="${CSS.escape(cat)}"]`).forEach(cb => { cb.checked = on; });
+  umSyncCategoryCounts();
+}
+// Keeps each category's "x/y" count and its select-all box in step with the
+// individual checkboxes, without re-rendering the whole form.
+function umSyncCategoryCounts() {
+  document.querySelectorAll('.um-perm-group').forEach(group => {
+    const boxes = [...group.querySelectorAll('.um-proj')];
+    if (!boxes.length) return;
+    const on = boxes.filter(b => b.checked).length;
+    const count = group.querySelector('.um-count');
+    if (count) count.textContent = `${on}/${boxes.length}`;
+    const all = group.querySelector('.um-perm-head input');
+    if (all) { all.checked = on === boxes.length; all.indeterminate = on > 0 && on < boxes.length; }
+  });
+}
+
+function umMenuPickerHtml(selectedIds) {
+  const selected = new Set(selectedIds || []);
+  // usermgmt is admin-only and never granted through this list.
+  const items = NAV_ITEMS.filter(it => it.id !== 'usermgmt');
+  return `<div class="um-perm-group" style="margin-bottom:0">
+    <div class="um-perm-head">
+      <label class="um-check" style="font-weight:700">
+        <input type="checkbox" ${items.every(it => selected.has(it.id)) ? 'checked' : ''} onchange="umToggleAllMenus(this.checked)">
+        <span>All menus</span>
+      </label>
+    </div>
+    <div class="um-perm-body">
+      ${items.map(it => `
+        <label class="um-check">
+          <input type="checkbox" class="um-nav" value="${it.id}" ${selected.has(it.id) ? 'checked' : ''}>
+          <span>${umEsc(it.label)}</span>
+        </label>`).join('')}
+    </div>
+  </div>`;
+}
+function umToggleAllMenus(on) {
+  document.querySelectorAll('.um-nav').forEach(cb => { cb.checked = on; });
+}
+function umToggleMenuSection() {
+  UM.menuOpen = !UM.menuOpen;
+  const sec = document.getElementById('um-menu-section');
+  const btn = document.getElementById('um-menu-toggle');
+  if (sec) sec.style.display = UM.menuOpen ? '' : 'none';
+  if (btn) btn.textContent = UM.menuOpen ? 'Hide menu access' : 'Configure menu access';
+}
+
+function umFormHtml() {
+  const u = UM.form.id ? umFindUser(UM.form.id) : null;
+  const isNew = !u;
+  // A brand-new user gets every menu ticked by default — the project list is
+  // the permission that actually needs deciding, so menus stay out of the way.
+  const defaultNav = NAV_ITEMS.filter(it => it.id !== 'usermgmt').map(it => it.id);
+
+  return `<div class="ap-form" style="margin-bottom:16px">
+    <div style="font-size:13px;font-weight:700;color:var(--ink-800)">
+      ${isNew ? 'Add user' : `Edit ${umEsc(u.username)}`}
+    </div>
+
+    <div class="ap-form-row two">
+      <div class="ap-form-row">
+        <label for="um-username">Username</label>
+        <input id="um-username" type="text" autocapitalize="none" spellcheck="false" value="${umEsc(u ? u.username : '')}" placeholder="e.g. budi.santoso">
+      </div>
+      <div class="ap-form-row">
+        <label for="um-email">Email</label>
+        <input id="um-email" type="email" value="${umEsc(u ? u.email : '')}" placeholder="name@linkit360.com">
+      </div>
+    </div>
+
+    <div class="ap-form-row two">
+      <div class="ap-form-row">
+        <label for="um-display">Display name <span style="text-transform:none;font-weight:400">(optional)</span></label>
+        <input id="um-display" type="text" value="${umEsc(u && u.display_name ? u.display_name : '')}">
+      </div>
+      <div class="ap-form-row">
+        <label for="um-status">Status</label>
+        <select id="um-status">
+          <option value="active" ${!u || u.is_active ? 'selected' : ''}>Active</option>
+          <option value="inactive" ${u && !u.is_active ? 'selected' : ''}>Inactive</option>
+        </select>
+      </div>
+    </div>
+
+    ${isNew ? `
+    <div class="ap-form-row">
+      <label for="um-password">Password</label>
+      <input id="um-password" type="password" autocomplete="new-password" placeholder="At least 6 characters">
+    </div>` : `
+    <div class="ap-form-hint">Use “Change password” in the table to set a new password for this user.</div>`}
+
+    <label class="um-check" style="font-weight:600">
+      <input id="um-admin" type="checkbox" ${u && u.is_admin ? 'checked' : ''}>
+      <span>Administrator — full access to every project and menu, and can manage users</span>
+    </label>
+
+    <div class="ap-form-row">
+      <label>Projects this user can see</label>
+      ${umProjectPickerHtml(u ? u.allowed_project_keys : [])}
+    </div>
+
+    <div class="ap-form-row">
+      <button type="button" class="um-collapse-btn" id="um-menu-toggle" onclick="umToggleMenuSection()">Configure menu access</button>
+      <div id="um-menu-section" style="display:none;margin-top:8px">
+        ${umMenuPickerHtml(u ? u.allowed_nav_ids : defaultNav)}
+      </div>
+    </div>
+
+    ${UM.error ? `<div class="ap-form-err">${umEsc(UM.error)}</div>` : ''}
+    <div class="ap-form-actions">
+      <button class="btn btn-primary" onclick="umSubmit()" ${UM.busy ? 'disabled' : ''}>${UM.busy ? 'Saving…' : (isNew ? 'Create user' : 'Save changes')}</button>
+      <button class="btn btn-ghost" onclick="umCloseForm()" ${UM.busy ? 'disabled' : ''}>Cancel</button>
+    </div>
+  </div>`;
+}
+
+async function umSubmit() {
+  if (!UM.form || UM.busy) return;
+  const id = UM.form.id;
+  const payload = {
+    username: document.getElementById('um-username')?.value || '',
+    email: document.getElementById('um-email')?.value || '',
+    display_name: document.getElementById('um-display')?.value || '',
+    is_admin: !!document.getElementById('um-admin')?.checked,
+    is_active: (document.getElementById('um-status')?.value || 'active') === 'active',
+    allowed_project_keys: [...document.querySelectorAll('.um-proj')].filter(c => c.checked).map(c => c.value),
+    allowed_nav_ids: [...document.querySelectorAll('.um-nav')].filter(c => c.checked).map(c => c.value)
+  };
+  if (!id) payload.password = document.getElementById('um-password')?.value || '';
+
+  UM.busy = true; UM.error = null;
+  renderUserMgmt();
+  try {
+    const r = await fetch(id ? `/api/users/${id}` : '/api/users', {
+      method: id ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const json = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(json.error || `HTTP ${r.status}`);
+    UM.form = null;
+    UM.busy = false;
+    await loadUserMgmtPage();
+    showError(id ? '✓ User updated' : '✓ User created');
+  } catch (e) {
+    // Keep the form open so nothing typed is lost.
+    UM.busy = false;
+    UM.error = e.message;
+    renderUserMgmt();
+  }
+}
+
+async function umResetPassword(id) {
+  const u = umFindUser(id);
+  const next = prompt(`Set a new password for "${u ? u.username : 'this user'}" (at least 6 characters).\n\nThey will be asked to change it themselves after signing in.`);
+  if (next === null) return;
+  try {
+    const r = await fetch(`/api/users/${id}/password`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: next })
+    });
+    const json = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(json.error || `HTTP ${r.status}`);
+    showError('✓ Password updated');
+  } catch (e) {
+    showError('Could not update password: ' + e.message);
+  }
 }
 
 // ——— INIT ———
@@ -1777,10 +2454,11 @@ async function loadCapacity() {
   if (tg) tg.querySelectorAll('.pill').forEach((p,i) => p.classList.toggle('active', i === 0));
   showLoading('Calculating developer utilization…');
   try {
-    const cap = await api('/api/capacity');
+    const cap = scopeCapacity(await api('/api/capacity'));
     STATE.capacity = cap;
     renderExecutivePage(cap);
     renderCapacityTable(cap);
+    applyScopedNotes();
 
     const now = new Date();
     const sub = `${now.toLocaleString('en-GB',{month:'long',year:'numeric'})} · ${cap.period?.workingDays || 22} working days · ${STATE.members?.length || 0} members across 6 groups`;
@@ -1814,7 +2492,7 @@ async function setCapMode(mode, btn) {
 
   if (mode === 'sprint' && !STATE.capacitySprint) {
     showLoading('Calculating sprint capacity…');
-    try { STATE.capacitySprint = await api('/api/capacity?mode=sprint'); }
+    try { STATE.capacitySprint = scopeCapacity(await api('/api/capacity?mode=sprint')); }
     catch(e) { showError('Failed to load sprint capacity: ' + e.message); }
     finally { hideLoading(); }
   }
@@ -1846,7 +2524,7 @@ function renderExecutivePage(cap) {
         <div class="ab-title">Team is in critical condition — average utilization ${s.avgUtilization}%</div>
         <div class="ab-sub">${s.overloaded} developer overloaded · ${s.idle} underutilized and can absorb overflow</div>
       </div>
-      <button class="ab-link" onclick="showPage('capacity',document.querySelectorAll('.nav-item')[1])">View Developers →</button>
+      <button class="ab-link" onclick="showPage('capacity',navBtn('capacity'))">View Developers →</button>
     </div>` : '';
 
   // KPI cards (1b. conditional colour on Avg Utilization & Overloaded)
@@ -1866,7 +2544,7 @@ function renderExecutivePage(cap) {
         Active Projects
       </div>
       <div class="kpi-value">${projects.length}</div>
-      <div class="kpi-delta info">${(STATE.projects?.categories || []).length} categories</div>
+      <div class="kpi-delta info">${(STATE.projects?.categories || []).length} categor${(STATE.projects?.categories || []).length === 1 ? 'y' : 'ies'}</div>
     </div>
     <div class="kpi-card" style="${critCard}">
       <div class="kpi-label">
@@ -1982,7 +2660,7 @@ function renderExecutivePage(cap) {
   const navIdx = { 1:1, 5:5, 6:6 };
   const actionItemsHtml = actionItems.length
     ? actionItems.map(it => `
-        <div class="action-item" onclick="showPage('${it.nav===5?'members':it.nav===6?'jirasync':'capacity'}',document.querySelectorAll('.nav-item')[${it.nav}])">
+        <div class="action-item" onclick="showPage('${it.nav===5?'members':it.nav===6?'jirasync':'capacity'}',navBtn('${it.nav===5?'members':it.nav===6?'jirasync':'capacity'}'))">
           <span class="ai-badge ${it.priority}">${it.priority==='kritis'?'Kritis':it.priority==='penting'?'Penting':'Info'}</span>
           <span class="ai-text">${it.text}</span>
           <svg class="ai-chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4l4 4-4 4"/></svg>
@@ -2067,7 +2745,7 @@ function renderExecutivePage(cap) {
       <div class="exec-ai-body">${aiBullets}</div>
       <div class="exec-ai-footer">
         <span style="font-size:11px;color:var(--ink-400)">Updated ${new Date().toLocaleTimeString('en-GB')}</span>
-        <button style="font-size:12px;font-weight:500;color:var(--blue-700);cursor:pointer;background:none;border:none;font-family:var(--font-body);display:flex;align-items:center;gap:4px" onclick="showPage('capacity',document.querySelectorAll('.nav-item')[1])">
+        <button style="font-size:12px;font-weight:500;color:var(--blue-700);cursor:pointer;background:none;border:none;font-family:var(--font-body);display:flex;align-items:center;gap:4px" onclick="showPage('capacity',navBtn('capacity'))">
           View per-developer detail
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
         </button>
@@ -3458,7 +4136,7 @@ async function loadSyncData() {
           <div class="ab-title">${data.external} issue dengan assignee External (${extPct}% dari total)</div>
           <div class="ab-sub">These people are not tracked in Resource Portal — their utilization is not counted. Add them to Team Members or re-assign to a registered member.</div>
         </div>
-        <button class="ab-link" onclick="showPage('members',document.querySelectorAll('.nav-item')[5])">Manage Team Members →</button>
+        <button class="ab-link" onclick="showPage('members',navBtn('members'))">Manage Team Members →</button>
       </div>` : '';
 
     const badge = document.getElementById('nav-sync-badge');
@@ -6647,8 +7325,9 @@ function renderAirpayDetail() {
 }
 
 // ——— START ———
-applyNavVisibility();
-init();
+// Nothing loads until a session is confirmed — bootstrap() decides between the
+// login screen and the app shell, and calls init() itself once signed in.
+bootstrap();
 </script>
 </body>
 </html>

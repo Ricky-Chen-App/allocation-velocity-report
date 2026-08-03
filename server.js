@@ -4,6 +4,7 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const fetch = require('node-fetch');
 const fs = require('fs');
+const crypto = require('crypto');
 const forecastConfig = require('./forecastConfig');
 const { getEffectiveDates, classifyLoad, LOAD_STATUS_LABEL, DEFAULT_FIELD_IDS, val, PARAMS } = forecastConfig;
 const { businessDaysBetween, addBusinessDays, toIso } = require('./businessDays');
@@ -35,17 +36,174 @@ const HEADERS = {
   'Content-Type': 'application/json'
 };
 
-// Guard: every API route returns a clear 500 if env vars are missing,
-// instead of crashing the whole serverless function.
-app.use('/api', (req, res, next) => {
+// ——— Authentication ———
+// Deliberately dependency-free: scrypt + HMAC from node:crypto, and a stateless
+// signed cookie. No passport/jwt/bcrypt/cookie-parser — this repo runs on three
+// dependencies and a stateless cookie is what works on serverless anyway.
+const SESSION_SECRET = process.env.SESSION_SECRET || '';
+const SESSION_COOKIE = 'rp_session';
+const SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
+
+function makeSalt() {
+  return crypto.randomBytes(16).toString('hex');
+}
+function hashPassword(password, salt) {
+  return crypto.scryptSync(String(password), salt, 64).toString('hex');
+}
+function verifyPassword(password, salt, expectedHex) {
+  if (!salt || !expectedHex) return false;
+  const actual = Buffer.from(hashPassword(password, salt), 'hex');
+  const expected = Buffer.from(expectedHex, 'hex');
+  // timingSafeEqual throws on length mismatch, so check first.
+  if (actual.length !== expected.length) return false;
+  return crypto.timingSafeEqual(actual, expected);
+}
+
+function signSession(uid) {
+  const payload = Buffer.from(JSON.stringify({ uid, exp: Date.now() + SESSION_TTL_MS })).toString('base64url');
+  const sig = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('base64url');
+  return `${payload}.${sig}`;
+}
+function readSession(token) {
+  if (!token || !SESSION_SECRET) return null;
+  const [payload, sig] = String(token).split('.');
+  if (!payload || !sig) return null;
+  const expected = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('base64url');
+  const a = Buffer.from(sig);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+  try {
+    const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    if (!data.uid || !data.exp || Date.now() > data.exp) return null;
+    return data;
+  } catch (e) {
+    return null;
+  }
+}
+
+function parseCookies(header) {
+  const out = {};
+  if (!header) return out;
+  for (const part of String(header).split(';')) {
+    const i = part.indexOf('=');
+    if (i < 0) continue;
+    out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
+  }
+  return out;
+}
+function setSessionCookie(res, token) {
+  const parts = [`${SESSION_COOKIE}=${token}`, 'HttpOnly', 'SameSite=Lax', 'Path=/', `Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`];
+  if (IS_SERVERLESS) parts.push('Secure'); // production is HTTPS; localhost isn't
+  res.setHeader('Set-Cookie', parts.join('; '));
+}
+function clearSessionCookie(res) {
+  const parts = [`${SESSION_COOKIE}=`, 'HttpOnly', 'SameSite=Lax', 'Path=/', 'Max-Age=0'];
+  if (IS_SERVERLESS) parts.push('Secure');
+  res.setHeader('Set-Cookie', parts.join('; '));
+}
+
+// Readable device summary for the "last login" column. User-Agent is supplied
+// by the client and trivially spoofed — this is a convenience signal, never
+// evidence. Modern Chrome also freezes UA details, so it stays approximate.
+function parseUserAgent(ua) {
+  const s = String(ua || '');
+  if (!s.trim()) return 'Unknown device';
+
+  let browser = null;
+  if (/EdgA?\//i.test(s)) browser = 'Edge';
+  else if (/OPR\/|Opera/i.test(s)) browser = 'Opera';
+  else if (/SamsungBrowser/i.test(s)) browser = 'Samsung Internet';
+  else if (/Firefox\/|FxiOS/i.test(s)) browser = 'Firefox';
+  else if (/Chrome\/|CriOS/i.test(s)) browser = 'Chrome';
+  else if (/Safari\//i.test(s)) browser = 'Safari';
+
+  let os = null;
+  if (/Windows NT/i.test(s)) os = 'Windows';
+  else if (/iPhone|iPad|iPod/i.test(s)) os = 'iOS';
+  else if (/Android/i.test(s)) os = 'Android';
+  else if (/Mac OS X|Macintosh/i.test(s)) os = 'macOS';
+  else if (/Linux/i.test(s)) os = 'Linux';
+
+  let type = 'Desktop';
+  if (/iPad|Tablet/i.test(s) || (/Android/i.test(s) && !/Mobile/i.test(s))) type = 'Tablet';
+  else if (/Mobi|iPhone|iPod|Android/i.test(s)) type = 'Mobile';
+
+  const parts = [browser, os, type].filter(Boolean);
+  // Only a bare type isn't worth showing — say so rather than guessing.
+  return parts.length > 1 ? parts.join(' · ') : 'Unknown device';
+}
+
+const USER_PUBLIC_COLS = 'id,username,email,display_name,must_change_password,is_admin,is_active,' +
+                         'allowed_project_keys,allowed_nav_ids,last_login_at,last_login_device,created_at,updated_at';
+
+// The guard re-reads the user on every API call so deactivating someone takes
+// effect without waiting for their cookie to expire. A short in-process memo
+// keeps that from becoming one extra Supabase round-trip per dashboard request;
+// the trade-off is that a deactivation lands within SESSION_USER_TTL_MS.
+const SESSION_USER_TTL_MS = 30 * 1000;
+const sessionUserCache = new Map(); // uid -> { user, ts }
+
+async function loadSessionUser(uid) {
+  const hit = sessionUserCache.get(uid);
+  if (hit && Date.now() - hit.ts < SESSION_USER_TTL_MS) return hit.user;
+  const rows = await supabaseRequest('GET', `app_users?id=eq.${uid}&select=*`);
+  const user = rows && rows.length ? rows[0] : null;
+  sessionUserCache.set(uid, { user, ts: Date.now() });
+  return user;
+}
+function invalidateSessionUser(uid) {
+  sessionUserCache.delete(uid);
+}
+function publicUser(u) {
+  if (!u) return null;
+  const { password_hash, password_salt, last_login_user_agent, ...rest } = u;
+  return rest;
+}
+
+// Only the login call is reachable without a session.
+const AUTH_PUBLIC_PATHS = new Set(['/auth/login']);
+
+// Guard: every API route returns a clear 500 if env vars are missing (instead
+// of crashing the serverless function), and 401 without a valid session.
+app.use('/api', async (req, res, next) => {
   if (MISSING_ENV.length) {
     return res.status(500).json({
       error: `Server belum dikonfigurasi: environment variable hilang (${MISSING_ENV.join(', ')}). ` +
              `Set di Vercel → Project Settings → Environment Variables.`
     });
   }
-  next();
+  if (AUTH_PUBLIC_PATHS.has(req.path)) return next();
+
+  if (!SESSION_SECRET) {
+    return res.status(503).json({
+      error: 'Server belum dikonfigurasi: SESSION_SECRET belum di-set ' +
+             '(lokal di .env, production di Vercel → Project Settings → Environment Variables).'
+    });
+  }
+
+  const session = readSession(parseCookies(req.headers.cookie)[SESSION_COOKIE]);
+  if (!session) return res.status(401).json({ error: 'Not signed in' });
+
+  try {
+    const user = await loadSessionUser(session.uid);
+    if (!user || !user.is_active) {
+      clearSessionCookie(res);
+      return res.status(401).json({ error: 'Your session is no longer valid' });
+    }
+    req.user = user;
+    next();
+  } catch (e) {
+    console.error('session lookup failed:', e.message);
+    res.status(502).json({ error: 'Could not verify your session' });
+  }
 });
+
+function requireAdmin(req, res, next) {
+  if (!req.user || !req.user.is_admin) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
+}
 
 // Target project categories — EXACT names (case-insensitive).
 // Jira renames (per 2026): "Product"→"Product OTT", "Project OTT"→"Project". + RnD.
@@ -195,10 +353,30 @@ async function ensureDateFieldIds() {
   return dateFieldIds;
 }
 
+// Narrows the project list to what a user is allowed to see. This is the one
+// place scoping is applied: STATE.projects on the client feeds every project
+// selector (Velocity/Forecast combos, Timeline combos, the Capacity dropdown
+// and the Project Team canvas), so filtering here scopes all of them at once.
+//
+// Note this is a DISPLAY scope, not access control — the other Jira endpoints
+// still compute over every project, and a signed-in user can call them
+// directly. See the auth notes in CLAUDE.md.
+function scopeProjectsForUser(result, user) {
+  if (!user || user.is_admin) return result;
+  const allowed = new Set(user.allowed_project_keys || []);
+  const projects = (result.projects || []).filter(p => allowed.has(p.key));
+  const stillPresent = new Set(projects.map(p => p.category));
+  return {
+    ...result,
+    projects,
+    categories: (result.categories || []).filter(c => stillPresent.has(c.name))
+  };
+}
+
 // ——— GET /api/projects ———
 app.get('/api/projects', async (req, res) => {
   try {
-    const result = await ensureProjects();
+    const result = scopeProjectsForUser(await ensureProjects(), req.user);
     res.json(result);
   } catch (e) {
     console.error('projects error:', e.message);
@@ -1913,6 +2091,230 @@ function registerCrudRoutes(routeName, table, validate, order) {
 
 registerCrudRoutes('airpay-wins', 'wins', validateWin, 'win_date.desc,created_at.desc');
 registerCrudRoutes('airpay-blockers', 'blockers', validateBlocker, 'priority.asc,created_at.desc');
+
+// ——— Auth + User Management ———
+// Nav ids a user can be granted. Kept in step with NAV_ITEMS in index.html —
+// validating against this list stops a typo'd id from being stored as a
+// permission that silently matches nothing.
+const NAV_IDS = [
+  'executive', 'capacity', 'velocity', 'tasks', 'timeline',
+  'members', 'jirasync', 'usermgmt',
+  'orgchart', 'projectteam',
+  'airpay-summary', 'airpay-detail'
+];
+const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{2,31}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD_LEN = 6;
+
+function validatePassword(pw) {
+  if (typeof pw !== 'string' || pw.length < MIN_PASSWORD_LEN) {
+    return `password must be at least ${MIN_PASSWORD_LEN} characters`;
+  }
+  return null;
+}
+
+// Validates the editable profile fields shared by create and update.
+async function validateUserFields(body, { requirePassword }) {
+  const errors = [];
+  const b = body || {};
+  const username = trimmed(b.username).toLowerCase();
+  const email = trimmed(b.email).toLowerCase();
+
+  if (!USERNAME_RE.test(username)) {
+    errors.push('username must be 3-32 characters, lowercase letters/numbers/._- and start with a letter or number');
+  }
+  if (!EMAIL_RE.test(email)) errors.push('a valid email is required');
+
+  if (requirePassword) {
+    const pwErr = validatePassword(b.password);
+    if (pwErr) errors.push(pwErr);
+  }
+
+  // Reject project keys that don't exist, so a permission can never point at
+  // nothing and look like it was granted.
+  let projectKeys = Array.isArray(b.allowed_project_keys) ? b.allowed_project_keys.map(trimmed).filter(Boolean) : [];
+  if (projectKeys.length) {
+    try {
+      const known = new Set(((await ensureProjects()).projects || []).map(p => p.key));
+      const unknown = projectKeys.filter(k => !known.has(k));
+      if (unknown.length) errors.push(`unknown project keys: ${unknown.join(', ')}`);
+    } catch (e) {
+      errors.push('could not verify project keys against Jira right now');
+    }
+  }
+
+  const navIds = Array.isArray(b.allowed_nav_ids) ? b.allowed_nav_ids.map(trimmed).filter(Boolean) : [];
+  const unknownNav = navIds.filter(id => !NAV_IDS.includes(id));
+  if (unknownNav.length) errors.push(`unknown menu ids: ${unknownNav.join(', ')}`);
+
+  return {
+    errors,
+    row: {
+      username,
+      email,
+      display_name: trimmed(b.display_name) || null,
+      is_admin: b.is_admin === true,
+      is_active: b.is_active !== false,
+      allowed_project_keys: projectKeys,
+      allowed_nav_ids: navIds
+    }
+  };
+}
+
+async function countActiveAdmins() {
+  const rows = await supabaseRequest('GET', 'app_users?select=id&is_admin=eq.true&is_active=eq.true');
+  return Array.isArray(rows) ? rows.length : 0;
+}
+
+app.post('/api/auth/login', requireSupabase, async (req, res) => {
+  if (!SESSION_SECRET) {
+    return res.status(503).json({ error: 'Server belum dikonfigurasi: SESSION_SECRET belum di-set.' });
+  }
+  const username = trimmed(req.body?.username).toLowerCase();
+  const password = req.body?.password;
+  // One generic message for every failure mode — a distinct "no such user"
+  // would let anyone enumerate valid usernames.
+  const deny = () => res.status(401).json({ error: 'Invalid username or password' });
+  if (!username || !password) return deny();
+
+  try {
+    const rows = await supabaseRequest('GET', `app_users?username=eq.${encodeURIComponent(username)}&select=*`);
+    const user = rows && rows.length ? rows[0] : null;
+    if (!user || !user.is_active) return deny();
+    if (!verifyPassword(password, user.password_salt, user.password_hash)) return deny();
+
+    const device = parseUserAgent(req.headers['user-agent']);
+    await supabaseRequest('PATCH', `app_users?id=eq.${user.id}`, {
+      last_login_at: new Date().toISOString(),
+      last_login_device: device,
+      last_login_user_agent: String(req.headers['user-agent'] || '').slice(0, 500)
+    });
+    invalidateSessionUser(user.id);
+
+    setSessionCookie(res, signSession(user.id));
+    res.json({ user: publicUser({ ...user, last_login_at: new Date().toISOString(), last_login_device: device }) });
+  } catch (e) {
+    sendSupabaseError(res, e, 'auth/login');
+  }
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  if (req.user) invalidateSessionUser(req.user.id);
+  clearSessionCookie(res);
+  res.json({ ok: true });
+});
+
+app.get('/api/auth/me', (req, res) => {
+  res.json({ user: publicUser(req.user) });
+});
+
+app.post('/api/auth/change-password', requireSupabase, async (req, res) => {
+  const current = req.body?.current_password;
+  const next = req.body?.new_password;
+  const pwErr = validatePassword(next);
+  if (pwErr) return res.status(400).json({ error: pwErr });
+  if (!verifyPassword(current, req.user.password_salt, req.user.password_hash)) {
+    return res.status(400).json({ error: 'Current password is incorrect' });
+  }
+  try {
+    const salt = makeSalt();
+    await supabaseRequest('PATCH', `app_users?id=eq.${req.user.id}`, {
+      password_salt: salt,
+      password_hash: hashPassword(next, salt),
+      must_change_password: false,
+      updated_at: new Date().toISOString()
+    });
+    invalidateSessionUser(req.user.id);
+    res.json({ ok: true });
+  } catch (e) {
+    sendSupabaseError(res, e, 'auth/change-password');
+  }
+});
+
+app.get('/api/users', requireSupabase, requireAdmin, async (req, res) => {
+  try {
+    res.json(await supabaseRequest('GET', `app_users?select=${USER_PUBLIC_COLS}&order=username.asc`));
+  } catch (e) {
+    sendSupabaseError(res, e, 'users');
+  }
+});
+
+app.post('/api/users', requireSupabase, requireAdmin, async (req, res) => {
+  const { errors, row } = await validateUserFields(req.body, { requirePassword: true });
+  if (errors.length) return res.status(400).json({ error: errors.join('; ') });
+  try {
+    const salt = makeSalt();
+    const created = await supabaseRequest('POST', `app_users?select=${USER_PUBLIC_COLS}`, {
+      ...row,
+      password_salt: salt,
+      password_hash: hashPassword(req.body.password, salt),
+      must_change_password: false
+    });
+    res.status(201).json(Array.isArray(created) ? created[0] : created);
+  } catch (e) {
+    // 23505 = unique violation on the username index
+    if (e.status === 409 || /duplicate key|23505/i.test(e.message)) {
+      return res.status(409).json({ error: 'That username is already taken' });
+    }
+    sendSupabaseError(res, e, 'users');
+  }
+});
+
+app.put('/api/users/:id', requireSupabase, requireAdmin, async (req, res) => {
+  const id = req.params.id;
+  if (!UUID_RE.test(id)) return res.status(400).json({ error: 'Invalid id' });
+  const { errors, row } = await validateUserFields(req.body, { requirePassword: false });
+  if (errors.length) return res.status(400).json({ error: errors.join('; ') });
+
+  // Locking yourself out of the app is only recoverable via raw SQL, so the
+  // two ways to do it are refused outright.
+  if (id === req.user.id && (!row.is_active || !row.is_admin)) {
+    return res.status(400).json({ error: 'You cannot deactivate your own account or remove your own admin access' });
+  }
+  try {
+    if (!row.is_active || !row.is_admin) {
+      const existing = await supabaseRequest('GET', `app_users?id=eq.${id}&select=is_admin,is_active`);
+      const before = existing && existing[0];
+      const wasActiveAdmin = before && before.is_admin && before.is_active;
+      if (wasActiveAdmin && (await countActiveAdmins()) <= 1) {
+        return res.status(400).json({ error: 'This is the last active admin — promote someone else first' });
+      }
+    }
+    row.updated_at = new Date().toISOString();
+    const updated = await supabaseRequest('PATCH', `app_users?id=eq.${id}&select=${USER_PUBLIC_COLS}`, row);
+    if (!updated || !updated.length) return res.status(404).json({ error: 'Not found' });
+    invalidateSessionUser(id);
+    res.json(updated[0]);
+  } catch (e) {
+    if (e.status === 409 || /duplicate key|23505/i.test(e.message)) {
+      return res.status(409).json({ error: 'That username is already taken' });
+    }
+    sendSupabaseError(res, e, 'users');
+  }
+});
+
+// Admin resets someone else's password without knowing the old one, then that
+// user is prompted to set their own on next sign-in.
+app.put('/api/users/:id/password', requireSupabase, requireAdmin, async (req, res) => {
+  const id = req.params.id;
+  if (!UUID_RE.test(id)) return res.status(400).json({ error: 'Invalid id' });
+  const pwErr = validatePassword(req.body?.password);
+  if (pwErr) return res.status(400).json({ error: pwErr });
+  try {
+    const salt = makeSalt();
+    const updated = await supabaseRequest('PATCH', `app_users?id=eq.${id}&select=id`, {
+      password_salt: salt,
+      password_hash: hashPassword(req.body.password, salt),
+      must_change_password: true,
+      updated_at: new Date().toISOString()
+    });
+    if (!updated || !updated.length) return res.status(404).json({ error: 'Not found' });
+    invalidateSessionUser(id);
+    res.json({ ok: true });
+  } catch (e) {
+    sendSupabaseError(res, e, 'users/password');
+  }
+});
 
 // Reference list for the "pick a task" dropdown in both forms. /api/sync-status
 // can't serve this: its JQL is capped at `updated >= 7 days`, maxResults=100,

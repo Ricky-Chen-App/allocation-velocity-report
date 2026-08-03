@@ -40,11 +40,46 @@ Data is **live from Jira**, not mock. Env/credentials live in `.env` /
   the Vercel git integration is connected.
 - Visual language is **"Momentum"** (see Design system). UI copy is **English**.
 
+## Authentication & permissions
+
+The app is behind a login. Sessions are a stateless signed cookie
+(`rp_session`): scrypt password hashing and an HMAC signature, both from
+`node:crypto` — **no new dependencies**, and it works on serverless. Users live
+in Supabase `app_users` (RLS on, no policies; service-role key server-side
+only). Requires `SESSION_SECRET`; without it every API route returns 503.
+
+- Every `/api/*` route needs a valid session except `POST /api/auth/login`.
+  The guard re-reads the user per request (memoised 30s), so deactivating an
+  account takes effect within 30 seconds rather than at cookie expiry.
+- `is_admin` is a single boolean, not a role system. Only admins reach
+  `/api/users` and the User Management page; both are enforced server-side.
+- An admin cannot deactivate or demote **themselves** — that's what actually
+  prevents locking everyone out of the app.
+- No DELETE for users (same as `wins`/`blockers`): deactivate via `is_active`.
+- Default seeded account is `admin` / `admin` with `must_change_password`
+  set, which drives a persistent warning banner. **Change it immediately.**
+
+**Project scoping is display-only — not access control.** `GET /api/projects`
+filters to the user's `allowed_project_keys`, which scopes every project
+selector at once because `STATE.projects` feeds all of them. But the other
+Jira endpoints still compute over every project, so a signed-in user can call
+`/api/capacity` or `/api/drilldown?projectKey=…` directly and see everything.
+Capacity aggregates are re-derived client-side in `scopeCapacity()` from
+`projectAllocations`, and scoped users get a note saying the numbers cover
+only their projects — without it, a reduced utilization % reads as that
+developer's real workload. Treat this as tidying each person's view, not as
+isolating confidential data. If real isolation is ever needed,
+`/api/forecast` and `/api/timeline` already accept project filters with
+per-filter cache keys — that's the place to start.
+
 ## Information architecture
 
-Eleven destinations in the sidebar, four groups. **Do not add, remove,
+Thirteen destinations in the sidebar, four groups. **Do not add, remove,
 rename, merge, or reorder them** without an explicit product decision (the
-Report AirPay group below was one such deliberate addition — see its note).
+Report AirPay group and User Management were each such a deliberate
+addition — see their notes). Sidebar groups hide themselves when every button
+inside is hidden. Resolve nav buttons with `navBtn('<id>')`, never by
+positional index into `.nav-item`.
 
 **Dashboards**
 - `executive` (home) — KPI strip, team-utilization gauge, utilization-by-group,
@@ -67,6 +102,12 @@ Report AirPay group below was one such deliberate addition — see its note).
 - `members` (Team Members) — members table: group, email, position, level,
   workload; inline edit + bulk save.
 - `jirasync` (Jira Sync) — Jira sync status, issue table, sync-status badges.
+- `usermgmt` (User Management) — **admin only.** Register users (username,
+  email, password), set Active/Inactive, and pick the projects they can see,
+  grouped by Jira project category with a select-all per category. Menu
+  access sits in a collapsed section, defaulting to everything, so the
+  common case stays short. Shows last login with the device it came from
+  (parsed from User-Agent — a convenience signal, spoofable, never evidence).
 
 **Org Design**
 - `orgchart` (Structure Organization) — draw.io-style canvas mapping
