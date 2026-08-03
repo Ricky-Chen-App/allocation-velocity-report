@@ -843,6 +843,46 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 /* Inline add/edit form — lives inside the panel (CLAUDE.md: modals are a last
    resort, prefer progressive disclosure like the Capacity rows). */
 .ap-form{padding:14px 16px;border-bottom:1px solid var(--ink-100);background:var(--ink-50);display:grid;gap:10px}
+
+/* Card treatment for the Wins/Blockers forms. Applied as a modifier so the
+   User Management form, which also uses .ap-form, is untouched. */
+.ap-form.ap-form-card{padding:0;gap:0;background:var(--ink-0);border:1px solid var(--ink-100);
+  border-left:3px solid var(--accent);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);overflow:hidden;margin:12px 16px}
+.ap-form-head{display:flex;align-items:center;gap:9px;padding:12px 15px;border-bottom:1px solid var(--ink-100);
+  background:linear-gradient(180deg,var(--ink-50),var(--ink-0))}
+.ap-form-head b{font-size:12.5px;font-weight:700;color:var(--ink-800);letter-spacing:-.01em}
+.ap-form-head .ap-form-kicker{font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em}
+.ap-form-close{margin-left:auto;border:none;background:none;color:var(--ink-400);cursor:pointer;padding:3px;border-radius:var(--radius-sm);line-height:0}
+.ap-form-close:hover{background:var(--ink-50);color:var(--ink-800)}
+.ap-form-close:focus-visible{outline:2px solid var(--blue-500);outline-offset:1px}
+.ap-form-body{padding:14px 15px;display:grid;gap:11px}
+.ap-form-foot{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:11px 15px;border-top:1px solid var(--ink-100);background:var(--ink-50)}
+/* Two inputs that belong together read better with one shared frame. */
+.ap-field-group{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+@media (max-width:840px){.ap-field-group{grid-template-columns:1fr}}
+
+/* ——— Searchable combobox ——— */
+.ap-combo{position:relative}
+.ap-combo-control{display:flex;align-items:center;gap:6px;border:1px solid var(--ink-100);border-radius:var(--radius-sm);background:var(--ink-0);transition:border-color .15s var(--ease),box-shadow .15s var(--ease)}
+.ap-combo-control:focus-within{border-color:transparent;box-shadow:0 0 0 2px var(--blue-500)}
+.ap-combo-control input{flex:1;min-width:0;border:none!important;background:none!important;box-shadow:none!important;padding:7px 0 7px 9px!important;font:inherit;font-size:12px;color:var(--ink-800)}
+.ap-combo-control input:focus{outline:none!important}
+.ap-combo-toggle{border:none;background:none;color:var(--ink-400);cursor:pointer;padding:6px 8px;line-height:0;flex-shrink:0}
+.ap-combo-toggle:hover{color:var(--ink-800)}
+.ap-combo-panel{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:60;background:var(--ink-0);border:1px solid var(--ink-100);
+  border-radius:var(--radius-md);box-shadow:var(--shadow-lg);overflow:hidden;display:none}
+.ap-combo.open .ap-combo-panel{display:block}
+.ap-combo-list{list-style:none;margin:0;padding:4px;max-height:230px;overflow-y:auto}
+.ap-combo-opt{padding:7px 9px;border-radius:var(--radius-sm);cursor:pointer;font-size:12px;color:var(--ink-700);line-height:1.35;display:flex;align-items:baseline;gap:7px}
+.ap-combo-opt:hover,.ap-combo-opt.active{background:var(--blue-50);color:var(--ink-800)}
+.ap-combo-opt[aria-selected="true"]{font-weight:600}
+.ap-combo-opt .ap-combo-key{font-family:var(--font-mono);font-size:10px;color:var(--ink-400);flex-shrink:0}
+.ap-combo-opt mark{background:var(--amber-50);color:inherit;font-weight:700;padding:0 1px;border-radius:2px}
+.ap-combo-opt.manual{border-top:1px solid var(--ink-50);margin-top:3px;padding-top:9px;color:var(--accent);font-weight:600}
+.ap-combo-empty{padding:14px 11px;font-size:11.5px;color:var(--ink-400);line-height:1.5}
+.ap-combo-count{padding:6px 10px;border-bottom:1px solid var(--ink-50);font-size:10px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.05em}
+.ap-combo-picked{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:11px;color:var(--ink-500)}
+.ap-combo-picked .ap-combo-key{font-family:var(--font-mono);font-size:10px;color:var(--accent);font-weight:700}
 .ap-form-row{display:grid;gap:4px}
 .ap-form-row.two{grid-template-columns:1fr 1fr;gap:10px}
 .ap-form label{font-size:10px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.05em}
@@ -988,8 +1028,20 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .um-sub{font-size:10.5px;color:var(--ink-400);margin-top:2px}
 .scoped-note{font-size:11px;color:var(--ink-400);font-style:italic;margin-top:6px;line-height:1.45}
 
+/* Touch sizing for the AirPay forms. Placed last so it beats the base
+   .ap-form control rules, which would otherwise win on source order. */
+@media (max-width:840px){
+  .ap-form input,.ap-form select,.ap-form textarea{min-height:44px;font-size:16px}
+  .ap-form textarea{min-height:76px}
+  .ap-form input[type="checkbox"]{min-height:0}
+  .ap-combo-control input{padding-top:11px!important;padding-bottom:11px!important;font-size:16px}
+  .ap-combo-toggle{padding:11px 12px}
+  .ap-combo-opt{padding:11px 10px}
+}
+
 @media print{
   .sidebar,.topbar,#top-loader,.ap-noprint,.ap-sort-toggle,.ap-task-checkbox{display:none!important}
+  .ap-combo-panel,.ap-form-close{display:none!important}
   #login-screen,.user-menu,.pw-warning{display:none!important}
   /* Editing chrome is screen-only — a printed report shouldn't show controls */
   .ap-form,.ap-panel-add,.ap-row-actions{display:none!important}
@@ -6382,6 +6434,7 @@ const AIRPAY = {
   curErrorMsg: null,
   winsCategory: '',         // '' (all) | Platform | DCB | Digital Payment
   blockerPrio: '',          // '' (all) | P0..P4
+  blockerStatus: 'active',  // 'active' (Open+In Progress) | 'all' | Open | In Progress | Resolved
   jiraIssues: null,         // dropdown reference, fetched once
   picOptions: null,         // dropdown reference, fetched once
   // Which inline form is open, if any: { kind:'win'|'blocker', id:null|uuid }.
@@ -6637,9 +6690,17 @@ function apWinsHtml() {
 function apBlockerStatusClass(s) {
   return s === 'Resolved' ? 'resolved' : s === 'In Progress' ? 'progress' : 'open';
 }
+// Status view: 'active' (default) hides Resolved so the panel stays a
+// working list, but Resolved stays reachable rather than disappearing for good.
+function apBlockerStatusMatch(b, view) {
+  if (view === 'active') return b.status !== 'Resolved';
+  if (view === 'all') return true;
+  return b.status === view;
+}
 function apBlockersHtml() {
   if (AIRPAY.blockers === null) return apCuratedEmpty('Loading blockers…');
-  let rows = AIRPAY.blockers.filter(b => b.status !== 'Resolved');
+  const view = AIRPAY.blockerStatus || 'active';
+  let rows = AIRPAY.blockers.filter(b => apBlockerStatusMatch(b, view));
   if (AIRPAY.blockerPrio) rows = rows.filter(b => b.priority === AIRPAY.blockerPrio);
   rows = rows.sort((a, b) => {
     const d = (AP_PRIO_RANK[a.priority] ?? 9) - (AP_PRIO_RANK[b.priority] ?? 9);
@@ -6647,9 +6708,12 @@ function apBlockersHtml() {
   }).slice(0, AP_PANEL_CAP);
 
   if (!rows.length) {
+    const label = view === 'active' ? 'active' : view === 'all' ? '' : view.toLowerCase();
     return apCuratedEmpty(AIRPAY.blockerPrio
-      ? `No open ${AIRPAY.blockerPrio} blockers.`
-      : 'No active blockers right now. Use “+ Add” to log one.');
+      ? `No ${label} ${AIRPAY.blockerPrio} blockers.`
+      : view === 'Resolved'
+        ? 'Nothing resolved yet — resolved blockers will be kept here.'
+        : `No ${label || ''} blockers right now. Use “+ Add” to log one.`);
   }
   return rows.map(b => `
     <div class="ap-item-row">
@@ -6737,90 +6801,322 @@ function apFindEntry(kind, id) {
   return (list || []).find(x => x.id === id) || null;
 }
 
+// Combobox state is per-form-session: clear it when a form opens or closes so
+// the next form starts fresh, but leave it alone during re-renders (saving,
+// validation errors) so a selection survives.
+function apResetCombos() {
+  ['win-task', 'blk-task', 'blk-picsel'].forEach(id => { delete AP_COMBO[id]; });
+}
 async function apOpenForm(kind, id) {
+  apResetCombos();
   AIRPAY.form = { kind, id: id || null };
   AIRPAY.formError = null;
   AIRPAY.formBusy = false;
   renderAirpaySummary();          // paint the form immediately…
   await apEnsureFormRefs();
-  if (AIRPAY.form) renderAirpaySummary();  // …then again once dropdowns land
+  if (AIRPAY.form) { apResetCombos(); renderAirpaySummary(); }  // …then again once options land
 }
 function apCloseForm() {
+  apResetCombos();
   AIRPAY.form = null;
   AIRPAY.formError = null;
   AIRPAY.formBusy = false;
   renderAirpaySummary();
 }
 
-function apOptionsHtml(values, selected) {
+// ——— Searchable combobox ———
+// A native <select> is unusable once it holds 140 Jira issues. This filters as
+// you type and patches ONLY its own subtree — calling the page render on every
+// keystroke would destroy the input and its focus. Roles and key handling
+// follow the WAI-ARIA combobox pattern.
+const AP_COMBO = {};
+
+function apComboInit(id, cfg) {
+  AP_COMBO[id] = {
+    options: cfg.options || [],          // [{ value, label, key }]
+    value: cfg.value || '',
+    label: cfg.label || '',
+    manualLabel: cfg.manualLabel || null,
+    placeholder: cfg.placeholder || 'Search…',
+    onPick: cfg.onPick || null,
+    open: false, active: -1, query: '', filtered: []
+  };
+}
+function apComboEl(id, suffix) { return document.getElementById(`cmb-${id}${suffix || ''}`); }
+
+function apComboHtml(id) {
+  const s = AP_COMBO[id];
+  if (!s) return '';
+  return `<div class="ap-combo" id="cmb-${id}">
+    <div class="ap-combo-control">
+      <input id="cmb-${id}-input" type="text" role="combobox" aria-expanded="false"
+             aria-controls="cmb-${id}-list" aria-autocomplete="list" autocomplete="off"
+             placeholder="${apEsc(s.placeholder)}" value="${apEsc(s.label)}"
+             oninput="apComboOnInput('${id}')" onfocus="apComboOpen('${id}')"
+             onkeydown="apComboKey('${id}',event)">
+      <button type="button" class="ap-combo-toggle" tabindex="-1" aria-label="Show all options"
+              onclick="apComboToggle('${id}')">
+        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6.5l4 4 4-4"/></svg>
+      </button>
+    </div>
+    <div class="ap-combo-panel" onmousedown="event.preventDefault()">
+      <ul class="ap-combo-list" id="cmb-${id}-list" role="listbox" aria-label="Options"></ul>
+    </div>
+    <div id="cmb-${id}-picked"></div>
+  </div>`;
+}
+
+function apComboMatches(id) {
+  const s = AP_COMBO[id];
+  const q = s.query.trim().toLowerCase();
+  if (!q) return s.options;
+  return s.options.filter(o => o.label.toLowerCase().includes(q) || (o.key || '').toLowerCase().includes(q));
+}
+// Highlight the matched span so it's obvious why a row matched.
+function apComboMark(text, q) {
+  if (!q) return apEsc(text);
+  const i = text.toLowerCase().indexOf(q.toLowerCase());
+  if (i < 0) return apEsc(text);
+  return apEsc(text.slice(0, i)) + '<mark>' + apEsc(text.slice(i, i + q.length)) + '</mark>' + apEsc(text.slice(i + q.length));
+}
+
+function apComboRenderList(id) {
+  const s = AP_COMBO[id];
+  const list = apComboEl(id, '-list');
+  if (!s || !list) return;
+  s.filtered = apComboMatches(id);
+  const q = s.query.trim();
+
+  let html = s.options.length ? `<div class="ap-combo-count">${s.filtered.length} of ${s.options.length}</div>` : '';
+  if (!s.filtered.length) {
+    // Never a dead end — name what was searched and point at the way out.
+    html += `<div class="ap-combo-empty">No match for “${apEsc(q)}”.${s.manualLabel ? '<br>Choose <b>' + apEsc(s.manualLabel) + '</b> below to type it yourself.' : ''}</div>`;
+  } else {
+    html += s.filtered.map((o, i) => `
+      <li class="ap-combo-opt ${i === s.active ? 'active' : ''}" role="option"
+          id="cmb-${id}-opt-${i}" aria-selected="${o.value === s.value}" onclick="apComboPick('${id}',${i})">
+        <span>${apComboMark(o.label, q)}</span>
+        ${o.key ? `<span class="ap-combo-key">${apEsc(o.key)}</span>` : ''}
+      </li>`).join('');
+  }
+  if (s.manualLabel) {
+    const mi = s.filtered.length;
+    html += `<li class="ap-combo-opt manual ${mi === s.active ? 'active' : ''}" role="option"
+        id="cmb-${id}-opt-${mi}" aria-selected="${s.value === '__manual__'}" onclick="apComboPick('${id}',${mi})">${apEsc(s.manualLabel)}</li>`;
+  }
+  list.innerHTML = html;
+
+  const input = apComboEl(id, '-input');
+  if (input) {
+    if (s.active >= 0) input.setAttribute('aria-activedescendant', `cmb-${id}-opt-${s.active}`);
+    else input.removeAttribute('aria-activedescendant');
+  }
+  list.querySelector('.ap-combo-opt.active')?.scrollIntoView({ block: 'nearest' });
+}
+
+function apComboOpen(id) {
+  const s = AP_COMBO[id];
+  if (!s || s.open) return;
+  s.open = true; s.query = ''; s.active = -1;
+  apComboEl(id)?.classList.add('open');
+  apComboEl(id, '-input')?.setAttribute('aria-expanded', 'true');
+  apComboRenderList(id);
+}
+function apComboClose(id, restoreLabel) {
+  const s = AP_COMBO[id];
+  if (!s) return;
+  s.open = false; s.active = -1;
+  apComboEl(id)?.classList.remove('open');
+  const input = apComboEl(id, '-input');
+  if (input) {
+    input.setAttribute('aria-expanded', 'false');
+    input.removeAttribute('aria-activedescendant');
+    if (restoreLabel !== false) input.value = s.label;
+  }
+}
+function apComboToggle(id) {
+  const s = AP_COMBO[id];
+  if (!s) return;
+  if (s.open) apComboClose(id);
+  else { apComboEl(id, '-input')?.focus(); apComboOpen(id); }
+}
+function apComboOnInput(id) {
+  const s = AP_COMBO[id];
+  if (!s) return;
+  if (!s.open) apComboOpen(id);
+  s.query = apComboEl(id, '-input')?.value || '';
+  s.active = -1;
+  apComboRenderList(id);
+}
+function apComboPick(id, index) {
+  const s = AP_COMBO[id];
+  if (!s) return;
+  if (s.manualLabel && index === s.filtered.length) {
+    s.value = '__manual__'; s.label = '';
+    apComboClose(id, false);
+    const input = apComboEl(id, '-input');
+    if (input) input.value = '';
+    apComboRenderPicked(id);
+    if (s.onPick) s.onPick(id, '__manual__', null);
+    return;
+  }
+  const opt = s.filtered[index];
+  if (!opt) return;
+  s.value = opt.value; s.label = opt.label;
+  apComboClose(id);
+  apComboRenderPicked(id);
+  if (s.onPick) s.onPick(id, opt.value, opt);
+}
+function apComboRenderPicked(id) {
+  const s = AP_COMBO[id];
+  const el = apComboEl(id, '-picked');
+  if (!el || !s) return;
+  const opt = s.options.find(o => o.value === s.value);
+  el.innerHTML = opt && opt.key ? `<div class="ap-combo-picked">Linked to <span class="ap-combo-key">${apEsc(opt.key)}</span></div>` : '';
+}
+function apComboKey(id, ev) {
+  const s = AP_COMBO[id];
+  if (!s) return;
+  const max = s.filtered.length + (s.manualLabel ? 1 : 0) - 1;
+  if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+    ev.preventDefault();
+    if (!s.open) return apComboOpen(id);
+    const dir = ev.key === 'ArrowDown' ? 1 : -1;
+    s.active = s.active < 0 ? (dir > 0 ? 0 : max) : Math.min(max, Math.max(0, s.active + dir));
+    apComboRenderList(id);
+  } else if (ev.key === 'Enter') {
+    if (s.open && s.active >= 0) { ev.preventDefault(); apComboPick(id, s.active); }
+  } else if (ev.key === 'Escape') {
+    if (s.open) { ev.preventDefault(); ev.stopPropagation(); apComboClose(id); }
+  } else if (ev.key === 'Tab') {
+    apComboClose(id);
+  } else if ((ev.key === 'Home' || ev.key === 'End') && s.open) {
+    ev.preventDefault();
+    s.active = ev.key === 'Home' ? 0 : max;
+    apComboRenderList(id);
+  }
+}
+document.addEventListener('click', ev => {
+  Object.keys(AP_COMBO).forEach(id => {
+    if (!AP_COMBO[id].open) return;
+    const root = apComboEl(id);
+    if (root && !root.contains(ev.target)) apComboClose(id);
+  });
+});
+
+function apSelectOptionsHtml(values, selected) {
   return values.map(v => `<option value="${apEsc(v)}"${v === selected ? ' selected' : ''}>${apEsc(v)}</option>`).join('');
 }
-// Task picker: a list of AIRPAY issues plus an "Other" escape hatch, because
-// plenty of real work in this report has no Jira issue behind it.
+// Task picker: searchable list of AIRPAY issues plus a manual escape hatch,
+// because plenty of real work in this report has no Jira issue behind it.
+// The free-text Title field only appears when nothing is linked.
+function apTaskComboId(prefix) { return prefix + '-task'; }
+
+function apInitTaskCombo(idPrefix, currentTitle, currentKey) {
+  const id = apTaskComboId(idPrefix);
+  if (AP_COMBO[id]) return id;   // keep state across form re-renders
+  const issues = AIRPAY.jiraIssues || [];
+  const matched = currentKey && issues.some(i => i.key === currentKey);
+  apComboInit(id, {
+    options: issues.map(i => ({ value: i.key, label: i.summary, key: i.key })),
+    value: matched ? currentKey : (currentTitle ? '__manual__' : ''),
+    label: matched ? (issues.find(i => i.key === currentKey)?.summary || '') : '',
+    manualLabel: 'Other — type the title manually',
+    placeholder: AIRPAY.jiraIssues === null ? 'Loading AIRPAY issues…' : 'Search AIRPAY issues…',
+    onPick: (cid, value) => {
+      const row = document.getElementById(idPrefix + '-title-row');
+      const title = document.getElementById(idPrefix + '-title');
+      if (!row || !title) return;
+      if (value === '__manual__') {
+        row.style.display = '';
+        title.focus();
+      } else {
+        title.value = AP_COMBO[cid].label;   // derived from the issue summary
+        row.style.display = 'none';
+      }
+    }
+  });
+  return id;
+}
+
 function apTaskPickerHtml(idPrefix, currentTitle, currentKey) {
   const issues = AIRPAY.jiraIssues || [];
   const matched = currentKey && issues.some(i => i.key === currentKey);
-  const loading = AIRPAY.jiraIssues === null;
+  const id = apInitTaskCombo(idPrefix, currentTitle, currentKey);
+  const showTitle = AP_COMBO[id].value === '__manual__' || (!matched && !!currentTitle) || !AP_COMBO[id].value;
   return `
     <div class="ap-form-row">
-      <label for="${idPrefix}-issue">Task name</label>
-      <select id="${idPrefix}-issue" onchange="apOnTaskPick('${idPrefix}')">
-        <option value="">${loading ? 'Loading AIRPAY issues…' : '— Select an AIRPAY issue —'}</option>
-        ${issues.map(i => `<option value="${apEsc(i.key)}"${i.key === currentKey ? ' selected' : ''}>${apEsc(i.key)} — ${apEsc(i.summary)}</option>`).join('')}
-        <option value="__other__"${(!matched && currentTitle) ? ' selected' : ''}>Other (type manually)</option>
-      </select>
+      <label for="cmb-${id}-input">Task name</label>
+      ${apComboHtml(id)}
     </div>
-    <div class="ap-form-row" id="${idPrefix}-title-row" style="${(!matched && currentTitle) || !currentKey ? '' : 'display:none'}">
+    <div class="ap-form-row" id="${idPrefix}-title-row" style="${showTitle ? '' : 'display:none'}">
       <label for="${idPrefix}-title">Title</label>
       <input id="${idPrefix}-title" type="text" value="${apEsc(currentTitle || '')}" placeholder="Describe the item">
     </div>`;
 }
-function apOnTaskPick(idPrefix) {
-  const sel = document.getElementById(idPrefix + '-issue');
-  const row = document.getElementById(idPrefix + '-title-row');
-  const title = document.getElementById(idPrefix + '-title');
-  if (!sel || !row || !title) return;
-  if (sel.value === '__other__' || sel.value === '') {
-    row.style.display = '';
-    if (sel.value === '__other__') title.focus();
-  } else {
-    // Prefill from the issue summary but keep the field visible-free: the
-    // title is derived, and the user can still switch to "Other" to edit it.
-    const issue = (AIRPAY.jiraIssues || []).find(i => i.key === sel.value);
-    title.value = issue ? issue.summary : '';
-    row.style.display = 'none';
-  }
+
+// PIC picker: same combobox, since the member list is long enough to scan badly.
+function apInitPicCombo(b, picKnown) {
+  const id = 'blk-picsel';
+  if (AP_COMBO[id]) return id;
+  const pics = AIRPAY.picOptions || [];
+  apComboInit(id, {
+    options: pics.map(p => ({ value: p, label: p })),
+    value: b ? (picKnown ? b.pic : '__manual__') : '',
+    label: b && picKnown ? b.pic : '',
+    manualLabel: 'Other — someone not in the team list',
+    placeholder: AIRPAY.picOptions === null ? 'Loading members…' : 'Search team members…',
+    onPick: (cid, value) => {
+      const row = document.getElementById('blk-pic-other-row');
+      if (!row) return;
+      row.style.display = value === '__manual__' ? '' : 'none';
+      if (value === '__manual__') document.getElementById('blk-pic-other')?.focus();
+    }
+  });
+  return id;
 }
 
-function apFormButtonsHtml() {
+function apFormFootHtml() {
   return `
-    ${AIRPAY.formError ? `<div class="ap-form-err">${apEsc(AIRPAY.formError)}</div>` : ''}
-    <div class="ap-form-actions">
+    ${AIRPAY.formError ? `<div class="ap-form-err" role="alert" style="padding:0 15px 10px">${apEsc(AIRPAY.formError)}</div>` : ''}
+    <div class="ap-form-foot">
       <button class="btn btn-primary" onclick="apSubmitForm()" ${AIRPAY.formBusy ? 'disabled' : ''}>${AIRPAY.formBusy ? 'Saving…' : 'Save'}</button>
       <button class="btn btn-ghost" onclick="apCloseForm()" ${AIRPAY.formBusy ? 'disabled' : ''}>Cancel</button>
     </div>`;
+}
+function apFormHeadHtml(kicker, title) {
+  return `<div class="ap-form-head">
+    <span class="ap-form-kicker">${apEsc(kicker)}</span>
+    <b>${apEsc(title)}</b>
+    <button class="ap-form-close" onclick="apCloseForm()" aria-label="Close form" ${AIRPAY.formBusy ? 'disabled' : ''}>
+      <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+    </button>
+  </div>`;
 }
 
 function apWinFormHtml() {
   const w = AIRPAY.form.id ? apFindEntry('win', AIRPAY.form.id) : null;
   const todayIso = new Date().toISOString().slice(0, 10);
-  return `<div class="ap-form">
-    <div class="ap-form-row two">
-      <div class="ap-form-row">
-        <label for="win-date">Date</label>
-        <input id="win-date" type="date" value="${apEsc(w ? w.win_date : todayIso)}">
+  return `<div class="ap-form ap-form-card">
+    ${apFormHeadHtml(w ? 'Edit' : 'New', w ? 'Edit win' : 'Add a win')}
+    <div class="ap-form-body">
+      <div class="ap-field-group">
+        <div class="ap-form-row">
+          <label for="win-date">Date</label>
+          <input id="win-date" type="date" value="${apEsc(w ? w.win_date : todayIso)}">
+        </div>
+        <div class="ap-form-row">
+          <label for="win-category">Category</label>
+          <select id="win-category">${apSelectOptionsHtml(AP_WIN_CATEGORIES, w ? w.category : 'Platform')}</select>
+        </div>
       </div>
+      ${apTaskPickerHtml('win', w ? w.title : '', w ? w.jira_issue_key : '')}
       <div class="ap-form-row">
-        <label for="win-category">Category</label>
-        <select id="win-category">${apOptionsHtml(AP_WIN_CATEGORIES, w ? w.category : 'Platform')}</select>
+        <label for="win-description">Description <span style="text-transform:none;font-weight:400">(optional)</span></label>
+        <textarea id="win-description" placeholder="What was delivered?">${apEsc(w ? (w.description || '') : '')}</textarea>
       </div>
     </div>
-    ${apTaskPickerHtml('win', w ? w.title : '', w ? w.jira_issue_key : '')}
-    <div class="ap-form-row">
-      <label for="win-description">Description <span style="text-transform:none;font-weight:400">(optional)</span></label>
-      <textarea id="win-description" placeholder="What was delivered?">${apEsc(w ? (w.description || '') : '')}</textarea>
-    </div>
-    ${apFormButtonsHtml()}
+    ${apFormFootHtml()}
   </div>`;
 }
 
@@ -6828,28 +7124,28 @@ function apBlockerFormHtml() {
   const b = AIRPAY.form.id ? apFindEntry('blocker', AIRPAY.form.id) : null;
   const pics = AIRPAY.picOptions || [];
   const picKnown = b && pics.includes(b.pic);
-  return `<div class="ap-form">
+  const picId = apInitPicCombo(b, picKnown);
+  const showPicOther = AP_COMBO[picId].value === '__manual__';
+  return `<div class="ap-form ap-form-card">
+    ${apFormHeadHtml(b ? 'Edit' : 'New', b ? 'Edit blocker' : 'Add a blocker')}
+    <div class="ap-form-body">
     ${apTaskPickerHtml('blk', b ? b.title : '', b ? b.jira_issue_key : '')}
     <div class="ap-form-row">
-      <label for="blk-pic">PIC</label>
-      <select id="blk-pic" onchange="apOnPicPick()">
-        <option value="">${AIRPAY.picOptions === null ? 'Loading members…' : '— Select a team member —'}</option>
-        ${pics.map(p => `<option value="${apEsc(p)}"${picKnown && p === b.pic ? ' selected' : ''}>${apEsc(p)}</option>`).join('')}
-        <option value="__other__"${b && !picKnown ? ' selected' : ''}>Other…</option>
-      </select>
+      <label for="cmb-${picId}-input">PIC</label>
+      ${apComboHtml(picId)}
     </div>
-    <div class="ap-form-row" id="blk-pic-other-row" style="${b && !picKnown ? '' : 'display:none'}">
+    <div class="ap-form-row" id="blk-pic-other-row" style="${showPicOther ? '' : 'display:none'}">
       <label for="blk-pic-other">PIC name</label>
       <input id="blk-pic-other" type="text" value="${apEsc(b && !picKnown ? b.pic : '')}" placeholder="Name (not a Jira user)">
     </div>
-    <div class="ap-form-row two">
+    <div class="ap-field-group">
       <div class="ap-form-row">
         <label for="blk-priority">Priority</label>
-        <select id="blk-priority">${apOptionsHtml(AP_PRIORITIES, b ? b.priority : 'P1')}</select>
+        <select id="blk-priority">${apSelectOptionsHtml(AP_PRIORITIES, b ? b.priority : 'P1')}</select>
       </div>
       <div class="ap-form-row">
         <label for="blk-status">Status</label>
-        <select id="blk-status">${apOptionsHtml(AP_BLOCKER_STATUSES, b ? b.status : 'Open')}</select>
+        <select id="blk-status">${apSelectOptionsHtml(AP_BLOCKER_STATUSES, b ? b.status : 'Open')}</select>
       </div>
     </div>
     <div class="ap-form-row">
@@ -6865,26 +7161,24 @@ function apBlockerFormHtml() {
       <input id="blk-target" type="date" value="${apEsc(b && b.target_date ? b.target_date : '')}">
       <div class="ap-form-hint">Drives the ordering in the Decision Required panel.</div>
     </div>
-    ${apFormButtonsHtml()}
+    </div>
+    ${apFormFootHtml()}
   </div>`;
 }
-function apOnPicPick() {
-  const sel = document.getElementById('blk-pic');
-  const row = document.getElementById('blk-pic-other-row');
-  if (!sel || !row) return;
-  row.style.display = sel.value === '__other__' ? '' : 'none';
-  if (sel.value === '__other__') document.getElementById('blk-pic-other')?.focus();
-}
-
 function apReadTaskPicker(idPrefix) {
-  const sel = document.getElementById(idPrefix + '-issue');
+  const s = AP_COMBO[apTaskComboId(idPrefix)];
   const titleEl = document.getElementById(idPrefix + '-title');
-  const picked = sel ? sel.value : '';
-  if (picked && picked !== '__other__') {
+  const picked = s ? s.value : '';
+  if (picked && picked !== '__manual__') {
     const issue = (AIRPAY.jiraIssues || []).find(i => i.key === picked);
-    return { title: (issue && issue.summary) || (titleEl ? titleEl.value : ''), jira_issue_key: picked };
+    return { title: (issue && issue.summary) || (titleEl ? titleEl.value.trim() : ''), jira_issue_key: picked };
   }
   return { title: titleEl ? titleEl.value.trim() : '', jira_issue_key: null };
+}
+function apReadPic() {
+  const s = AP_COMBO['blk-picsel'];
+  if (s && s.value && s.value !== '__manual__') return s.value;
+  return document.getElementById('blk-pic-other')?.value || '';
 }
 
 async function apSubmitForm() {
@@ -6903,11 +7197,10 @@ async function apSubmitForm() {
     };
   } else {
     const picked = apReadTaskPicker('blk');
-    const picSel = document.getElementById('blk-pic')?.value || '';
     payload = {
       title: picked.title,
       jira_issue_key: picked.jira_issue_key,
-      pic: picSel === '__other__' ? (document.getElementById('blk-pic-other')?.value || '') : picSel,
+      pic: apReadPic(),
       priority: document.getElementById('blk-priority')?.value || '',
       status: document.getElementById('blk-status')?.value || 'Open',
       bottleneck: document.getElementById('blk-bottleneck')?.value || '',
@@ -6956,9 +7249,26 @@ function apWinsFilterHtml() {
   </div>`;
 }
 function apBlockersFilterHtml() {
-  return `<div style="display:flex;gap:5px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--ink-50)">
-    ${apCuratedPill('All', AIRPAY.blockerPrio === '', `AIRPAY.blockerPrio='';renderAirpaySummary()`)}
-    ${AP_PRIORITIES.map(p => apCuratedPill(p, AIRPAY.blockerPrio === p, `AIRPAY.blockerPrio='${p}';renderAirpaySummary()`)).join('')}
+  const all = AIRPAY.blockers || [];
+  const view = AIRPAY.blockerStatus || 'active';
+  const count = v => all.filter(b => apBlockerStatusMatch(b, v)).length;
+  // Counts are on the status row only — they answer "is anything hiding here?",
+  // which is the whole point of surfacing Resolved.
+  const statuses = [
+    ['active', 'Active'], ['Open', 'Open'], ['In Progress', 'In Progress'],
+    ['Resolved', 'Resolved'], ['all', 'All']
+  ];
+  return `<div style="padding:9px 16px;border-bottom:1px solid var(--ink-50);display:grid;gap:7px">
+    <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:9.5px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.05em;margin-right:2px">Status</span>
+      ${statuses.map(([v, label]) =>
+        apCuratedPill(`${label} ${count(v)}`, view === v, `AIRPAY.blockerStatus='${v}';renderAirpaySummary()`)).join('')}
+    </div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:9.5px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.05em;margin-right:2px">Priority</span>
+      ${apCuratedPill('All', AIRPAY.blockerPrio === '', `AIRPAY.blockerPrio='';renderAirpaySummary()`)}
+      ${AP_PRIORITIES.map(p => apCuratedPill(p, AIRPAY.blockerPrio === p, `AIRPAY.blockerPrio='${p}';renderAirpaySummary()`)).join('')}
+    </div>
   </div>`;
 }
 function apCuratedErrorHtml() {

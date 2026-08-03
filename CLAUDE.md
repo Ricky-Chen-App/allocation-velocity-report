@@ -121,9 +121,15 @@ route, own `lib/airpay/parseSheet.js` parser — never touches `STATE`/`TL`/
 `CAP` or any Jira-derived object). Reuses the app's existing tokens/components
 (`.card`, `.kpi-card`, `.btn`, `.error-banner`, `.pill`) — no separate theme.
 - `airpay-summary` (Summary Report) — executive one-pager: overall-% donut,
-  derived KPI cards, auto-generated Wins/Blockers/Decision-Required panels,
-  and a day-based Gantt (by DCB/Digital Payment/Platform category) with a
-  click-through detail drawer.
+  derived KPI cards, hand-curated Wins/Blockers/Decision-Required panels
+  (Supabase; see Authentication section), and a day-based Gantt (by
+  DCB/Digital Payment/Platform category) with a click-through detail drawer.
+  Blockers filter by status (Active is the default; Open / In Progress /
+  Resolved / All are selectable, with counts) **and** priority — Resolved
+  entries are hidden from the working list but never lost. The task and PIC
+  pickers use `apCombo*`, a searchable ARIA combobox: a native `<select>` is
+  unusable at 140+ Jira issues. It patches only its own subtree, because
+  re-rendering the page per keystroke would destroy the input's focus.
 - `airpay-detail` (Detail Report) — daily-standup task board for in-progress
   items, sortable by Priority or PIC, with urgency badges, a local-only
   "discussed" checkbox (`localStorage`, no backend — there's no per-user
