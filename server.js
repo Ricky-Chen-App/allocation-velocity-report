@@ -9,6 +9,9 @@ const forecastConfig = require('./forecastConfig');
 const { getEffectiveDates, classifyLoad, LOAD_STATUS_LABEL, DEFAULT_FIELD_IDS, val, PARAMS } = forecastConfig;
 const { businessDaysBetween, addBusinessDays, toIso } = require('./businessDays');
 const { parseAirpayCsv } = require('./lib/airpay/parseSheet');
+const {
+  buildChecklistWorkbook, buildMomMarkdown, computePeriodEnd, checklistFileName, momFileName
+} = require('./lib/governance/buildTemplates');
 
 const app = express();
 app.use(express.json());
@@ -2505,6 +2508,105 @@ app.put('/api/governance/projects/:key/tracking', requireSupabase, requireAdmin,
     res.json(updated[0]);
   } catch (e) {
     sendSupabaseError(res, e, 'governance/projects/tracking');
+  }
+});
+
+// ——— Governance — Phase 3: personalized templates + Storage ———
+const GOV_BUCKET = 'compliance';
+const GOV_PERIOD_TYPES = ['weekly', 'monthly'];
+
+// Signed URL for a private-bucket object, generated server-side after an
+// authz check — the object path is never handed to the client directly
+// (invariant 21). Not exercised yet (no submission files exist until
+// Phase 4), but established now so the storage path convention is fixed
+// from day one: compliance/{project_key}/{period_type}/{period_start}/...
+async function getSignedStorageUrl(objectPath, ttlSeconds = 60) {
+  const r = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/${GOV_BUCKET}/${objectPath}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ expiresIn: ttlSeconds })
+  });
+  const json = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(json.message || `Storage responded ${r.status}`);
+  return `${SUPABASE_URL}/storage/v1${json.signedURL}`;
+}
+
+// Shared by both template endpoints: resolve + authorize the project, load
+// its parser profile, and compute the period. Throws { status, message } so
+// callers can respond uniformly.
+async function resolveTemplateContext(req) {
+  const projectKey = trimmed(req.query.project_key).toUpperCase();
+  const periodStart = trimmed(req.query.period_start);
+  const periodType = trimmed(req.query.period_type) || 'weekly';
+
+  if (!GOV_KEY_RE.test(projectKey)) throw { status: 400, message: 'project_key is required and must look like a Jira key' };
+  if (!ISO_DATE_RE.test(periodStart)) throw { status: 400, message: 'period_start is required as YYYY-MM-DD' };
+  if (!GOV_PERIOD_TYPES.includes(periodType)) throw { status: 400, message: `period_type must be one of: ${GOV_PERIOD_TYPES.join(', ')}` };
+
+  // Re-verify against the session, not the query string (invariant 19) — the
+  // dropdown that will eventually drive this is a convenience, not a boundary.
+  if (!req.user.is_admin && !(req.user.allowed_project_keys || []).includes(projectKey)) {
+    throw { status: 403, message: `You do not have access to project ${projectKey}` };
+  }
+
+  const projects = await supabaseRequest('GET', `projects?key=eq.${encodeURIComponent(projectKey)}&select=*`);
+  const project = projects && projects[0];
+  if (!project) throw { status: 404, message: `Project ${projectKey} not found. Try syncing from Jira first.` };
+
+  const profiles = await supabaseRequest('GET', `parser_profiles?code=eq.${encodeURIComponent(project.parser_profile)}&select=*`);
+  const parserProfile = profiles && profiles[0];
+  if (!parserProfile) throw { status: 500, message: `Parser profile "${project.parser_profile}" is not configured` };
+
+  let teamSlug = '';
+  if (project.team_id) {
+    const teams = await supabaseRequest('GET', `teams?id=eq.${project.team_id}&select=slug`);
+    teamSlug = teams && teams[0] ? teams[0].slug : '';
+  }
+
+  const periodEnd = computePeriodEnd(periodType, periodStart);
+  return { project, parserProfile, periodType, periodStart, periodEnd, teamSlug };
+}
+
+app.get('/api/templates/checklist', requireSupabase, async (req, res) => {
+  try {
+    const ctx = await resolveTemplateContext(req);
+    const wb = await buildChecklistWorkbook({
+      project: ctx.project, periodType: ctx.periodType, periodStart: ctx.periodStart,
+      periodEnd: ctx.periodEnd, parserProfile: ctx.parserProfile,
+      submittedByEmail: req.user.email, teamSlug: ctx.teamSlug
+    });
+    const buffer = await wb.xlsx.writeBuffer();
+    const filename = checklistFileName(ctx.project.key, ctx.periodType, ctx.periodStart, ctx.parserProfile.schema_version);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(Buffer.from(buffer));
+  } catch (e) {
+    if (e && e.status) return res.status(e.status).json({ error: e.message });
+    console.error('templates/checklist error:', e.message);
+    res.status(502).json({ error: e.message });
+  }
+});
+
+app.get('/api/templates/mom', requireSupabase, async (req, res) => {
+  try {
+    const ctx = await resolveTemplateContext(req);
+    const md = buildMomMarkdown({
+      project: ctx.project, periodType: ctx.periodType, periodStart: ctx.periodStart,
+      periodEnd: ctx.periodEnd, submittedByEmail: req.user.email, teamSlug: ctx.teamSlug,
+      schemaVersion: ctx.parserProfile.schema_version
+    });
+    const filename = momFileName(ctx.project.key, ctx.periodType, ctx.periodStart);
+    res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(md);
+  } catch (e) {
+    if (e && e.status) return res.status(e.status).json({ error: e.message });
+    console.error('templates/mom error:', e.message);
+    res.status(502).json({ error: e.message });
   }
 });
 

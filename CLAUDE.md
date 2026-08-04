@@ -78,9 +78,9 @@ Spec: `docs/SPEC_Governance_Checklist.md` (implementation is phased — see the
 spec's §10 order; only the phases actually built are described below).
 Reference UI: `docs/Governance_Upload_Mockup.html`.
 
-**Status: Phase 1 (migration) and Phase 2 (Jira project sync + tracking) are
-built.** Upload, parsing, Submit UI, and Compliance Board are not — those are
-later phases.
+**Status: Phase 1 (migration), Phase 2 (Jira project sync + tracking), and
+Phase 3 (Storage + template downloads) are built.** Upload, parsing, Submit
+UI, and Compliance Board are not — those are later phases.
 
 Rules that must not be violated in any future phase:
 - Compliance color is computed **on read** via SQL `compliance_state()`; never
@@ -116,6 +116,29 @@ Rules that must not be violated in any future phase:
   derived from the actual `Checklist_AIRPAY_W32_v2.xlsx` template, which
   differs from some of the spec's own prose examples — the template is the
   source of truth when the two disagree.
+- Neither blank template ever supplied (`Checklist_Template_v1.xlsx`,
+  team-based/superseded; `Checklist_Template_v1-2.xlsx`, project-based but
+  missing the Todos sheet and half of Meta) matches `parser_profiles.default`
+  (schema_version 2). `lib/governance/buildTemplates.js` generates the
+  checklist workbook fresh per request from `parser_profiles.sheets` instead
+  of cloning either stale file — a future profile version changes the
+  download automatically, with no second place to edit. No
+  `MoM_Template_v1.md` was ever supplied either; the MoM `.md` format
+  (YAML frontmatter + one Markdown table per sheet, same columns as the
+  checklist) is this app's own design, chosen to satisfy §5.5's merge rule
+  (checklist wins on structured fields, MoM wins on narrative) — a
+  deterministic Markdown-table parser needs the same columns on both sides.
+- Checklist `Meta` sheet cell protection has **no real password** — it's a
+  fat-finger guard (anyone can click "Unprotect Sheet" in Excel), not a
+  security boundary. The actual boundary is server-side: `project_key` from
+  an uploaded file is always re-verified against the session's
+  `allowed_project_keys`, never trusted from the file or the query string.
+- Storage bucket `compliance` is private, RLS-on/no-policies like every other
+  table here — access is only ever a server-generated signed URL (TTL 60s,
+  `getSignedStorageUrl()`) after an authz check, never a direct object URL.
+  Path convention: `compliance/{project_key}/{period_type}/{period_start}/
+  {filename}` (established in Phase 3; not yet exercised — Phase 4 is what
+  actually writes submission files there).
 
 ## Information architecture
 
