@@ -1944,14 +1944,18 @@ const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const SUPABASE_READY = !!(SUPABASE_URL && SUPABASE_KEY);
 
-async function supabaseRequest(method, pathQuery, body) {
+// `prefer` overrides the default 'return=representation' — governance's bulk
+// upsert needs 'resolution=merge-duplicates,...' instead, which the default
+// omits (without it, on_conflict in the URL alone does not trigger upsert
+// behavior and duplicate keys 409 as a plain insert).
+async function supabaseRequest(method, pathQuery, body, prefer) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${pathQuery}`, {
     method,
     headers: {
       'apikey': SUPABASE_KEY,
       'Authorization': `Bearer ${SUPABASE_KEY}`,
       'Content-Type': 'application/json',
-      'Prefer': 'return=representation'
+      'Prefer': prefer || 'return=representation'
     },
     body: body === undefined ? undefined : JSON.stringify(body)
   });
@@ -2100,7 +2104,8 @@ const NAV_IDS = [
   'executive', 'capacity', 'velocity', 'tasks', 'timeline',
   'members', 'jirasync', 'usermgmt',
   'orgchart', 'projectteam',
-  'airpay-summary', 'airpay-detail'
+  'airpay-summary', 'airpay-detail',
+  'gov-settings'
 ];
 const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{2,31}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -2333,6 +2338,173 @@ app.get('/api/airpay-issues', async (req, res) => {
   } catch (e) {
     console.error('airpay-issues error:', e.message);
     res.status(502).json({ error: e.message });
+  }
+});
+
+// ——— Governance — Phase 2: Jira project sync + admin tracking ———
+// projects/teams/etc. live in Supabase (see governance migration). This is a
+// separate concept from ensureProjects()/cache.projects above: that mirrors a
+// filtered, 8-category slice of Jira for the Capacity/Timeline/Velocity
+// selectors; this mirrors ALL 90 Jira projects for compliance tracking. They
+// intentionally do not share a cache or an endpoint.
+const GOV_KEY_RE = /^[A-Z][A-Z0-9_]{1,15}$/;
+
+// /rest/api/3/project (used by ensureProjects) returns 174 rows on this site,
+// 84 of them archived — it has no `archived` filter. /rest/api/3/project/search
+// excludes archived projects and returns exactly the 90 live ones the spec
+// describes, via classic startAt/total pagination (not the token pagination
+// jiraSearchAll uses for issue search).
+async function jiraFetchAllProjects() {
+  const all = [];
+  let startAt = 0;
+  const pageSize = 100;
+  while (true) {
+    const data = await jiraGet(`/rest/api/3/project/search?maxResults=${pageSize}&startAt=${startAt}`);
+    const values = data.values || [];
+    all.push(...values);
+    if (data.isLast || !values.length || all.length >= data.total) break;
+    startAt += pageSize;
+  }
+  return all.map(p => ({
+    jira_id: p.id,
+    key: p.key,
+    name: p.name,
+    category: p.projectCategory?.name || null
+  }));
+}
+
+// Upserts by key (never touching is_tracked — invariant 6), detects renames by
+// jira_id so history/FKs migrate via ON UPDATE CASCADE instead of orphaning,
+// and marks projects absent from Jira inactive rather than deleting them
+// (invariant 7 — submissions/wins/blockers may still point at the key).
+async function syncProjectsFromJira() {
+  const [live, existingRows] = await Promise.all([
+    jiraFetchAllProjects(),
+    supabaseRequest('GET', 'projects?select=key,jira_id,is_active')
+  ]);
+
+  const existingByJiraId = new Map((existingRows || []).filter(r => r.jira_id).map(r => [r.jira_id, r]));
+  const existingKeys = new Set((existingRows || []).map(r => r.key));
+  const activeKeysBefore = new Set((existingRows || []).filter(r => r.is_active).map(r => r.key));
+
+  const now = new Date().toISOString();
+  const renames = [];
+  const upsertRows = [];
+  const seenKeys = new Set();
+
+  for (const p of live) {
+    seenKeys.add(p.key);
+    const existing = p.jira_id ? existingByJiraId.get(p.jira_id) : null;
+    if (existing && existing.key !== p.key) {
+      // Same Jira project, different key — a rename, not a new project.
+      // UPDATE the primary key directly so every FK (compliance_policies,
+      // submissions, wins, blockers, ...) cascades via ON UPDATE CASCADE.
+      renames.push({ from: existing.key, to: p.key });
+      await supabaseRequest('PATCH', `projects?key=eq.${encodeURIComponent(existing.key)}`, {
+        key: p.key, name: p.name, jira_id: p.jira_id, category: p.category,
+        is_active: true, last_synced_at: now, updated_at: now
+      });
+      activeKeysBefore.delete(existing.key); // handled — exclude from the deactivate pass below
+    } else {
+      upsertRows.push({
+        key: p.key, name: p.name, jira_id: p.jira_id, category: p.category,
+        is_active: true, last_synced_at: now
+      });
+    }
+  }
+
+  const created = upsertRows.filter(r => !existingKeys.has(r.key)).length;
+  const updated = upsertRows.length - created;
+  if (upsertRows.length) {
+    // merge-duplicates only overwrites the columns present in this payload —
+    // is_tracked, tracked_from, team_id, parser_profile are never sent here,
+    // so an upsert can never touch an admin's tracking decision.
+    await supabaseRequest('POST', 'projects?on_conflict=key', upsertRows, 'resolution=merge-duplicates,return=minimal');
+  }
+
+  const toDeactivate = [...activeKeysBefore].filter(k => !seenKeys.has(k));
+  if (toDeactivate.length) {
+    const inList = toDeactivate.map(k => `"${k}"`).join(',');
+    await supabaseRequest('PATCH', `projects?key=in.(${inList})`, { is_active: false, updated_at: now });
+  }
+
+  return { total: live.length, created, updated, renamed: renames, deactivated: toDeactivate };
+}
+
+app.post('/api/governance/projects/sync', requireSupabase, requireAdmin, async (req, res) => {
+  try {
+    const result = await syncProjectsFromJira();
+    console.log('governance project sync:', JSON.stringify(result));
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    console.error('governance/projects/sync error:', e.message);
+    res.status(502).json({ error: e.message });
+  }
+});
+
+// List for both the Settings page (admin) and, later, the Submit page's
+// project dropdown. Non-admins only ever see their allowed_project_keys
+// (invariant 8's dropdown scoping) — enforced here, not just in the UI.
+app.get('/api/governance/projects', requireSupabase, async (req, res) => {
+  try {
+    const params = [`select=*&order=key.asc`];
+    if (req.query.tracked === 'true') params.push('is_tracked=eq.true');
+    if (req.query.tracked === 'false') params.push('is_tracked=eq.false');
+    if (req.query.active !== 'all') params.push('is_active=eq.true'); // default: hide inactive
+    if (req.query.team_id) params.push(`team_id=eq.${encodeURIComponent(req.query.team_id)}`);
+    if (req.query.q) {
+      // Strip characters PostgREST's or() filter treats as syntax (commas,
+      // parens) so a stray character in a search box can't produce a
+      // confusing 400 from a malformed filter expression.
+      const safe = String(req.query.q).replace(/[(),]/g, '').trim();
+      if (safe) {
+        const q = encodeURIComponent(`*${safe}*`);
+        params.push(`or=(key.ilike.${q},name.ilike.${q})`);
+      }
+    }
+    let rows = await supabaseRequest('GET', `projects?${params.join('&')}`);
+    if (!req.user.is_admin) {
+      const allowed = new Set(req.user.allowed_project_keys || []);
+      rows = (rows || []).filter(p => allowed.has(p.key));
+    }
+    res.json(rows);
+  } catch (e) {
+    sendSupabaseError(res, e, 'governance/projects');
+  }
+});
+
+app.get('/api/governance/teams', requireSupabase, async (req, res) => {
+  try {
+    res.json(await supabaseRequest('GET', 'teams?select=*&order=name.asc'));
+  } catch (e) {
+    sendSupabaseError(res, e, 'governance/teams');
+  }
+});
+
+// Whether/when a project counts toward compliance is an admin decision made
+// here — sync() above never touches it (invariant 6).
+app.put('/api/governance/projects/:key/tracking', requireSupabase, requireAdmin, async (req, res) => {
+  const key = req.params.key;
+  if (!GOV_KEY_RE.test(key)) return res.status(400).json({ error: 'Invalid project key' });
+  const isTracked = req.body?.is_tracked === true;
+  let trackedFrom = trimmed(req.body?.tracked_from) || null;
+  if (trackedFrom && !ISO_DATE_RE.test(trackedFrom)) {
+    return res.status(400).json({ error: 'tracked_from must be YYYY-MM-DD' });
+  }
+  // Turning tracking on with no start date would leave ensure_periods() (Phase
+  // 6/§4) with nothing to anchor to — default it to today rather than 400ing
+  // on the single most common path through this form.
+  if (isTracked && !trackedFrom) trackedFrom = new Date().toISOString().slice(0, 10);
+  try {
+    const updated = await supabaseRequest(
+      'PATCH',
+      `projects?key=eq.${encodeURIComponent(key)}&select=*`,
+      { is_tracked: isTracked, tracked_from: trackedFrom, updated_at: new Date().toISOString() }
+    );
+    if (!updated || !updated.length) return res.status(404).json({ error: 'Project not found' });
+    res.json(updated[0]);
+  } catch (e) {
+    sendSupabaseError(res, e, 'governance/projects/tracking');
   }
 });
 

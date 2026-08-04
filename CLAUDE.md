@@ -72,14 +72,59 @@ isolating confidential data. If real isolation is ever needed,
 `/api/forecast` and `/api/timeline` already accept project filters with
 per-filter cache keys — that's the place to start.
 
+## Governance Checklist
+
+Spec: `docs/SPEC_Governance_Checklist.md` (implementation is phased — see the
+spec's §10 order; only the phases actually built are described below).
+Reference UI: `docs/Governance_Upload_Mockup.html`.
+
+**Status: Phase 1 (migration) and Phase 2 (Jira project sync + tracking) are
+built.** Upload, parsing, Submit UI, and Compliance Board are not — those are
+later phases.
+
+Rules that must not be violated in any future phase:
+- Compliance color is computed **on read** via SQL `compliance_state()`; never
+  stored, never cron'd.
+- `wins.category` is a lookup table (`win_categories`) with an FK, not a CHECK
+  — chosen so new categories don't need a migration.
+- `blocked` is checked **before** `overdue` in `todo_state()` — a to-do
+  blocked by someone else and past due is not the PIC's fault.
+- `projects.key` is the primary key (not `jira_id`); every FK pointing at it
+  carries `ON UPDATE CASCADE`, because Jira project keys do get renamed (see
+  the sync rename-detection logic below).
+- Project sync (`POST /api/governance/projects/sync`) **never touches
+  `is_tracked`** — that's an admin decision. Projects missing from Jira are
+  set `is_active = false`, never deleted (submissions/wins/blockers may still
+  reference the key).
+- Fetch the project list via `/rest/api/3/project/search` (paginated,
+  `startAt`), not the plain `/rest/api/3/project` used by `ensureProjects()`
+  elsewhere in this file — the old endpoint includes archived projects (174
+  rows here vs. the 90 live ones `/project/search` returns) and has no
+  `archived` filter.
+- **This is a separate concept from `ensureProjects()`/`cache.projects`.**
+  That system is a Jira-live, 8-category slice powering the Capacity/
+  Timeline/Velocity selectors. Governance's `public.projects` table mirrors
+  *all* Jira projects for compliance tracking. They deliberately don't share
+  a cache, an endpoint, or a route prefix (`/api/governance/*` vs
+  `/api/projects`) — don't merge them.
+- `gov-settings` (like `usermgmt`) is admin-only regardless of a user's
+  `allowed_nav_ids` — enforced in both `canSeeNav()` and server-side route
+  guards, not just by hiding the sidebar button.
+- Parser column definitions live in `parser_profiles.sheets` (jsonb), read at
+  parse time — never hardcoded as constants. The seeded `default` profile's
+  layout (Meta as a row-4–13 key/value block, sheet data starting row 2) was
+  derived from the actual `Checklist_AIRPAY_W32_v2.xlsx` template, which
+  differs from some of the spec's own prose examples — the template is the
+  source of truth when the two disagree.
+
 ## Information architecture
 
-Thirteen destinations in the sidebar, four groups. **Do not add, remove,
+Fourteen destinations in the sidebar, five groups. **Do not add, remove,
 rename, merge, or reorder them** without an explicit product decision (the
-Report AirPay group and User Management were each such a deliberate
-addition — see their notes). Sidebar groups hide themselves when every button
-inside is hidden. Resolve nav buttons with `navBtn('<id>')`, never by
-positional index into `.nav-item`.
+Report AirPay group, User Management, and the Governance group were each such
+a deliberate addition — see their notes). Sidebar groups hide themselves when
+every button inside is hidden. Resolve nav buttons with `navBtn('<id>')`,
+never by positional index into `.nav-item`.
 
 **Dashboards**
 - `executive` (home) — KPI strip, team-utilization gauge, utilization-by-group,
@@ -142,6 +187,19 @@ poll fails — the sheet is never allowed to blank the page. The sheet's own
 gid (as shared) does not resolve via Google's gid-based CSV export; the
 route fetches by **tab name** (`Detail Progress`) via the gviz endpoint
 instead — keep that in mind if the sheet is ever restructured.
+
+**Governance** — weekly/monthly compliance tracking, backed by its own
+Supabase tables (`projects`, `teams`, `submissions`, `todos`, `dependencies`,
+...; see the Governance Checklist section above). Independent of AirPay's
+Supabase tables and of `ensureProjects()`'s Jira-live project cache.
+- `gov-settings` (Settings) — **admin only.** The 90-project mirror synced
+  from Jira via "Sync from Jira"; toggle which projects are `is_tracked` (and
+  their `tracked_from` start date) for compliance. Search, tracked/untracked
+  filter, team filter (empty until Governance seeds/creates teams — a later
+  phase), show-inactive toggle. Sync never touches `is_tracked` and detects
+  Jira project-key renames via `jira_id` rather than treating a rename as a
+  delete + create.
+- `Submit` and `Compliance Board` are specced but not yet built.
 
 ## Data model
 

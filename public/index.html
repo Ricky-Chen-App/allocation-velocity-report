@@ -1145,6 +1145,14 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
   </div>
 
   <div class="nav-section">
+    <div class="nav-label">Governance</div>
+    <button class="nav-item" data-navid="gov-settings" onclick="showPage('gov-settings',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v1.8M8 12.7v1.8M14.5 8h-1.8M3.3 8H1.5M12.7 3.3l-1.3 1.3M4.6 11.1l-1.3 1.3M12.7 12.7l-1.3-1.3M4.6 4.9L3.3 3.3"/></svg>
+      Settings
+    </button>
+  </div>
+
+  <div class="nav-section">
     <div class="nav-label">Org Design</div>
     <button class="nav-item" data-navid="orgchart" onclick="showPage('orgchart',this)">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="1" width="4" height="4" rx="1"/><rect x="1" y="11" width="4" height="4" rx="1"/><rect x="11" y="11" width="4" height="4" rx="1"/><path d="M8 5v3M8 8H3v3M8 8h5v3"/></svg>
@@ -1704,6 +1712,20 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
       <div id="um-body" style="padding:0 24px 24px"></div>
     </div>
 
+    <div class="page" id="page-gov-settings">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Governance Settings</div>
+          <div class="page-sub" id="gov-subtitle">Mark which Jira projects are tracked for weekly compliance</div>
+        </div>
+        <button class="btn btn-primary" id="gov-sync-btn" onclick="govSyncProjects()">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8A6 6 0 0114 8M14 8a6 6 0 01-12 0"/><path d="M14 4v4h-4"/></svg>
+          Sync from Jira
+        </button>
+      </div>
+      <div id="gov-body" style="padding:0 24px 24px"></div>
+    </div>
+
   </div>
 </div>
 
@@ -1850,6 +1872,7 @@ function showPage(id, btn) {
   if (id === 'airpay-summary') loadAirpaySummaryPage();
   if (id === 'airpay-detail') loadAirpayDetailPage();
   if (id === 'usermgmt') loadUserMgmtPage();
+  if (id === 'gov-settings') loadGovSettingsPage();
 
   toggleSidebar(false); // close mobile drawer after navigating
 }
@@ -1867,17 +1890,20 @@ const NAV_ITEMS = [
   { id: 'members',     label: 'Team Members' },
   { id: 'jirasync',    label: 'Jira Sync' },
   { id: 'usermgmt',    label: 'User Management' },
+  { id: 'gov-settings', label: 'Governance Settings' },
   { id: 'orgchart',    label: 'Structure Organization' },
   { id: 'projectteam', label: 'Structure Project Team' },
   { id: 'airpay-summary', label: 'Summary Report' },
   { id: 'airpay-detail',  label: 'Detail Report' }
 ];
 
-// User Management is admin-only regardless of the granted menu list.
+// User Management and Governance Settings are admin-only regardless of the
+// granted menu list — both manage things (accounts, project tracking) that
+// aren't meant to be delegated by checkbox.
 function canSeeNav(id) {
   const u = STATE.user;
   if (!u) return false;
-  if (id === 'usermgmt') return !!u.is_admin;
+  if (id === 'usermgmt' || id === 'gov-settings') return !!u.is_admin;
   if (u.is_admin) return true;
   return (u.allowed_nav_ids || []).includes(id);
 }
@@ -2314,8 +2340,8 @@ function umSyncCategoryCounts() {
 
 function umMenuPickerHtml(selectedIds) {
   const selected = new Set(selectedIds || []);
-  // usermgmt is admin-only and never granted through this list.
-  const items = NAV_ITEMS.filter(it => it.id !== 'usermgmt');
+  // usermgmt/gov-settings are admin-only and never granted through this list.
+  const items = NAV_ITEMS.filter(it => it.id !== 'usermgmt' && it.id !== 'gov-settings');
   return `<div class="um-perm-group" style="margin-bottom:0">
     <div class="um-perm-head">
       <label class="um-check" style="font-weight:700">
@@ -2463,6 +2489,204 @@ async function umResetPassword(id) {
     showError('✓ Password updated');
   } catch (e) {
     showError('Could not update password: ' + e.message);
+  }
+}
+
+// ============================================================
+// GOVERNANCE SETTINGS (admin only) — Phase 2: track which of the 90 Jira
+// projects count toward weekly compliance, per docs/SPEC_Governance_Checklist.md.
+// This is deliberately separate from STATE.projects: that's a Jira-live,
+// 8-category slice for Capacity/Timeline/Velocity: this is the full 90-project
+// mirror in Supabase that Governance owns.
+// ============================================================
+const GOV = {
+  projects: null,
+  teams: null,
+  q: '',
+  tracked: 'all',   // 'all' | 'true' | 'false'
+  teamId: '',       // '' = all teams
+  showInactive: false,
+  busy: false
+};
+
+function govEsc(v) { return apEsc(v); }
+
+async function loadGovSettingsPage() {
+  if (!STATE.user?.is_admin) return;
+  if (GOV.teams === null) {
+    try { GOV.teams = await api('/api/governance/teams'); } catch (e) { GOV.teams = []; }
+  }
+  await govFetchProjects();
+}
+
+async function govFetchProjects() {
+  const body = document.getElementById('gov-body');
+  if (!GOV.projects) body.innerHTML = emptyState({ icon: '🗂️', title: 'Loading projects…', description: '' });
+  const params = new URLSearchParams();
+  if (GOV.tracked !== 'all') params.set('tracked', GOV.tracked);
+  if (GOV.teamId) params.set('team_id', GOV.teamId);
+  if (GOV.showInactive) params.set('active', 'all');
+  if (GOV.q) params.set('q', GOV.q);
+  try {
+    GOV.projects = await api('/api/governance/projects?' + params.toString());
+    renderGovSettings();
+  } catch (e) {
+    body.innerHTML = emptyState({ icon: '⚠️', title: 'Could not load projects', description: e.message });
+  }
+}
+
+function govFmtWhen(iso) {
+  if (!iso) return 'Never';
+  return new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function govTeamName(id) {
+  if (!id) return '—';
+  return (GOV.teams || []).find(t => t.id === id)?.name || '—';
+}
+
+function govRowHtml(p) {
+  return `<tr>
+    <td>
+      <div style="font-family:var(--font-mono);font-weight:700;color:var(--ink-800)">${govEsc(p.key)}</div>
+      <div class="um-sub">Synced ${govFmtWhen(p.last_synced_at)}</div>
+    </td>
+    <td>${govEsc(p.name)}</td>
+    <td>${govEsc(p.category || '—')}</td>
+    <td>${govEsc(govTeamName(p.team_id))}</td>
+    <td>
+      <label class="um-check">
+        <input type="checkbox" ${p.is_tracked ? 'checked' : ''} ${GOV.busy ? 'disabled' : ''}
+               onchange="govToggleTracked('${govEsc(p.key)}', this.checked)">
+        <span>Tracked</span>
+      </label>
+    </td>
+    <td>
+      ${p.is_tracked
+        ? `<input type="date" value="${govEsc(p.tracked_from || '')}" style="width:140px" ${GOV.busy ? 'disabled' : ''}
+                  onchange="govSetTrackedFrom('${govEsc(p.key)}', this.value)">`
+        : '<span style="color:var(--ink-400)">—</span>'}
+    </td>
+    <td><span class="um-status ${p.is_active ? 'active' : 'inactive'}">${p.is_active ? 'Active' : 'Inactive'}</span></td>
+  </tr>`;
+}
+
+function renderGovSettings() {
+  const rows = GOV.projects || [];
+  const trackedCount = rows.filter(p => p.is_tracked).length;
+
+  document.getElementById('gov-subtitle').textContent =
+    `${rows.length} project${rows.length === 1 ? '' : 's'} shown · ${trackedCount} tracked for compliance`;
+
+  const teamOptions = (GOV.teams || [])
+    .map(t => `<option value="${govEsc(t.id)}" ${GOV.teamId === t.id ? 'selected' : ''}>${govEsc(t.name)}</option>`)
+    .join('');
+
+  document.getElementById('gov-body').innerHTML = `
+    <div class="ap-gantt-toolbar" style="padding:0 0 14px;flex-direction:column;align-items:stretch;gap:12px">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <div class="search-input" style="max-width:260px">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5"/></svg>
+          <input type="text" placeholder="Search key or name…" value="${govEsc(GOV.q)}"
+                 oninput="GOV.q=this.value;govFetchProjects()">
+        </div>
+        <select onchange="GOV.teamId=this.value;govFetchProjects()" ${(GOV.teams || []).length ? '' : 'disabled'}
+                style="font:inherit;font-size:12px;padding:7px 9px;border:1px solid var(--ink-100);border-radius:var(--radius-sm);background:var(--ink-0);color:var(--ink-800)">
+          <option value="">${(GOV.teams || []).length ? 'All teams' : 'No teams yet'}</option>
+          ${teamOptions}
+        </select>
+        <label class="um-check" style="font-size:12px">
+          <input type="checkbox" ${GOV.showInactive ? 'checked' : ''} onchange="GOV.showInactive=this.checked;govFetchProjects()">
+          <span>Show inactive</span>
+        </label>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:10px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0">Tracking</span>
+        ${apCuratedPill('All', GOV.tracked === 'all', `GOV.tracked='all';govFetchProjects()`)}
+        ${apCuratedPill('Tracked', GOV.tracked === 'true', `GOV.tracked='true';govFetchProjects()`)}
+        ${apCuratedPill('Untracked', GOV.tracked === 'false', `GOV.tracked='false';govFetchProjects()`)}
+      </div>
+    </div>
+    <div class="members-table-wrap" style="margin:0">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:130px">Key</th>
+            <th>Name</th>
+            <th style="width:150px">Category</th>
+            <th style="width:130px">Team</th>
+            <th style="width:110px">Tracked</th>
+            <th style="width:160px">Tracked from</th>
+            <th style="width:100px">Status</th>
+          </tr>
+        </thead>
+        <tbody>${rows.length ? rows.map(govRowHtml).join('') :
+          `<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--ink-400)">
+            No projects match this filter. ${GOV.projects && !GOV.projects.length && GOV.tracked === 'all' && !GOV.q ? 'Click “Sync from Jira” to import the 90 projects.' : ''}
+          </td></tr>`}</tbody>
+      </table>
+    </div>`;
+}
+
+function govFindProject(key) { return (GOV.projects || []).find(p => p.key === key) || null; }
+
+async function govPutTracking(key, isTracked, trackedFrom) {
+  const body = { is_tracked: isTracked };
+  if (trackedFrom !== undefined) body.tracked_from = trackedFrom;
+  const r = await fetch(`/api/governance/projects/${encodeURIComponent(key)}/tracking`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const json = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(json.error || `HTTP ${r.status}`);
+  return json;
+}
+
+async function govToggleTracked(key, checked) {
+  const p = govFindProject(key);
+  try {
+    const updated = await govPutTracking(key, checked, p ? p.tracked_from : undefined);
+    if (p) Object.assign(p, updated);
+    renderGovSettings();
+  } catch (e) {
+    showError(`Could not update tracking for ${key}: ${e.message}`);
+    renderGovSettings(); // revert the checkbox to the last known-good state
+  }
+}
+async function govSetTrackedFrom(key, value) {
+  const p = govFindProject(key);
+  if (!p) return;
+  try {
+    const updated = await govPutTracking(key, true, value || null);
+    Object.assign(p, updated);
+    renderGovSettings();
+  } catch (e) {
+    showError(`Could not update tracked-from date for ${key}: ${e.message}`);
+    renderGovSettings();
+  }
+}
+
+async function govSyncProjects() {
+  const btn = document.getElementById('gov-sync-btn');
+  GOV.busy = true;
+  btn.disabled = true;
+  btn.innerHTML = 'Syncing…';
+  try {
+    const r = await fetch('/api/governance/projects/sync', { method: 'POST' });
+    const json = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(json.error || `HTTP ${r.status}`);
+    const parts = [`${json.total} projects on Jira`, `${json.created} new`, `${json.updated} updated`];
+    if (json.renamed?.length) parts.push(`${json.renamed.length} renamed (${json.renamed.map(r => r.from + '→' + r.to).join(', ')})`);
+    if (json.deactivated?.length) parts.push(`${json.deactivated.length} no longer on Jira`);
+    showError('✓ Sync complete — ' + parts.join(', '));
+    await govFetchProjects();
+  } catch (e) {
+    showError('Sync failed: ' + e.message);
+  } finally {
+    GOV.busy = false;
+    btn.disabled = false;
+    btn.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8A6 6 0 0114 8M14 8a6 6 0 01-12 0"/><path d="M14 4v4h-4"/></svg> Sync from Jira`;
   }
 }
 

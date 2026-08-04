@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Governance — Resource Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --primary:#1E40AF; --primary-hi:#1D4ED8; --on-primary:#fff;
+  --secondary:#3B82F6; --accent:#D97706;
+  --bg:#F8FAFC; --surface:#fff; --surface-2:#F1F5F9;
+  --fg:#0F1E3D; --fg-muted:#51607A; --fg-faint:#7C8AA3;
+  --border:#DBE3EF; --border-strong:#C3D0E4; --ring:#1E40AF;
+  --green:#15803D; --green-bg:#DCFCE7; --green-br:#86EFAC;
+  --orange:#C2410C; --orange-bg:#FFEDD5; --orange-br:#FDBA74;
+  --red:#B91C1C; --red-bg:#FEE2E2; --red-br:#FCA5A5;
+  --slate:#475569; --slate-bg:#F1F5F9; --slate-br:#CBD5E1;
+  --r:8px; --r-lg:12px;
+  --sh-1:0 1px 2px rgba(15,30,61,.06),0 1px 3px rgba(15,30,61,.04);
+  --sh-2:0 4px 12px rgba(15,30,61,.08);
+  --sh-3:0 12px 32px rgba(15,30,61,.14);
+  --sh-4:-8px 0 40px rgba(15,30,61,.18);
+  --t:180ms cubic-bezier(.2,.7,.3,1);
+}
+@media (prefers-color-scheme:dark){
+:root{
+  --primary:#5B8DEF; --primary-hi:#7BA5F5; --on-primary:#0A1428;
+  --secondary:#7BA5F5; --accent:#F0A020;
+  --bg:#0B1220; --surface:#121C2E; --surface-2:#18243A;
+  --fg:#E8EFFA; --fg-muted:#A3B2CA; --fg-faint:#7B8BA6;
+  --border:#26344D; --border-strong:#33456A; --ring:#7BA5F5;
+  --green:#6EE7A8; --green-bg:#0C3323; --green-br:#1B6B47;
+  --orange:#FFB366; --orange-bg:#3A2210; --orange-br:#7C4A1E;
+  --red:#FF9B9B; --red-bg:#3B1618; --red-br:#7F2B2E;
+  --slate:#A3B2CA; --slate-bg:#1A2437; --slate-br:#33456A;
+  --sh-1:0 1px 2px rgba(0,0,0,.4); --sh-2:0 4px 14px rgba(0,0,0,.45);
+  --sh-3:0 14px 36px rgba(0,0,0,.6); --sh-4:-8px 0 44px rgba(0,0,0,.7);
+}}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--fg);font-family:'Fira Sans',system-ui,sans-serif;
+  font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:'Fira Code','Fira Sans',monospace;font-weight:600;margin:0;letter-spacing:-.01em}
+.mono,td.num,.kpi-v{font-family:'Fira Code',monospace;font-variant-numeric:tabular-nums}
+button,input,select{font-family:inherit;font-size:inherit}
+a{color:var(--primary)}
+:focus-visible{outline:3px solid var(--ring);outline-offset:2px;border-radius:4px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:8px;top:-60px;background:var(--primary);color:var(--on-primary);
+  padding:10px 16px;border-radius:var(--r);z-index:300;transition:top var(--t)}
+.skip:focus{top:8px}
+[hidden]{display:none!important}
+
+.shell{display:grid;grid-template-columns:236px 1fr;min-height:100dvh}
+.side{background:var(--surface);border-right:1px solid var(--border);padding:18px 12px;
+  position:sticky;top:0;height:100dvh;overflow-y:auto}
+.brand{display:flex;align-items:center;gap:9px;padding:4px 8px 18px}
+.brand-mk{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--primary),var(--secondary));
+  display:grid;place-items:center;color:#fff;font-family:'Fira Code',monospace;font-size:13px;font-weight:600;flex:none}
+.brand b{font-size:14px;display:block;line-height:1.2}
+.brand span{font-size:11px;color:var(--fg-faint)}
+.nav-h{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--fg-faint);
+  padding:14px 10px 6px;font-weight:600}
+.nav button,.nav a{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r);
+  color:var(--fg-muted);text-decoration:none;font-size:13.5px;min-height:36px;width:100%;
+  border:0;background:transparent;cursor:pointer;text-align:left;transition:background var(--t),color var(--t)}
+.nav button:hover,.nav a:hover{background:var(--surface-2);color:var(--fg)}
+.nav [aria-current="page"]{background:var(--primary);color:var(--on-primary);font-weight:500}
+.nav svg{width:16px;height:16px;flex:none;opacity:.75}
+.main{padding:22px 26px 64px;max-width:1240px;width:100%}
+@media(max-width:900px){
+  .shell{grid-template-columns:1fr}
+  .side{position:static;height:auto;display:flex;gap:6px;overflow-x:auto;padding:10px;border-right:0;border-bottom:1px solid var(--border)}
+  .side .nav-h,.side .brand span{display:none}
+  .nav{display:flex;gap:4px}
+  .nav button,.nav a{white-space:nowrap;width:auto}
+  .main{padding:16px 14px 56px}
+}
+
+.crumb{font-size:12.5px;color:var(--fg-faint);margin-bottom:6px}
+.crumb span{margin:0 6px}
+.page-h{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-content:space-between;margin-bottom:20px}
+.page-h h1{font-size:22px}
+.page-h p{margin:5px 0 0;color:var(--fg-muted);font-size:13.5px;max-width:64ch}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-1)}
+.card-h{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;gap:12px;
+  align-items:center;justify-content:space-between;flex-wrap:wrap}
+.card-h h2{font-size:14px}
+.card-b{padding:16px}
+
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 10px;
+  font-size:11.5px;font-weight:600;border:1px solid;white-space:nowrap}
+.pill svg{width:12px;height:12px;flex:none}
+.p-green{color:var(--green);background:var(--green-bg);border-color:var(--green-br)}
+.p-orange{color:var(--orange);background:var(--orange-bg);border-color:var(--orange-br)}
+.p-red{color:var(--red);background:var(--red-bg);border-color:var(--red-br)}
+.p-slate{color:var(--slate);background:var(--slate-bg);border-color:var(--slate-br)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;
+  padding:9px 15px;border-radius:var(--r);border:1px solid transparent;font-size:13.5px;font-weight:500;
+  cursor:pointer;transition:background var(--t),border-color var(--t),color var(--t),transform var(--t)}
+.btn svg{width:16px;height:16px;flex:none}
+.btn:active{transform:scale(.985)}
+.btn-p{background:var(--primary);color:var(--on-primary)}
+.btn-p:hover{background:var(--primary-hi)}
+.btn-o{background:var(--surface);color:var(--fg);border-color:var(--border-strong)}
+.btn-o:hover{background:var(--surface-2)}
+.btn-g{background:transparent;color:var(--fg-muted);border-color:transparent}
+.btn-g:hover{background:var(--surface-2);color:var(--fg)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-sm{min-height:32px;padding:5px 11px;font-size:12.5px}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:11px;margin-bottom:18px}
+.kpi{padding:13px 15px;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh-1)}
+.kpi-l{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--fg-faint);font-weight:600}
+.kpi-v{font-size:24px;font-weight:600;margin-top:3px;line-height:1.1}
+.kpi-s{font-size:11.5px;color:var(--fg-faint);margin-top:2px}
+
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.fsel{min-height:38px;padding:7px 11px;border:1px solid var(--border-strong);border-radius:var(--r);
+  background:var(--surface);color:var(--fg);font-size:13px;cursor:pointer}
+.fsearch{min-height:38px;padding:7px 11px;border:1px solid var(--border-strong);border-radius:var(--r);
+  background:var(--surface);color:var(--fg);font-size:13px;min-width:190px;flex:1;max-width:280px}
+
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface)}
+table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:680px}
+th{text-align:left;font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--fg-faint);padding:10px 13px;background:var(--surface-2);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:11px 13px;border-bottom:1px solid var(--border);vertical-align:middle}
+tbody tr:last-child td{border-bottom:0}
+tbody tr{transition:background var(--t)}
+tbody tr:hover{background:var(--surface-2)}
+td.num{white-space:nowrap;color:var(--fg-muted)}
+.pk-tag{font-family:'Fira Code',monospace;font-size:11px;font-weight:600;color:var(--primary);
+  background:var(--surface-2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;white-space:nowrap}
+.fname{display:flex;align-items:center;gap:8px}
+.fname svg{width:15px;height:15px;flex:none}
+.fx{color:var(--green)} .fm{color:var(--slate)}
+.empty{padding:44px 20px;text-align:center}
+.empty svg{width:34px;height:34px;color:var(--fg-faint);margin-bottom:10px}
+.empty b{display:block;font-size:14px;margin-bottom:4px}
+.empty p{margin:0 0 14px;font-size:13px;color:var(--fg-muted)}
+
+/* ---- board ---- */
+.board table{min-width:760px;font-size:12px}
+.cell{display:flex;align-items:center;justify-content:center;gap:4px;min-width:46px;min-height:30px;
+  border-radius:6px;border:1px solid;font-size:10.5px;font-weight:600;font-family:'Fira Code',monospace}
+.cell svg{width:11px;height:11px}
+.c-green{color:var(--green);background:var(--green-bg);border-color:var(--green-br)}
+.c-orange{color:var(--orange);background:var(--orange-bg);border-color:var(--orange-br)}
+.c-red{color:var(--red);background:var(--red-bg);border-color:var(--red-br)}
+.c-slate{color:var(--fg-faint);background:var(--surface-2);border-color:var(--border)}
+.grp-row th{background:var(--surface-2)!important;font-size:10.5px!important;letter-spacing:.08em!important;
+  color:var(--fg-faint)!important;font-weight:600!important}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:11.5px;color:var(--fg-muted)}
+.legend div{display:flex;align-items:center;gap:6px}
+.bar{display:flex;height:7px;border-radius:4px;overflow:hidden;background:var(--surface-2);margin-top:7px}
+.bar i{display:block}
+
+/* ---- drawer ---- */
+.scrim{position:fixed;inset:0;background:rgba(8,15,30,.52);z-index:150;opacity:0;pointer-events:none;
+  transition:opacity 240ms ease}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--bg);z-index:160;
+  box-shadow:var(--sh-4);display:flex;flex-direction:column;
+  transform:translateX(100%);transition:transform 280ms cubic-bezier(.2,.8,.25,1)}
+.drawer.on{transform:none}
+.dw-h{padding:16px 20px;border-bottom:1px solid var(--border);background:var(--surface);
+  display:flex;align-items:flex-start;gap:12px}
+.dw-h h2{font-size:16px}
+.dw-h p{margin:3px 0 0;font-size:12.5px;color:var(--fg-muted)}
+.dw-b{flex:1;overflow-y:auto;padding:18px 20px 26px}
+.dw-f{padding:14px 20px;border-top:1px solid var(--border);background:var(--surface);
+  display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+
+.fstep{margin-bottom:20px}
+.fstep-h{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.fstep-n{width:22px;height:22px;border-radius:50%;background:var(--surface-2);color:var(--fg-faint);
+  border:1px solid var(--border-strong);display:grid;place-items:center;
+  font-family:'Fira Code',monospace;font-size:11px;font-weight:600;flex:none;transition:background var(--t),color var(--t)}
+.fstep.act .fstep-n,.fstep.done .fstep-n{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
+.fstep-h h3{font-size:13.5px;color:var(--fg-faint);transition:color var(--t)}
+.fstep.act .fstep-h h3,.fstep.done .fstep-h h3{color:var(--fg)}
+.fstep-b{padding-left:31px}
+.fstep.idle .fstep-b{opacity:.45;pointer-events:none}
+
+.pk{position:relative}
+.pk-in{display:flex;align-items:center;gap:9px;width:100%;min-height:46px;padding:9px 13px;
+  background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r);
+  cursor:pointer;text-align:left;transition:border-color var(--t)}
+.pk-in:hover,.pk-in[aria-expanded="true"]{border-color:var(--primary)}
+.pk-in .n{flex:1;font-size:13.5px;color:var(--fg)}
+.pk-in .ph{flex:1;font-size:13.5px;color:var(--fg-faint)}
+.pk-in svg{width:16px;height:16px;color:var(--fg-faint);flex:none}
+.pk-pop{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:60;background:var(--surface);
+  border:1px solid var(--border-strong);border-radius:var(--r);box-shadow:var(--sh-3);overflow:hidden}
+.pk-search{width:100%;border:0;border-bottom:1px solid var(--border);padding:11px 13px;
+  background:var(--surface);color:var(--fg);font-size:13.5px;min-height:44px}
+.pk-search:focus{outline:none;box-shadow:inset 0 -2px 0 var(--primary)}
+.pk-list{max-height:250px;overflow-y:auto;padding:5px}
+.pk-gh{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--fg-faint);font-weight:600;padding:9px 9px 4px}
+.pk-op{display:flex;align-items:center;gap:9px;width:100%;padding:8px 9px;border:0;background:transparent;
+  border-radius:6px;cursor:pointer;text-align:left;min-height:40px;transition:background var(--t)}
+.pk-op:hover,.pk-op.hi{background:var(--surface-2)}
+.pk-op .n{flex:1;font-size:13px;color:var(--fg)}
+.pk-empty{padding:20px 13px;text-align:center;font-size:13px;color:var(--fg-faint)}
+
+.period{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:0;overflow:hidden;
+  border:1px solid var(--border);border-radius:var(--r);background:var(--surface)}
+.period > div{padding:11px 13px;border-right:1px solid var(--border)}
+.period > div:last-child{border-right:0}
+.period dt{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--fg-faint);font-weight:600}
+.period dd{margin:3px 0 0;font-size:13.5px;font-weight:500}
+@media(max-width:520px){.period > div{border-right:0;border-bottom:1px solid var(--border)}}
+
+.tabs{display:flex;gap:4px;padding:4px;background:var(--surface-2);border-radius:10px;
+  border:1px solid var(--border);width:fit-content;margin-bottom:12px;max-width:100%;overflow-x:auto}
+.tab{display:flex;align-items:center;gap:7px;min-height:36px;padding:7px 14px;border-radius:7px;border:0;
+  background:transparent;color:var(--fg-muted);font-size:13px;font-weight:500;cursor:pointer;
+  white-space:nowrap;transition:background var(--t),color var(--t)}
+.tab svg{width:15px;height:15px}
+.tab[aria-selected="true"]{background:var(--surface);color:var(--primary);box-shadow:var(--sh-1)}
+
+.dz{border:2px dashed var(--border-strong);border-radius:var(--r);background:var(--surface);
+  padding:26px 18px;text-align:center;cursor:pointer;transition:border-color var(--t),background var(--t)}
+.dz:hover,.dz:focus-visible{border-color:var(--primary);background:var(--surface-2)}
+.dz.over{border-color:var(--primary);background:var(--surface-2);border-style:solid}
+.dz-ic{width:40px;height:40px;margin:0 auto 10px;border-radius:10px;background:var(--surface-2);
+  color:var(--primary);display:grid;place-items:center}
+.dz-ic svg{width:20px;height:20px}
+.dz b{display:block;font-size:13.5px;margin-bottom:3px}
+.dz .m{font-size:12px;color:var(--fg-muted);margin:0}
+.dz .fmt{font-size:11px;color:var(--fg-faint);margin:8px 0 0;font-family:'Fira Code',monospace}
+
+.filerow{display:flex;align-items:center;gap:11px;padding:11px 13px;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r);margin-bottom:12px}
+.filerow .fi{width:32px;height:32px;border-radius:7px;display:grid;place-items:center;flex:none;
+  background:var(--green-bg);color:var(--green)}
+.filerow .fi svg{width:16px;height:16px}
+.filerow .fn{font-size:13px;font-weight:500;word-break:break-all}
+.filerow .fs{font-size:11.5px;color:var(--fg-faint);font-family:'Fira Code',monospace}
+
+/* ---- activity log ---- */
+.act{list-style:none;margin:0;padding:0;position:relative}
+.act::before{content:"";position:absolute;left:10px;top:12px;bottom:12px;width:1px;background:var(--border)}
+.act li{position:relative;padding:0 0 14px 32px;font-size:13px}
+.act li:last-child{padding-bottom:0}
+.act .dot{position:absolute;left:2px;top:1px;width:18px;height:18px;border-radius:50%;
+  display:grid;place-items:center;border:2px solid var(--bg)}
+.act .dot svg{width:10px;height:10px}
+.d-ok{background:var(--green-bg);color:var(--green)}
+.d-warn{background:var(--orange-bg);color:var(--orange)}
+.d-info{background:var(--surface-2);color:var(--fg-muted)}
+.d-run{background:var(--surface-2);color:var(--primary)}
+.act .at{font-weight:500}
+.act .am{font-size:11.5px;color:var(--fg-faint);font-family:'Fira Code',monospace;margin-top:1px}
+.act .aw{font-size:11.5px;color:var(--orange);margin-top:2px}
+.spin{width:10px;height:10px;border:2px solid var(--border-strong);border-top-color:var(--primary);
+  border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+.note{display:flex;gap:9px;padding:11px 13px;border-radius:var(--r);font-size:12.5px;line-height:1.5;
+  background:var(--orange-bg);border:1px solid var(--orange-br);color:var(--orange)}
+.note svg{width:15px;height:15px;flex:none;margin-top:2px}
+.note.info{background:var(--surface-2);border-color:var(--border);color:var(--fg-muted)}
+.note.info svg{color:var(--fg-faint)}
+
+.toast{position:fixed;right:18px;bottom:18px;max-width:340px;display:flex;gap:10px;padding:13px 15px;
+  background:var(--surface);border:1px solid var(--green-br);border-left:4px solid var(--green);
+  border-radius:var(--r);box-shadow:var(--sh-3);z-index:200;font-size:13px;
+  transform:translateY(140%);transition:transform 280ms cubic-bezier(.2,.8,.25,1)}
+.toast.on{transform:translateY(0)}
+.toast svg{width:17px;height:17px;color:var(--green);flex:none;margin-top:1px}
+.toast b{display:block;margin-bottom:2px}
+.toast p{margin:0;color:var(--fg-muted);font-size:12.5px}
+@media(max-width:640px){.toast{left:12px;right:12px;bottom:12px;max-width:none}}
+
+
+.rejected{border:1px solid var(--red-br);background:var(--red-bg);border-radius:var(--r);padding:13px;margin-bottom:12px}
+.rejected h4{font-size:13px;color:var(--red);margin-bottom:8px;display:flex;align-items:center;gap:7px}
+.rejected h4 svg{width:15px;height:15px}
+.rej-cmp{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.rej-cmp > div{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:9px 11px}
+.rej-cmp dt{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--fg-faint);font-weight:600}
+.rej-cmp dd{margin:3px 0 0;font-size:12.5px;font-family:'Fira Code',monospace}
+.rej-diff{list-style:none;margin:0 0 11px;padding:0;font-size:12.5px}
+.rej-diff li{display:flex;gap:7px;padding:4px 0;color:var(--fg)}
+.rej-diff li svg{width:13px;height:13px;color:var(--red);flex:none;margin-top:3px}
+.tpl-note{display:flex;gap:8px;padding:9px 11px;border-radius:var(--r);font-size:12px;line-height:1.5;
+  background:var(--surface-2);border:1px solid var(--border);color:var(--fg-muted);margin-bottom:12px}
+.tpl-note svg{width:14px;height:14px;flex:none;margin-top:2px;color:var(--fg-faint)}
+.tpl-note b{color:var(--fg)}
+.slot{border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);
+  padding:12px;margin-bottom:12px;transition:border-color var(--t)}
+.slot.filled{border-color:var(--green-br)}
+.slot-h{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.slot-h > svg{width:18px;height:18px;flex:none}
+.slot-h b{font-size:13.5px}
+.slot-f{font-size:11px;color:var(--fg-faint);margin-left:7px}
+.slot .dz{padding:18px 14px}
+.slot .dz-ic{width:34px;height:34px;margin-bottom:8px}
+.slot .dz-ic svg{width:17px;height:17px}
+.slot .dz b{font-size:13px}
+.slot .filerow{margin-bottom:0}
+.src{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600;
+  font-family:'Fira Code',monospace;border:1px solid;margin-left:6px;vertical-align:middle}
+.src-c{color:var(--green);background:var(--green-bg);border-color:var(--green-br)}
+.src-m{color:var(--slate);background:var(--slate-bg);border-color:var(--slate-br)}
+.src-b{color:var(--primary);background:var(--surface-2);border-color:var(--border-strong)}
+.td-state{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:5px;
+  font-size:10.5px;font-weight:600;border:1px solid;white-space:nowrap}
+.td-state svg{width:10px;height:10px}
+.s-overdue{color:var(--red);background:var(--red-bg);border-color:var(--red-br)}
+.s-due_today{color:var(--orange);background:var(--orange-bg);border-color:var(--orange-br)}
+.s-due_soon{color:var(--accent);background:var(--surface-2);border-color:var(--border-strong)}
+.s-on_track{color:var(--slate);background:var(--slate-bg);border-color:var(--slate-br)}
+.s-done{color:var(--green);background:var(--green-bg);border-color:var(--green-br)}
+.s-blocked{color:var(--slate);background:var(--slate-bg);border-color:var(--slate-br)}
+.drawer-lg{width:min(760px,100%)}
+.meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0;
+  border:1px solid var(--border);border-radius:var(--r);overflow:hidden;background:var(--surface);margin-bottom:14px}
+.meta-grid > div{padding:11px 13px;border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.meta-grid dt{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--fg-faint);font-weight:600}
+.meta-grid dd{margin:3px 0 0;font-size:13px;font-weight:500;word-break:break-word}
+.dtab{display:flex;gap:4px;padding:4px;background:var(--surface-2);border-radius:10px;
+  border:1px solid var(--border);margin-bottom:14px;overflow-x:auto}
+.dtab button{display:flex;align-items:center;gap:6px;min-height:36px;padding:7px 13px;border-radius:7px;
+  border:0;background:transparent;color:var(--fg-muted);font-size:13px;font-weight:500;cursor:pointer;
+  white-space:nowrap;transition:background var(--t),color var(--t)}
+.dtab button[aria-selected="true"]{background:var(--surface);color:var(--primary);box-shadow:var(--sh-1)}
+.dtab .c{font-family:'Fira Code',monospace;font-size:11px;background:var(--surface-2);
+  border:1px solid var(--border);border-radius:20px;padding:0 6px;min-width:20px;text-align:center}
+.dtab button[aria-selected="true"] .c{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
+.dpane table{min-width:520px;font-size:12px}
+.dpane td{padding:9px 11px;vertical-align:top}
+.dpane th{padding:8px 11px}
+.tag{display:inline-block;padding:2px 7px;border-radius:5px;font-size:10.5px;font-weight:600;
+  font-family:'Fira Code',monospace;border:1px solid;white-space:nowrap}
+.t-p0,.t-p1{color:var(--red);background:var(--red-bg);border-color:var(--red-br)}
+.t-p2{color:var(--orange);background:var(--orange-bg);border-color:var(--orange-br)}
+.t-p3,.t-p4,.t-n{color:var(--slate);background:var(--slate-bg);border-color:var(--slate-br)}
+.jira{font-family:'Fira Code',monospace;font-size:11px;color:var(--primary);text-decoration:none}
+.jira:hover{text-decoration:underline}
+.mini-empty{padding:30px 16px;text-align:center;border:1px dashed var(--border-strong);border-radius:var(--r)}
+.mini-empty svg{width:26px;height:26px;color:var(--fg-faint);margin-bottom:8px}
+.mini-empty b{display:block;font-size:13px;margin-bottom:3px}
+.mini-empty p{margin:0;font-size:12px;color:var(--fg-muted)}
+.rev{animation:rev 260ms cubic-bezier(.2,.8,.25,1) both}
+@keyframes rev{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
+    transition-duration:.01ms!important}
+  .drawer,.scrim,.toast{transition:none}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Lompat ke konten utama</a>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-check"><path d="M20 6 9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g id="i-clock"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
+<g id="i-alert"><path d="M12 3 2 20h20L12 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4M12 17.5v.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
+<g id="i-x"><path d="M18 6 6 18M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></g>
+<g id="i-plus"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></g>
+<g id="i-dl"><path d="M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g id="i-up"><path d="M12 21V9m0 0 4.5 4.5M12 9l-4.5 4.5M4 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g id="i-sheet"><rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 9h18M3 15h18M9 3v18" stroke="currentColor" stroke-width="2"/></g>
+<g id="i-doc"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 3v5h5M8 13h8M8 17h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
+<g id="i-chev"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g id="i-grid"><rect x="3" y="3" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/></g>
+<g id="i-users"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="9" cy="7" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M22 21v-2a4 4 0 0 0-3-3.87" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
+<g id="i-shield"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></g>
+<g id="i-cog"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></g>
+<g id="i-chart"><path d="M3 3v18h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 15l4-5 3 3 5-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g id="i-info"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v5M12 8v.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
+<g id="i-eye"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></g>
+<g id="i-inbox"><path d="M3 12h5l2 3h4l2-3h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 5h13l2.5 7v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6L5.5 5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></g>
+<g id="i-user"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
+</defs></svg>
+
+<div class="shell">
+<nav class="side" aria-label="Navigasi utama">
+  <div class="brand">
+    <div class="brand-mk" aria-hidden="true">L</div>
+    <div><b>Resource Portal</b><span>Linkit360</span></div>
+  </div>
+  <div class="nav-h">Dashboards</div>
+  <div class="nav">
+    <a href="#" onclick="return false"><svg><use href="#i-grid"/></svg>Executive</a>
+    <a href="#" onclick="return false"><svg><use href="#i-chart"/></svg>Velocity &amp; Forecast</a>
+    <a href="#" onclick="return false"><svg><use href="#i-users"/></svg>Task Allocation</a>
+  </div>
+  <div class="nav-h">Governance</div>
+  <div class="nav">
+    <button id="navSubmit" aria-current="page"><svg><use href="#i-shield"/></svg>Submit</button>
+    <button id="navBoard"><svg><use href="#i-grid"/></svg>Compliance Board</button>
+    <button onclick="return false"><svg><use href="#i-cog"/></svg>Settings</button>
+  </div>
+</nav>
+
+<main class="main" id="main">
+
+<!-- ============ HALAMAN SUBMIT ============ -->
+<section id="pgSubmit">
+  <p class="crumb">Governance<span>/</span>Submit</p>
+  <div class="page-h">
+    <div>
+      <h1>Submit</h1>
+      <p>Daftar report yang sudah disubmit team Anda. Tekan <b>Submit report</b> untuk menambah
+         checklist atau MoM untuk periode berjalan.</p>
+    </div>
+    <button class="btn btn-p" id="openDrawer"><svg><use href="#i-plus"/></svg>Submit report</button>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-l">Submitted minggu ini</div>
+      <div class="kpi-v" style="color:var(--green)">3</div><div class="kpi-s">dari 6 project dilacak</div></div>
+    <div class="kpi"><div class="kpi-l">Belum submit</div>
+      <div class="kpi-v" style="color:var(--orange)">3</div><div class="kpi-s">2 sudah lewat jatuh tempo</div></div>
+    <div class="kpi"><div class="kpi-l">Perlu review</div>
+      <div class="kpi-v" style="color:var(--accent)">1</div><div class="kpi-s">baris gagal diparse</div></div>
+    <div class="kpi"><div class="kpi-l">Total submission</div>
+      <div class="kpi-v">28</div><div class="kpi-s">6 minggu terakhir</div></div>
+  </div>
+
+  <div class="filters">
+    <input class="fsearch" type="search" id="subSearch" placeholder="Cari project atau nama file…"
+           aria-label="Cari submission">
+    <select class="fsel" id="fProj" aria-label="Filter project">
+      <option value="">Semua project</option>
+      <option>AIRPAY</option><option>APMS</option><option>APA</option>
+      <option>DSH</option><option>IV</option><option>ARC</option>
+    </select>
+    <select class="fsel" id="fStat" aria-label="Filter status">
+      <option value="">Semua status</option>
+      <option value="green">On time</option>
+      <option value="orange">Telat</option>
+      <option value="warn">Perlu review</option>
+    </select>
+    <span style="flex:1"></span>
+    <button class="btn btn-o btn-sm" id="sExport"><svg><use href="#i-dl"/></svg>Export CSV</button>
+  </div>
+
+  <div class="tw">
+    <table>
+      <caption class="sr">Daftar submission yang sudah dikirim</caption>
+      <thead><tr>
+        <th scope="col">Project</th><th scope="col">Periode</th><th scope="col">Jenis</th>
+        <th scope="col">File</th><th scope="col">Diupload oleh</th><th scope="col">Waktu</th>
+        <th scope="col">Status</th><th scope="col"><span class="sr">Aksi</span></th>
+      </tr></thead>
+      <tbody id="subBody"></tbody>
+    </table>
+  </div>
+  <div class="empty" id="subEmpty" hidden>
+    <svg><use href="#i-inbox"/></svg>
+    <b>Tidak ada submission cocok</b>
+    <p>Ubah filter, atau kirim report baru untuk periode ini.</p>
+    <button class="btn btn-p" onclick="document.getElementById('openDrawer').click()">
+      <svg><use href="#i-plus"/></svg>Submit report</button>
+  </div>
+</section>
+
+<!-- ============ HALAMAN COMPLIANCE BOARD ============ -->
+<section id="pgBoard" hidden>
+  <p class="crumb">Governance<span>/</span>Compliance Board</p>
+  <div class="page-h">
+    <div>
+      <h1>Compliance Board</h1>
+      <p>Semua project yang dilacak, berdasarkan checklist dan MoM yang sudah diupload.
+         Mana yang tepat waktu, mana yang telat, per project per minggu.</p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span class="pill p-slate" id="bStamp"><svg><use href="#i-clock"/></svg>Diperbarui 2 menit lalu</span>
+      <button class="btn btn-o btn-sm" id="bRefresh"><svg><use href="#i-clock"/></svg>Refresh</button>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-l">On time</div>
+      <div class="kpi-v" style="color:var(--green)" id="kOn">—</div>
+      <div class="kpi-s" id="kOnS">—</div>
+      <div class="bar" id="kBar"></div></div>
+    <div class="kpi"><div class="kpi-l">Telat (H+1…H+3)</div>
+      <div class="kpi-v" style="color:var(--orange)" id="kLate">—</div><div class="kpi-s">masih bisa dikejar</div></div>
+    <div class="kpi"><div class="kpi-l">Telat &gt; H+3</div>
+      <div class="kpi-v" style="color:var(--red)" id="kVery">—</div><div class="kpi-s">perlu eskalasi</div></div>
+    <div class="kpi"><div class="kpi-l">To-do lewat tenggat</div>
+      <div class="kpi-v" style="color:var(--red)" id="kTodo">—</div><div class="kpi-s" id="kTodoS">—</div></div>
+    <div class="kpi"><div class="kpi-l">Rata-rata keterlambatan</div>
+      <div class="kpi-v"><span id="kAvg">—</span><span style="font-size:13px;color:var(--fg-faint)"> hari</span></div>
+      <div class="kpi-s" id="kAvgS">—</div></div>
+  </div>
+
+  <div class="filters">
+    <select class="fsel" id="bTeam" aria-label="Filter team">
+      <option value="">Semua team</option><option>Airpay Developer</option>
+      <option>Platform Developer</option><option>PPOB Developer</option>
+    </select>
+    <select class="fsel" id="bRange" aria-label="Rentang periode">
+      <option value="6">6 minggu terakhir</option><option value="12">12 minggu terakhir</option>
+    </select>
+    <select class="fsel" id="bStatus" aria-label="Filter status">
+      <option value="">Semua status</option>
+      <option value="late">Hanya yang telat</option>
+      <option value="ontime">Hanya yang on time</option>
+    </select>
+    <span style="flex:1"></span>
+    <button class="btn btn-o btn-sm" id="bExport"><svg><use href="#i-dl"/></svg>Export CSV</button>
+  </div>
+
+  <div class="card"><div class="card-b board">
+    <div class="tw" style="border:0">
+    <table>
+      <caption class="sr">Status kepatuhan tiap project per minggu, dikelompokkan per team pemilik</caption>
+      <thead><tr id="boardHead"></tr></thead>
+      <tbody id="boardBody"></tbody>
+    </table>
+    </div>
+    <div class="empty" id="boardEmpty" hidden>
+      <svg><use href="#i-inbox"/></svg>
+      <b>Tidak ada project cocok</b>
+      <p>Ubah filter team atau status untuk melihat project lain.</p>
+    </div>
+    <div class="legend">
+      <div><span class="cell c-green" style="min-width:34px"><svg><use href="#i-check"/></svg></span> On time</div>
+      <div><span class="cell c-orange" style="min-width:34px"><svg><use href="#i-alert"/></svg></span> Telat H+1 s/d H+3</div>
+      <div><span class="cell c-red" style="min-width:34px"><svg><use href="#i-x"/></svg></span> Telat &gt; H+3</div>
+      <div><span class="cell c-slate" style="min-width:34px">—</span> Belum jatuh tempo</div>
+    </div>
+    <p style="font-size:12px;color:var(--fg-faint);margin:12px 0 0;max-width:88ch">
+      Baris = project, dikelompokkan per team pemilik. Hanya project dengan
+      <span class="mono">is_tracked = true</span> yang muncul — dari 50+ project di Jira, ini 6 yang dilacak.
+      Kolom <b>On time</b> ditulis sebagai rasio, bukan satu warna rata-rata: merata-ratakan beberapa
+      minggu jadi satu warna akan menyembunyikan minggu yang bermasalah. Warna dihitung saat dibaca
+      dari <span class="mono">due_at</span> vs waktu sekarang — tidak disimpan, tidak perlu cron job.
+      Tiap sel punya ikon dan label teks, jadi terbaca tanpa bergantung pada warna.
+    </p>
+  </div></div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-h"><h2>Detail minggu berjalan · W32 (2026-08-03 → 08-09)</h2>
+      <span class="pill p-orange" id="dPill"><svg><use href="#i-alert"/></svg>—</span></div>
+    <div class="card-b">
+      <div class="tw" style="border:0">
+      <table>
+        <thead><tr><th scope="col">Project</th><th scope="col">Team</th><th scope="col">Status</th>
+          <th scope="col">Submit terakhir</th><th scope="col">Wins</th><th scope="col">Blockers</th>
+          <th scope="col">Deps</th><th scope="col">To Do</th><th scope="col">Telat</th><th scope="col"><span class="sr">Aksi</span></th></tr></thead>
+        <tbody id="detailBody"></tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<!-- ============ DRAWER SUBMIT ============ -->
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dwTitle" hidden>
+  <div class="dw-h">
+    <div style="flex:1">
+      <h2 id="dwTitle">Submit report</h2>
+      <p>Pilih project dulu — periode dan area upload menyusul.</p>
+    </div>
+    <button class="btn btn-g btn-sm" id="closeDrawer" aria-label="Tutup form">
+      <svg><use href="#i-x"/></svg></button>
+  </div>
+
+  <div class="dw-b">
+    <!-- 1: project -->
+    <div class="fstep act" id="st1">
+      <div class="fstep-h"><span class="fstep-n">1</span><h3>Pilih project</h3></div>
+      <div class="fstep-b">
+        <div class="pk">
+          <button class="pk-in" id="pkBtn" aria-expanded="false" aria-haspopup="listbox">
+            <span class="ph" id="pkLabel">Cari project Jira…</span>
+            <svg aria-hidden="true"><use href="#i-chev"/></svg>
+          </button>
+          <div class="pk-pop" id="pkPop" hidden>
+            <input class="pk-search" id="pkSearch" type="search" autocomplete="off"
+                   placeholder="Ketik key atau nama project…" aria-label="Cari project">
+            <div class="pk-list" id="pkList" role="listbox" aria-label="Daftar project"></div>
+          </div>
+        </div>
+        <p style="font-size:12px;color:var(--fg-faint);margin:8px 0 0">
+          Hanya project yang ditandai <b>dilacak</b> admin dan ada di
+          <span class="mono">allowed_project_keys</span> Anda.</p>
+      </div>
+    </div>
+
+    <!-- 2: periode -->
+    <div class="fstep idle" id="st2">
+      <div class="fstep-h"><span class="fstep-n">2</span><h3>Periode</h3></div>
+      <div class="fstep-b">
+        <dl class="period">
+          <div><dt>Minggu</dt><dd class="mono" id="pWeek">—</dd></div>
+          <div><dt>Rentang</dt><dd class="mono" id="pRange">—</dd></div>
+          <div><dt>Jatuh tempo</dt><dd class="mono" id="pDue">—</dd></div>
+          <div><dt>Status</dt><dd id="pState">—</dd></div>
+        </dl>
+        <p style="font-size:12px;color:var(--fg-faint);margin:8px 0 0" id="pNote">
+          Periode ditentukan otomatis dari policy project, tidak bisa diubah manual.</p>
+      </div>
+    </div>
+
+    <!-- 3: upload -->
+    <div class="fstep idle" id="st3">
+      <div class="fstep-h"><span class="fstep-n">3</span><h3>Upload checklist</h3></div>
+      <div class="fstep-b">
+        <p style="font-size:12.5px;color:var(--fg-muted);margin:0 0 12px">
+          Upload <b>checklist</b>, <b>MoM</b>, atau keduanya. Minimal satu wajib ada.
+          Kalau keduanya diupload, isinya digabung dan baris duplikat dilebur.</p>
+
+        <div class="tpl-note" id="tplNote">
+          <svg><use href="#i-info"/></svg>
+          <div id="tplNoteTxt">Pilih project dulu — template yang diunduh akan sudah terisi
+            identitas project dan periodenya.</div>
+        </div>
+
+        <div id="rejBox"></div>
+
+        <div class="slot" id="slotChk">
+          <div class="slot-h">
+            <svg class="fx"><use href="#i-sheet"/></svg>
+            <div style="flex:1"><b>Checklist</b>
+              <span class="slot-f mono">.xlsx · .csv · .xls</span></div>
+            <button class="btn btn-g btn-sm" data-tpl="xlsx"><svg><use href="#i-dl"/></svg>Template</button>
+          </div>
+          <div class="dz" data-kind="checklist" tabindex="0" role="button"
+               aria-label="Upload file checklist">
+            <div class="dz-ic" aria-hidden="true"><svg><use href="#i-up"/></svg></div>
+            <b>Seret file atau klik</b>
+            <p class="m">Hasil isian template .xlsx</p>
+          </div>
+          <div class="filerow" data-file="checklist" hidden></div>
+        </div>
+
+        <div class="slot" id="slotMom">
+          <div class="slot-h">
+            <svg class="fm"><use href="#i-doc"/></svg>
+            <div style="flex:1"><b>MoM</b>
+              <span class="slot-f mono">.md · .docx · .pdf</span></div>
+            <button class="btn btn-g btn-sm" data-tpl="md"><svg><use href="#i-dl"/></svg>Template</button>
+          </div>
+          <div class="dz" data-kind="mom" tabindex="0" role="button"
+               aria-label="Upload file MoM">
+            <div class="dz-ic" aria-hidden="true"><svg><use href="#i-up"/></svg></div>
+            <b>Seret file atau klik</b>
+            <p class="m">Minutes of Meeting</p>
+          </div>
+          <div class="filerow" data-file="mom" hidden></div>
+        </div>
+
+        <input type="file" id="fileIn" class="sr" accept=".xlsx,.xls,.csv,.md,.docx,.pdf">
+      </div>
+    </div>
+
+    <!-- 4: activity -->
+    <div class="fstep idle" id="st4">
+      <div class="fstep-h"><span class="fstep-n">4</span><h3>Activity</h3></div>
+      <div class="fstep-b">
+        <ul class="act" id="actLog"></ul>
+        <div class="note info" style="margin-top:12px" id="actNote" hidden>
+          <svg><use href="#i-info"/></svg>
+          <div>Wins, blockers, dan dependencies hasil ekstraksi bisa dilihat di
+          <b>Compliance Board</b> setelah submission dikonfirmasi.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dw-f">
+    <button class="btn btn-p" id="confirmBtn" disabled>
+      <svg><use href="#i-check"/></svg>Konfirmasi &amp; kirim</button>
+    <button class="btn btn-o" id="cancelBtn">Batal</button>
+    <span style="flex:1"></span>
+    <span style="font-size:11.5px;color:var(--fg-faint)" id="dwHint">Pilih project untuk mulai</span>
+  </div>
+</aside>
+
+<aside class="drawer drawer-lg" id="dDrawer" role="dialog" aria-modal="true" aria-labelledby="ddTitle" hidden>
+  <div class="dw-h">
+    <div style="flex:1">
+      <h2 id="ddTitle">Detail submission</h2>
+      <p id="ddSub">—</p>
+    </div>
+    <button class="btn btn-g btn-sm" id="ddClose" aria-label="Tutup detail"><svg><use href="#i-x"/></svg></button>
+  </div>
+  <div class="dw-b">
+    <dl class="meta-grid" id="ddMeta"></dl>
+    <div id="ddFiles"></div>
+    <div id="ddWarn"></div>
+    <div class="dtab" role="tablist" aria-label="Isi submission" id="ddTabs"></div>
+    <div id="ddPane" class="dpane"></div>
+  </div>
+  <div class="dw-f">
+    <button class="btn btn-g btn-sm" id="ddJson"><svg><use href="#i-dl"/></svg>analysis.json</button>
+    <span style="flex:1"></span>
+    <span style="font-size:11.5px;color:var(--fg-faint)" id="ddFoot">—</span>
+  </div>
+</aside>
+
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <svg><use href="#i-check"/></svg>
+  <div><b id="toastT">Tersimpan</b><p id="toastM">—</p></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const XLSX_B64="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";
+const MD_TPL=`---
+schema_version: 1
+doc_type: mom
+project_key: AIRPAY                 # wajib — kunci project di Jira, huruf besar, persis sama
+project_name: Airpay Reengineering  # opsional — diambil dari Jira kalau kosong
+team_slug: airpay-developer         # opsional — team pemilik, untuk grouping di board
+period_type: weekly                 # weekly | monthly
+period_start: 2026-08-03            # YYYY-MM-DD
+period_end: 2026-08-09
+meeting_date: 2026-08-08
+submitted_by: ricky@linkit360.com   # wajib — harus terdaftar di app_users
+attendees:
+  - Ricky (PM)
+  - Andi (Dev)
+  - Budi (BA)
+---
+
+# MoM — AIRPAY · Minggu 2026-08-03 s/d 2026-08-09
+
+> **Satu file = satu project.** Kalau rapat membahas beberapa project, buat file terpisah
+> per project. Ini yang membuat report bisa dipecah per project sesuai struktur Jira.
+
+> Isi heading \`##\` di bawah persis seperti tertulis. Parser mencari heading ini.
+> Tabel boleh diganti bullet biasa kalau lebih nyaman — parser menangani keduanya,
+> tapi tabel jauh lebih akurat karena tidak perlu ditebak LLM.
+
+## Wins
+
+| win_date | category | title | description | jira_issue_key | impact |
+|---|---|---|---|---|---|
+| 2026-08-05 | Platform | Payment gateway v2 live di production | Migrasi selesai tanpa downtime, latency 800ms → 210ms | LUM-482 | Throughput naik 3x |
+| 2026-08-07 | DCB | Retry logic DCB Indosat selesai | Menangani timeout 30s dengan exponential backoff | LUM-490 | Failed charge turun 12% |
+
+\`category\` harus salah satu dari: \`Platform\`, \`DCB\`, \`Digital Payment\`.
+
+## Blockers
+
+| title | priority | status | pic | bottleneck | next_action | target_date | jira_issue_key |
+|---|---|---|---|---|---|---|---|
+| Sandbox Telkomsel DCB belum dapat kredensial | P1 | In Progress | Andi | Menunggu approval partner, 9 hari tanpa respons | Eskalasi ke PIC partner via PM, deadline balasan 2026-08-08 | 2026-08-12 | LUM-501 |
+
+\`priority\`: \`P0\`–\`P4\` · \`status\`: \`Open\` \\| \`In Progress\` \\| \`Resolved\`
+
+## Dependencies
+
+| title | depends_on | direction | status | pic | target_date | jira_issue_key | notes |
+|---|---|---|---|---|---|---|---|
+| Butuh endpoint settlement dari tim PPOB | PPOB Developer | outbound | Open | Budi | 2026-08-15 | PPOB-77 | Spec dikirim 2026-07-28 |
+
+\`direction\`: \`outbound\` = kami menunggu pihak lain · \`inbound\` = pihak lain menunggu kami
+
+## To Do
+
+Apa yang harus dikerjakan berikutnya, siapa yang mengerjakan, dan kapan tenggatnya.
+
+| title | pic | due_date | priority | status | jira_issue_key | notes |
+|---|---|---|---|---|---|---|
+| Pasang instrumentasi metrik di gateway v2 | Andi | 2026-08-14 | P1 | In Progress | AIRPAY-505 | Dibutuhkan tim APMS |
+| Kirim ulang permintaan kredensial ke Telkomsel | Andi | 2026-08-08 | P0 | Blocked | AIRPAY-501 | Menunggu balasan partner |
+| Review spec settlement PPOB | Budi | 2026-08-06 | P2 | Done | ARC-77 | — |
+
+\`priority\`: \`P0\`–\`P4\` · \`status\`: \`Not Started\` \\| \`In Progress\` \\| \`Done\` \\| \`Blocked\`
+
+\`due_date\` wajib. To-do tanpa tenggat tidak bisa dihitung terlambat, jadi baris tanpa
+\`due_date\` ditolak parser dan masuk daftar review manual.
+
+Bentuk checklist juga diterima kalau lebih nyaman — parser menangani keduanya:
+
+\`\`\`
+- [ ] Andi — Pasang instrumentasi metrik di gateway v2 — 2026-08-14 — P1
+- [x] Budi — Review spec settlement PPOB — 2026-08-06 — P2
+\`\`\`
+
+Checkbox tercentang dianggap \`status: Done\`. Tapi bentuk tabel lebih akurat karena
+\`priority\` dan \`jira_issue_key\` tidak perlu ditebak.
+
+## Notes
+
+Bagian bebas. Tidak diparse ke tabel database, hanya disimpan di \`analysis.notes\`.
+Taruh diskusi, keputusan, atau konteks yang tidak masuk empat kategori di atas.
+`;
+const RM=matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+function toast(t,m){const el=$('#toast');$('#toastT').textContent=t;$('#toastM').textContent=m;
+  el.classList.add('on');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('on'),4200);}
+function dl(blob,name){const u=URL.createObjectURL(blob);const a=document.createElement('a');
+  a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(u),1500);}
+
+/* ---------- data ---------- */
+const PROJECTS=[
+ {k:'ABT',n:"Lulladream",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'AF',n:"Africa",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'AIRPAY',n:"Airpay Reengineering",t:'Airpay Developer',tr:1,s:'orange',late:1},
+ {k:'APA',n:"Airpay Software Architecture",t:'Airpay Developer',tr:1,s:'green',late:0},
+ {k:'APMS',n:"AIRPAY - Monitoring",t:'Airpay Developer',tr:1,s:'orange',late:1},
+ {k:'ARC',n:"PPOB VIA Software Architect",t:'PPOB Developer',tr:1,s:'red',late:4},
+ {k:'ASA',n:"Airgift Software Architecture",t:'Airgift Developer',tr:0,s:'none',late:0},
+ {k:'BD',n:"Business Development",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'BDM',n:"New Business & Sales",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'BN',n:"Booksnap new",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'BOPS',n:"Business Operations",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'BR',n:"Presales (BD)",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'CD',n:"Coffee Dewa",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'CSHEL',n:"CShelpdesk",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'CSIB',n:"CSI Bali",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'DC',n:"DTF Camnexus",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'DMS',n:"DMS Project",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'DOT',n:"Dottorotta",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'DP',n:"Digital Project (Bali Non-CSI)",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'DREAM',n:"DreamLeague",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'DSH',n:"Dashboard Linkit360",t:'Platform Developer',tr:1,s:'orange',late:1},
+ {k:'DXGR',n:"FantasyEleven",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'ECCIV',n:"ERP Chatbot CSI (ID Vendor)",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'EI',n:"ERP Infusion",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'EP',n:"EIR Project",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'EUR',n:"Europe",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'GAM',n:"GameShop",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'GAN',n:"Gamma Association (New)",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'GAPS',n:"Google ads PT, SK",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'GD',n:"Game Division",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'GEM',n:"Gemezz_New",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'GOAL',n:"Goaly",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'GOR',n:"E-Governance",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'GP',n:"Gamification Product",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'HG',n:"Sentra Gamer",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'HIT',n:"HRIS Internal Tools",t:'PMO Team',tr:0,s:'none',late:0},
+ {k:'HL',n:"Her Love",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'HRD',n:"HRD",t:'PMO Team',tr:0,s:'none',late:0},
+ {k:'IV',n:"Integration VAS",t:'Platform Developer',tr:1,s:'green',late:0},
+ {k:'JAW',n:"JawaraJoy",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'KH',n:"Cambodia",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'KID',n:"Kimee",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'LA',n:"Laos",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'LDN',n:"LinkIT Design new",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'LF',n:"Life Fit",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'LGG',n:"LinkIT Group GA",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'LGH',n:"LinkIT Group HRD",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'LMA',n:"MinuteX",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'LUN',n:"Lunette",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'LXK',n:"LinkIT x Kaspersky",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'MAV',n:"Maveo",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'MET',n:"Metaplay",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'MM',n:"Myanmar",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'NP3',n:"new product 3",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'PAK',n:"Pakistan",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'PD',n:"Product Team",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'PHIL',n:"Phillipines",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'PI',n:"Project Infra",t:'Platform Developer',tr:0,s:'none',late:0},
+ {k:'PPOBNEW',n:"PPOB NEW VERSION",t:'PPOB Developer',tr:0,s:'none',late:0},
+ {k:'PROJ',n:"Project_LinkitGroup_GA",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'QAN',n:"QA",t:'QA Team',tr:0,s:'none',late:0},
+ {k:'QN',n:"Quizy New",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'RGFT',n:"AirGift",t:'Airgift Developer',tr:0,s:'none',late:0},
+ {k:'RMAC',n:"Relationship mediator AI chat",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'RNDS',n:"RND (Scrum)",t:'RND Team',tr:0,s:'none',late:0},
+ {k:'RTM',n:"Airtime",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'RVPN',n:"RusVPN",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'SCRL',n:"Scrello New",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'SE',n:"SpeakEasy",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'SFMCP',n:"SF MCP AIRPAY",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'SK',n:"Chatbot PPOB",t:'PPOB Developer',tr:0,s:'none',late:0},
+ {k:'SLYP',n:"Slypee",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'SM',n:"Stream Maveo",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'SOSMED',n:"LinkIT SocialMedia",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'SSCS',n:"Cepat Sehat",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'SSKD',n:"Surat Sakit & Konsul Dokter",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'STREAM',n:"Starly",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'SYN',n:"SynapSea",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'SYS',n:"Sys Admin",t:'Platform Developer',tr:0,s:'none',late:0},
+ {k:'TP',n:"Telkomsel Portal",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'TPT',n:"Testing Project Timeline",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'UPM',n:"Unified Portal Metaplay",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'VLA',n:"VRBT LinkIT",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'VLY',n:"VAS - LINKIT & YATTA",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'VM',n:"vending machine",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'WAS',n:"Wasting Management",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'WM',n:"Waki Media",t:'Waki Developer',tr:0,s:'none',late:0},
+ {k:'WR',n:"WAKICAMP REVAMP",t:'Waki Developer',tr:0,s:'none',late:0},
+ {k:'WRC',n:"CSI Report",t:'Belum di-assign',tr:0,s:'none',late:0},
+ {k:'WSA',n:"Wakicamp Software Architecture",t:'Waki Developer',tr:0,s:'none',late:0}
+];
+const SICON={green:'i-check',orange:'i-alert',red:'i-x',slate:'i-clock'};
+
+
+let SUBS=[
+ {k:'APA', per:'W32',rng:'2026-08-03 → 08-09',kind:'checklist',f:'Checklist_APA_W32.xlsx',
+  by:'Andi Prasetyo',at:'2026-08-08 16:12',s:'green',note:''},
+ {k:'IV',  per:'W32',rng:'2026-08-03 → 08-09',kind:'mom',f:'MoM_IV_W32.md',
+  by:'Sari Dewi',at:'2026-08-09 09:41',s:'green',note:''},
+ {k:'DSH', per:'W32',rng:'2026-08-03 → 08-09',kind:'checklist',f:'Checklist_DSH_W32.xlsx',
+  by:'Budi Santoso',at:'2026-08-10 11:05',s:'orange',note:'1 baris perlu review'},
+ {k:'AIRPAY',per:'W31',rng:'2026-07-27 → 08-02',kind:'both',
+  f:'Checklist_AIRPAY_W31.xlsx + MoM_AIRPAY_W31.md',
+  by:'Ricky',at:'2026-08-02 15:30',s:'green',note:''},
+ {k:'APMS',per:'W31',rng:'2026-07-27 → 08-02',kind:'checklist',f:'Checklist_APMS_W31.xlsx',
+  by:'Andi Prasetyo',at:'2026-08-04 10:22',s:'orange',note:''},
+ {k:'ARC', per:'W31',rng:'2026-07-27 → 08-02',kind:'mom',f:'MoM_ARC_W31.docx',
+  by:'Budi Santoso',at:'2026-08-02 17:48',s:'green',note:''},
+];
+
+function kindLabel(k){
+  if(k==='both')return '<span class="src src-b">Checklist + MoM</span>';
+  return k==='mom'?'<span class="src src-m">MoM</span>':'<span class="src src-c">Checklist</span>';}
+function statPill(s,note){
+  if(note) return '<span class="pill p-orange"><svg><use href="#i-alert"/></svg>Perlu review</span>';
+  if(s==='green') return '<span class="pill p-green"><svg><use href="#i-check"/></svg>On time</span>';
+  if(s==='orange')return '<span class="pill p-orange"><svg><use href="#i-alert"/></svg>Telat</span>';
+  return '<span class="pill p-red"><svg><use href="#i-x"/></svg>Telat berat</span>';
+}
+function renderSubs(){
+  const q=($('#subSearch').value||'').toLowerCase().trim();
+  const fp=$('#fProj').value, fs=$('#fStat').value;
+  const rows=SUBS.filter(r=>{
+    if(fp&&r.k!==fp)return false;
+    if(fs==='warn'&&!r.note)return false;
+    if(fs&&fs!=='warn'&&r.s!==fs)return false;
+    if(q&&!(r.k.toLowerCase().includes(q)||r.f.toLowerCase().includes(q)))return false;
+    return true;});
+  const tb=$('#subBody'); tb.innerHTML='';
+  rows.forEach(r=>{
+    const p=PROJECTS.find(x=>x.k===r.k)||{n:''};
+    tb.insertAdjacentHTML('beforeend',
+     '<tr><td><span class="pk-tag">'+r.k+'</span><div style="font-size:11.5px;color:var(--fg-faint);margin-top:3px">'+p.n+'</div></td>'+
+     '<td class="num">'+r.per+'<div style="font-size:11px;color:var(--fg-faint)">'+r.rng+'</div></td>'+
+     '<td>'+kindLabel(r.kind)+'</td>'+
+     '<td>'+r.f.split(' + ').map(fn=>{const x=/\.(xlsx|xls|csv)$/i.test(fn);
+       return '<span class="fname"><svg class="'+(x?'fx':'fm')+'"><use href="#'+(x?'i-sheet':'i-doc')+'"/></svg>'+fn+'</span>';}).join('<div style="height:4px"></div>')+'</td>'+
+     '<td>'+r.by+'</td><td class="num">'+r.at+'</td>'+
+     '<td>'+statPill(r.s,r.note)+(r.note?'<div style="font-size:11px;color:var(--fg-faint);margin-top:3px">'+r.note+'</div>':'')+'</td>'+
+     '<td><button class="btn btn-g btn-sm" data-sub="'+SUBS.indexOf(r)+'" aria-label="Lihat detail '+r.k+' '+r.per+'"><svg><use href="#i-eye"/></svg>Detail</button></td></tr>');
+  });
+  $('#subEmpty').hidden=rows.length>0;
+  $('#subBody').closest('.tw').hidden=rows.length===0;
+}
+['#subSearch','#fProj','#fStat'].forEach(s=>$(s).addEventListener('input',renderSubs));
+
+/* ---------- board ---------- */
+// 12 minggu data; W21..W32. g=on time, o1/o2=telat ringan, r4/r5=telat berat, n=belum jatuh tempo
+const WEEKS=['W21','W22','W23','W24','W25','W26','W27','W28','W29','W30','W31','W32'];
+const BOARD=[
+ {k:'AIRPAY',n:'Airpay Reengineering',        t:'Airpay Developer',
+  w:['g','g','o1','g','g','g','g','g','o2','g','g','o1'],todo:0},
+ {k:'APMS',  n:'AIRPAY - Monitoring',         t:'Airpay Developer',
+  w:['g','o1','g','g','g','o2','g','g','g','g','g','o1'],todo:0},
+ {k:'APA',   n:'Airpay Software Architecture',t:'Airpay Developer',
+  w:['g','g','g','r4','g','g','g','r5','g','g','o2','g'],todo:1},
+ {k:'DSH',   n:'Dashboard Linkit360',         t:'Platform Developer',
+  w:['g','g','o2','g','g','g','g','g','g','o1','r4','o1'],todo:1},
+ {k:'IV',    n:'Integration VAS',             t:'Platform Developer',
+  w:['g','g','g','g','g','g','g','g','g','g','g','g'],todo:0},
+ {k:'ARC',   n:'PPOB VIA Software Architect', t:'PPOB Developer',
+  w:['o1','g','g','g','o2','g','g','g','o2','g','g','r4'],todo:0},
+];
+const CMAP={g:['green','i-check','OK'],o1:['orange','i-alert','H+1'],o2:['orange','i-alert','H+2'],
+            r4:['red','i-x','H+4'],r5:['red','i-x','H+5'],n:['slate','','—']};
+const LATE={o1:1,o2:2,r4:4,r5:5};
+function boardRows(){
+  const team=$('#bTeam').value, st=$('#bStatus').value;
+  return BOARD.filter(r=>{
+    if(team&&r.t!==team)return false;
+    const cur=r.w[r.w.length-1];
+    if(st==='late'&&cur==='g')return false;
+    if(st==='ontime'&&cur!=='g')return false;
+    return true;});
+}
+function renderBoard(){
+  const n=+$('#bRange').value, rows=boardRows();
+  const weeks=WEEKS.slice(-n);
+  $('#boardHead').innerHTML='<th scope="col">Project</th>'+
+    weeks.map(w=>'<th scope="col">'+w+'</th>').join('')+'<th scope="col">On time</th>';
+  const tb=$('#boardBody');tb.innerHTML='';
+  $('#boardEmpty').hidden=rows.length>0;
+  tb.closest('.tw').hidden=rows.length===0;
+
+  const byTeam={};rows.forEach(r=>{(byTeam[r.t]=byTeam[r.t]||[]).push(r);});
+  Object.keys(byTeam).forEach(team=>{
+    const rs=byTeam[team], ok=rs.filter(r=>r.w[r.w.length-1]==='g').length;
+    tb.insertAdjacentHTML('beforeend',
+      '<tr class="grp-row"><th scope="rowgroup" colspan="'+(weeks.length+2)+'">'+team+
+      '<span style="float:right;font-family:\'Fira Code\',monospace;letter-spacing:0">'+
+      ok+'/'+rs.length+' on time minggu ini</span></th></tr>');
+    rs.forEach(r=>{
+      const cells=r.w.slice(-n);
+      const tds=cells.map(c=>{const[cls,ic,tx]=CMAP[c];
+        return '<td><span class="cell c-'+cls+'">'+(ic?'<svg><use href="#'+ic+'"/></svg>':'')+tx+'</span></td>';}).join('');
+      const good=cells.filter(c=>c==='g').length;
+      tb.insertAdjacentHTML('beforeend',
+       '<tr><th scope="row" style="font-weight:500;background:var(--surface);text-transform:none;font-size:12.5px;color:var(--fg)">'+
+       '<span class="pk-tag">'+r.k+'</span> '+r.n+'</th>'+tds+
+       '<td class="num" style="font-weight:600">'+good+'/'+cells.length+'</td></tr>');
+    });
+  });
+  renderKpi(rows,n);
+  renderDetail(rows);
+}
+function renderKpi(rows,n){
+  const cur=rows.map(r=>r.w[r.w.length-1]);
+  const on=cur.filter(c=>c==='g').length;
+  const late=cur.filter(c=>c==='o1'||c==='o2').length;
+  const very=cur.filter(c=>c==='r4'||c==='r5').length;
+  const tot=cur.length||1;
+  $('#kOn').textContent=on; $('#kOnS').textContent='dari '+cur.length+' project · minggu ini';
+  $('#kLate').textContent=late; $('#kVery').textContent=very;
+  $('#kBar').innerHTML=
+    '<i style="width:'+(on/tot*100)+'%;background:var(--green)"></i>'+
+    '<i style="width:'+(late/tot*100)+'%;background:var(--orange)"></i>'+
+    '<i style="width:'+(very/tot*100)+'%;background:var(--red)"></i>';
+  const td=rows.reduce((s,r)=>s+r.todo,0);
+  $('#kTodo').textContent=td; $('#kTodoS').textContent='dari '+(rows.length*2)+' to-do aktif';
+  let sum=0,cnt=0;
+  rows.forEach(r=>r.w.slice(-n).forEach(c=>{if(LATE[c]){sum+=LATE[c];cnt++;}}));
+  $('#kAvg').textContent=cnt?(sum/cnt).toFixed(1).replace('.',','):'0';
+  $('#kAvgS').textContent=n+' minggu terakhir · '+cnt+' keterlambatan';
+}
+/* detail minggu berjalan — ikut filter board */
+const DETAIL_W32={
+ AIRPAY:['—','—','—','—','—'], APMS:['—','—','—','—','—'],
+ APA:['2026-08-08 16:12','3','1','2','3','1'],
+ DSH:['2026-08-10 11:05','2','2','0','3','1'],
+ IV:['2026-08-09 09:41','4','0','1','4','0'],
+ ARC:['—','—','—','—','—','—'],
+};
+function renderDetail(rows){
+  rows=rows||boardRows();
+  const tb=$('#detailBody');tb.innerHTML='';
+  let belum=0;
+  rows.forEach(r=>{
+    const cur=r.w[r.w.length-1];
+    const d=DETAIL_W32[r.k]||['—','—','—','—','—','—'];
+    const has=cur==='g';
+    if(!has)belum++;
+    const pill = cur==='g'?'<span class="pill p-green"><svg><use href="#i-check"/></svg>On time</span>'
+      : (cur==='o1'||cur==='o2')?'<span class="pill p-orange"><svg><use href="#i-alert"/></svg>Telat H+'+LATE[cur]+'</span>'
+      : '<span class="pill p-red"><svg><use href="#i-x"/></svg>Telat H+'+LATE[cur]+'</span>';
+    const ov=d[5]||'—';
+    tb.insertAdjacentHTML('beforeend',
+     '<tr><td><span class="pk-tag">'+r.k+'</span><div style="font-size:11.5px;color:var(--fg-faint);margin-top:3px">'+r.n+'</div></td>'+
+     '<td>'+r.t+'</td><td>'+pill+'</td><td class="num">'+d[0]+'</td>'+
+     '<td class="num" style="color:var(--green);font-weight:600">'+(d[1]||'—')+'</td>'+
+     '<td class="num" style="color:var(--red);font-weight:600">'+(d[2]||'—')+'</td>'+
+     '<td class="num" style="color:var(--accent);font-weight:600">'+(d[3]||'—')+'</td>'+
+     '<td class="num" style="font-weight:600">'+(d[4]||'—')+'</td>'+
+     '<td class="num" style="font-weight:600;color:'+(ov!=='—'&&+ov>0?'var(--red)':'var(--fg-faint)')+'">'+ov+'</td>'+
+     '<td><button class="btn btn-g btn-sm" data-proj="'+r.k+'" aria-label="Lihat detail '+r.k+'">'+
+     '<svg><use href="#i-eye"/></svg>Detail</button></td></tr>');
+  });
+  $('#dPill').innerHTML = belum
+    ? '<svg><use href="#i-alert"/></svg>'+belum+' project belum submit'
+    : '<svg><use href="#i-check"/></svg>Semua project sudah submit';
+  $('#dPill').className='pill '+(belum?'p-orange':'p-green');
+}
+['#bTeam','#bRange','#bStatus'].forEach(s=>$(s).addEventListener('change',renderBoard));
+$('#bRefresh').addEventListener('click',()=>{
+  $('#bStamp').innerHTML='<svg><use href="#i-clock"/></svg>Diperbarui barusan';
+  renderBoard();
+  toast('Data disegarkan','Status dihitung ulang dari due_at vs waktu sekarang.');
+});
+function toCSV(rows){
+  return rows.map(r=>r.map(c=>{
+    const s=String(c==null?'':c);
+    return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(',')).join('\n');
+}
+$('#bExport').addEventListener('click',()=>{
+  const n=+$('#bRange').value, weeks=WEEKS.slice(-n), rows=boardRows();
+  const head=['project_key','project_name','team',...weeks,'on_time_ratio'];
+  const body=rows.map(r=>{const c=r.w.slice(-n);
+    return [r.k,r.n,r.t,...c.map(x=>CMAP[x][2]),c.filter(x=>x==='g').length+'/'+c.length];});
+  dl(new Blob([toCSV([head,...body])],{type:'text/csv'}),'compliance_board_'+weeks[0]+'-'+weeks[weeks.length-1]+'.csv');
+  toast('CSV terunduh',rows.length+' project × '+n+' minggu.');
+});
+$('#sExport').addEventListener('click',()=>{
+  const q=($('#subSearch').value||'').toLowerCase().trim();
+  const fp=$('#fProj').value, fs=$('#fStat').value;
+  const rows=SUBS.filter(r=>{
+    if(fp&&r.k!==fp)return false;
+    if(fs==='warn'&&!r.note)return false;
+    if(fs&&fs!=='warn'&&r.s!==fs)return false;
+    if(q&&!(r.k.toLowerCase().includes(q)||r.f.toLowerCase().includes(q)))return false;
+    return true;});
+  const head=['project_key','period','range','kind','files','uploaded_by','uploaded_at','status','note'];
+  const body=rows.map(r=>[r.k,r.per,r.rng,r.kind,r.f,r.by,r.at,r.note?'needs_review':r.s,r.note]);
+  dl(new Blob([toCSV([head,...body])],{type:'text/csv'}),'submissions.csv');
+  toast('CSV terunduh',rows.length+' submission diekspor.');
+});
+
+/* ---------- navigasi halaman ---------- */
+function go(page){
+  const sub=page==='submit';
+  $('#pgSubmit').hidden=!sub; $('#pgBoard').hidden=sub;
+  $('#navSubmit').setAttribute('aria-current',sub?'page':'false');
+  $('#navBoard').setAttribute('aria-current',sub?'false':'page');
+  if(!sub)$('#navSubmit').removeAttribute('aria-current');else $('#navBoard').removeAttribute('aria-current');
+  window.scrollTo({top:0,behavior:RM?'auto':'smooth'});
+}
+$('#navSubmit').addEventListener('click',()=>go('submit'));
+$('#navBoard').addEventListener('click',()=>go('board'));
+
+/* ---------- drawer ---------- */
+let proj=null,kind='checklist',hiIdx=-1,filtered=PROJECTS.slice(),lastFocus=null;
+function openDrawer(o){
+  const d=$('#drawer'),s=$('#scrim');
+  if(o){lastFocus=document.activeElement;d.hidden=false;requestAnimationFrame(()=>{d.classList.add('on');s.classList.add('on');});
+    setTimeout(()=>$('#pkBtn').focus(),RM?0:120);document.body.style.overflow='hidden';}
+  else{d.classList.remove('on');s.classList.remove('on');document.body.style.overflow='';
+    setTimeout(()=>{d.hidden=true;},RM?0:280);if(lastFocus)lastFocus.focus();}
+}
+$('#openDrawer').addEventListener('click',()=>{resetForm();openDrawer(true);});
+$('#closeDrawer').addEventListener('click',()=>openDrawer(false));
+$('#cancelBtn').addEventListener('click',()=>openDrawer(false));
+$('#scrim').addEventListener('click',()=>{if(!$('#dDrawer').hidden)closeDetail();else openDrawer(false);});
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape')return;
+  if(!$('#dDrawer').hidden){closeDetail();return;}
+  if(!$('#drawer').hidden){
+    if(!$('#pkPop').hidden){openPk(false);$('#pkBtn').focus();}else openDrawer(false);}
+});
+
+function setStep(id,state){const el=$(id);el.classList.remove('idle','act','done');el.classList.add(state);}
+function resetForm(){
+  proj=null;$('#fileIn').value='';clearTimeout(checkTimer);
+  $('#pkLabel').textContent='Cari project Jira…';$('#pkLabel').className='ph';
+  const k=$('#pkKey');if(k)k.remove();
+  ['#pWeek','#pRange','#pDue'].forEach(s=>$(s).textContent='—');
+  $('#pState').textContent='—';
+  setStep('#st1','act');setStep('#st2','idle');setStep('#st3','idle');setStep('#st4','idle');
+  FILES.checklist=null;FILES.mom=null;
+  ['checklist','mom'].forEach(k=>{const s=slotEl(k);s.classList.remove('filled');
+    s.querySelector('.dz').hidden=false;s.querySelector('.filerow').hidden=true;});
+  $('#actLog').innerHTML='';$('#actNote').hidden=true;
+  $('#rejBox').innerHTML='';
+  $('#tplNoteTxt').innerHTML='Pilih project dulu — template yang diunduh akan sudah terisi '+
+    'identitas project dan periodenya.';
+  $('#confirmBtn').disabled=true;
+  $('#confirmBtn').innerHTML='<svg><use href="#i-check"/></svg>Konfirmasi &amp; kirim';
+  $('#dwHint').textContent='Pilih project untuk mulai';
+  renderList('');
+}
+
+/* project picker */
+function renderList(q=''){
+  const list=$('#pkList');list.innerHTML='';q=(q||'').trim().toLowerCase();
+  filtered=PROJECTS.filter(p=>!q||p.k.toLowerCase().includes(q)||p.n.toLowerCase().includes(q));
+  if(!filtered.length){list.innerHTML='<p class="pk-empty">Tidak ada project cocok.<br>'+
+    '<span style="font-size:12px">Project yang belum ditandai <b>dilacak</b> tidak muncul di sini.</span></p>';return;}
+  let team=null,i=0;
+  filtered.forEach(p=>{
+    if(p.t!==team){team=p.t;const g=document.createElement('div');g.className='pk-gh';g.textContent=team;list.appendChild(g);}
+    const b=document.createElement('button');b.type='button';b.className='pk-op'+(i===hiIdx?' hi':'');
+    b.setAttribute('role','option');b.dataset.i=i;
+    b.innerHTML='<span class="pk-tag">'+p.k+'</span><span class="n">'+p.n+'</span>';
+    b.addEventListener('click',()=>pick(p));list.appendChild(b);i++;
+  });
+}
+function openPk(o){$('#pkPop').hidden=!o;$('#pkBtn').setAttribute('aria-expanded',o);
+  if(o){hiIdx=-1;renderList($('#pkSearch').value);setTimeout(()=>$('#pkSearch').focus(),20);}}
+$('#pkBtn').addEventListener('click',()=>openPk($('#pkPop').hidden));
+$('#pkSearch').addEventListener('input',e=>{hiIdx=-1;renderList(e.target.value);});
+$('#pkSearch').addEventListener('keydown',e=>{
+  const ops=$$('.pk-op');
+  if(e.key==='ArrowDown'){e.preventDefault();hiIdx=Math.min(hiIdx+1,ops.length-1);}
+  else if(e.key==='ArrowUp'){e.preventDefault();hiIdx=Math.max(hiIdx-1,0);}
+  else if(e.key==='Enter'){e.preventDefault();if(filtered[hiIdx])pick(filtered[hiIdx]);return;}
+  else return;
+  ops.forEach((o,i)=>o.classList.toggle('hi',i===hiIdx));
+  if(ops[hiIdx])ops[hiIdx].scrollIntoView({block:'nearest'});
+});
+document.addEventListener('click',e=>{if(!e.target.closest('.pk')&&!$('#pkPop').hidden)openPk(false);});
+
+function pick(p){
+  proj=p;openPk(false);
+  if(!$('#pkKey')){$('#pkBtn').insertAdjacentHTML('afterbegin','<span class="pk-tag" id="pkKey"></span>');}
+  $('#pkKey').textContent=p.k;
+  $('#pkLabel').textContent=p.n;$('#pkLabel').className='n';
+  setStep('#st1','done');setStep('#st2','act');setStep('#st3','act');
+  $('#pWeek').textContent='W32';
+  $('#pRange').textContent='2026-08-03 → 08-09';
+  $('#pDue').textContent='08-09 17:00';
+  $('#pState').innerHTML='<span style="color:var(--fg-faint)">Muncul setelah file diupload</span>';
+  $('#pNote').innerHTML='Periode ditentukan otomatis dari policy project, tidak bisa diubah manual. '+
+    'Status on time / telat baru dihitung saat file diterima.';
+  $('#dwHint').textContent='Upload checklist atau MoM';
+  $('#tplNoteTxt').innerHTML='Template untuk <b>'+p.k+'</b> memakai profil '+
+    '<span class="mono">'+PROFILE+'</span> · <span class="mono">schema_version '+SCHEMA+'</span>. '+
+    'Sheet <span class="mono">Meta</span> sudah terisi project dan periode, sel-selnya terkunci — '+
+    'Anda tinggal isi Wins, Blockers, Dependencies, dan To Do.';
+  $('#rejBox').innerHTML='';
+  addAct('info','Project dipilih',p.k+' — '+p.n);
+}
+
+/* unduh template */
+const SCHEMA=2, PROFILE='default';
+function tplName(kind){
+  const base=kind==='xlsx'?'Checklist':'MoM';
+  return proj ? base+'_'+proj.k+'_W32_v'+SCHEMA+(kind==='xlsx'?'.xlsx':'.md')
+              : base+'_Template_v'+SCHEMA+(kind==='xlsx'?'.xlsx':'.md');
+}
+function dlXlsx(){
+  const bin=atob(XLSX_B64),buf=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)buf[i]=bin.charCodeAt(i);
+  dl(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),
+     tplName('xlsx'));
+  toast('Template checklist terunduh', proj
+    ? 'Sheet Meta sudah terisi '+proj.k+' · W32 · profil '+PROFILE+' v'+SCHEMA+' (terkunci).'
+    : '5 sheet: Meta, Wins, Blockers, Dependencies, Todos.');
+}
+function dlMd(){
+  dl(new Blob([MD_TPL],{type:'text/markdown'}), tplName('md'));
+  toast('Template MoM terunduh', proj
+    ? 'Frontmatter sudah terisi '+proj.k+' · W32.'
+    : 'Pakai tabel Markdown supaya parsing deterministik.');
+}
+$$('[data-tpl]').forEach(b=>b.addEventListener('click',()=>b.dataset.tpl==='xlsx'?dlXlsx():dlMd()));
+
+/* dua slot upload */
+const FILES={checklist:null,mom:null};
+let pendKind=null;
+const fin=$('#fileIn');
+function guard(){if(proj)return true;
+  toast('Pilih project dulu','Upload terkunci sampai project dipilih.');openPk(true);return false;}
+function slotEl(k){return k==='checklist'?$('#slotChk'):$('#slotMom');}
+
+$$('.dz').forEach(dz=>{
+  const kind=dz.dataset.kind;
+  dz.addEventListener('click',()=>{if(!guard())return;pendKind=kind;
+    fin.accept=kind==='checklist'?'.xlsx,.xls,.csv':'.md,.docx,.pdf';fin.click();});
+  dz.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&guard()){
+    e.preventDefault();pendKind=kind;fin.click();}});
+  ['dragenter','dragover'].forEach(t=>dz.addEventListener(t,e=>{e.preventDefault();dz.classList.add('over');}));
+  ['dragleave','drop'].forEach(t=>dz.addEventListener(t,e=>{e.preventDefault();dz.classList.remove('over');}));
+  dz.addEventListener('drop',e=>{if(!guard())return;
+    if(e.dataTransfer.files[0])attach(kind,e.dataTransfer.files[0]);});
+});
+fin.addEventListener('change',()=>{if(fin.files[0]&&pendKind)attach(pendKind,fin.files[0]);fin.value='';});
+
+function attach(kind,file){
+  // Simulasi cek versi template: file dengan '_v1' dianggap schema lama.
+  if(kind==='checklist' && /_v1\b/i.test(file.name)){ reject(file); return; }
+  $('#rejBox').innerHTML='';
+  FILES[kind]=file;
+  const s=slotEl(kind);s.classList.add('filled');
+  s.querySelector('.dz').hidden=true;
+  const row=s.querySelector('.filerow');row.hidden=false;
+  const isX=kind==='checklist';
+  row.innerHTML='<div class="fi" aria-hidden="true"><svg><use href="#'+(isX?'i-sheet':'i-doc')+'"/></svg></div>'+
+    '<div style="flex:1"><div class="fn">'+file.name+'</div>'+
+    '<div class="fs">'+(file.size/1024).toFixed(1)+' KB · sha256 8f3a…c012</div></div>'+
+    '<button class="btn btn-g btn-sm" data-rm="'+kind+'"><svg><use href="#i-x"/></svg>Hapus</button>';
+  row.querySelector('[data-rm]').addEventListener('click',()=>detach(kind));
+  setStep('#st3','done');
+  addAct('ok','File '+(isX?'checklist':'MoM')+' diupload',file.name+' · '+(file.size/1024).toFixed(1)+' KB');
+  runChecks();
+}
+function reject(file){
+  $('#rejBox').innerHTML=
+   '<div class="rejected rev"><h4><svg><use href="#i-x"/></svg>Upload ditolak — versi template tidak cocok</h4>'+
+   '<div class="rej-cmp">'+
+     '<div><dt>File Anda</dt><dd>schema 1 · '+PROFILE+'</dd></div>'+
+     '<div><dt>'+proj.k+' memakai</dt><dd>schema '+SCHEMA+' · '+PROFILE+'</dd></div>'+
+   '</div>'+
+   '<ul class="rej-diff">'+
+     '<li><svg><use href="#i-x"/></svg><span>Sheet <b>Todos</b> tidak ada di file Anda</span></li>'+
+     '<li><svg><use href="#i-x"/></svg><span>Kolom <b>impact</b> tidak ada di sheet Wins</span></li>'+
+   '</ul>'+
+   '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+     '<button class="btn btn-p btn-sm" id="rejDl"><svg><use href="#i-dl"/></svg>'+
+       'Unduh template '+proj.k+' W32 (v'+SCHEMA+')</button>'+
+     '<button class="btn btn-o btn-sm" id="rejCancel">Batal</button>'+
+   '</div>'+
+   '<p style="font-size:11.5px;color:var(--red);margin:10px 0 0">'+
+     'File tidak disimpan. Status compliance '+proj.k+' belum berubah.</p></div>';
+  $('#rejDl').addEventListener('click',()=>{dlXlsx();$('#rejBox').innerHTML='';});
+  $('#rejCancel').addEventListener('click',()=>$('#rejBox').innerHTML='');
+  addAct('warn','Upload ditolak',file.name+' · schema 1, dibutuhkan schema '+SCHEMA,
+    'Sheet Todos hilang · kolom impact hilang di sheet Wins');
+  toast('Upload ditolak','Versi template tidak cocok. Unduh template terbaru untuk '+proj.k+'.');
+}
+function detach(kind){
+  FILES[kind]=null;
+  const s=slotEl(kind);s.classList.remove('filled');
+  s.querySelector('.dz').hidden=false;
+  s.querySelector('.filerow').hidden=true;
+  addAct('info','File '+(kind==='checklist'?'checklist':'MoM')+' dihapus','');
+  if(!FILES.checklist&&!FILES.mom){
+    $('#confirmBtn').disabled=true;$('#dwHint').textContent='Upload minimal satu file';
+    setStep('#st3','act');
+  }else runChecks();
+}
+
+let checkTimer=null;
+function runChecks(){
+  clearTimeout(checkTimer);
+  const both=FILES.checklist&&FILES.mom;
+  const names=[FILES.checklist&&FILES.checklist.name,FILES.mom&&FILES.mom.name].filter(Boolean);
+  const steps=[
+   ['ok','Format file diverifikasi',names.length+' file · magic bytes valid'],
+   ['ok','Versi template dicocokkan','schema '+SCHEMA+' · profil '+PROFILE+' — sesuai '+proj.k],
+   ['ok','project_key dicocokkan',proj.k+' di '+(both?'kedua file':'file')+' = '+proj.k+' yang dipilih'],
+   ['ok','Izin diverifikasi',proj.k+' ada di allowed_project_keys'],
+   ['ok','Periode divalidasi','2026-08-03 → 2026-08-09 · sesuai policy'],
+  ];
+  if(both)steps.push(['ok','Hasil kedua file digabung',
+    'checklist 4 wins / 2 blockers / 2 deps / 4 to-do · MoM 2 / 1 / 2 / 3',
+    '1 duplikat dilebur — AIRPAY-501 muncul di kedua file, nilai checklist dipakai']);
+  steps.push(['warn','Parsing selesai',
+    (both?'11':'8')+' baris terbaca dari '+(both?'12':'9'),
+    '1 baris dilewati — kolom priority berisi "High", bukan P0–P4']);
+  let i=0;
+  (function next(){
+    if(i>=steps.length){
+      $('#confirmBtn').disabled=false;$('#actNote').hidden=false;
+      $('#dwHint').textContent='Siap dikirim';
+      // status baru dihitung sekarang: bandingkan waktu upload vs due_at
+      const late=1;   // due 2026-08-09 17:00, upload 2026-08-10
+      $('#pState').innerHTML = late>0
+        ? '<span class="pill p-orange"><svg><use href="#i-alert"/></svg>Telat H+'+late+'</span>'
+        : '<span class="pill p-green"><svg><use href="#i-check"/></svg>On time</span>';
+      $('#pNote').innerHTML='File diterima 2026-08-10 09:15, jatuh tempo 2026-08-09 17:00 → '+
+        '<b>telat 1 hari</b>. Ambang merah project ini H+3.';
+      return;}
+    const s=steps[i++];addAct(s[0],s[1],s[2],s[3]);
+    checkTimer=setTimeout(next,RM?0:420);
+  })();
+}
+
+/* activity log */
+function addAct(type,title,meta,warn){
+  const map={ok:'d-ok',warn:'d-warn',info:'d-info',run:'d-run'};
+  const ic={ok:'i-check',warn:'i-alert',info:'i-info'};
+  const li=document.createElement('li');
+  li.className='rev';
+  li.innerHTML='<span class="dot '+map[type]+'">'+
+    (type==='run'?'<span class="spin"></span>':'<svg><use href="#'+ic[type]+'"/></svg>')+'</span>'+
+    '<div class="at">'+title+'</div>'+(meta?'<div class="am">'+meta+'</div>':'')+
+    (warn?'<div class="aw">'+warn+'</div>':'');
+  $('#actLog').appendChild(li);
+  setStep('#st4','act');
+  li.scrollIntoView({block:'nearest',behavior:RM?'auto':'smooth'});
+  return li;
+}
+
+const CHECKS=[
+ ['Format file diverifikasi','magic bytes PK\\x03\\x04 → xlsx valid'],
+ ['Ukuran file dicek','__SIZE__ · di bawah batas 20 MB'],
+ ['Sheet Meta dibaca','schema_version 1 · 5 sheet ditemukan'],
+ ['project_key dicocokkan','__PK__ di file = __PK__ yang dipilih'],
+ ['Izin diverifikasi','__PK__ ada di allowed_project_keys · pengirim terdaftar'],
+ ['Periode divalidasi','2026-08-03 → 2026-08-09 · sesuai policy'],
+ ['Parsing selesai','5 baris terbaca dari 6','1 baris dilewati — kolom priority berisi "High", bukan P0–P4'],
+];
+
+function start(file){
+  const isX=/\.(xlsx|xls|csv)$/i.test(file.name);
+  $('#dzWrap').hidden=true;$('#fileBox').hidden=false;
+  $('#fName').textContent=file.name;
+  const size=(file.size/1024).toFixed(1)+' KB';
+  $('#fMeta').textContent=size+' · sha256 8f3a…c012';
+  $('#fIc').innerHTML='<svg><use href="#'+(isX?'i-sheet':'i-doc')+'"/></svg>';
+  setStep('#st3','done');
+  addAct('ok','File diupload',file.name+' · '+size);
+  const running=addAct('run','Menganalisa file…','');
+  CHECKS.forEach((c,i)=>setTimeout(()=>{
+    if(i===0)running.remove();
+    const meta=c[1].replace(/__PK__/g,proj.k).replace('__SIZE__',size);
+    addAct(c[2]?'warn':'ok',c[0],meta,c[2]);
+    if(i===CHECKS.length-1){
+      $('#confirmBtn').disabled=false;
+      $('#actNote').hidden=false;
+      $('#dwHint').textContent='Siap dikirim';
+    }
+  },RM?0:(i+1)*420));
+}
+
+/* konfirmasi */
+$('#confirmBtn').addEventListener('click',()=>{
+  const names=[FILES.checklist&&FILES.checklist.name,FILES.mom&&FILES.mom.name].filter(Boolean);
+  const f=names.join(' + ');
+  const knd=FILES.checklist&&FILES.mom?'both':(FILES.checklist?'checklist':'mom');
+  addAct('ok','Submission dikonfirmasi','oleh Ricky · '+new Date().toISOString().slice(0,16).replace('T',' '));
+  SUBS.unshift({k:proj.k,per:'W32',rng:'2026-08-03 → 08-09',
+    kind:knd,f:f,by:'Ricky',at:'2026-08-10 09:16',s:'orange',note:'1 baris perlu review'});
+  renderSubs();
+  $('#confirmBtn').disabled=true;
+  $('#confirmBtn').innerHTML='<svg><use href="#i-check"/></svg>Terkirim';
+  $('#dwHint').textContent='Selesai';
+  setStep('#st4','done');
+  setTimeout(()=>{openDrawer(false);
+    toast('Submission tersimpan',proj.k+' W32 masuk daftar. Parsing berjalan di latar belakang.');
+  },RM?0:900);
+});
+
+/* ================= DETAIL DRAWER ================= */
+const DETAILS={
+ 'APA|W32':{
+  todos:[['Finalisasi ADR-015 pemisahan read/write','Andi','2026-08-12','P1','In Progress','APA-221','Menunggu slot review CTO','checklist'],
+         ['Susun blueprint migrasi service auth','Sari','2026-08-19','P2','Not Started','APA-224','','checklist'],
+         ['Kirim skema final ke tim Airpay','Andi','2026-08-11','P1','Blocked','AIRPAY-88','Terblokir approval ADR-015','mom']],
+  wins:[['Refactor modul auth selesai','Platform','Kurangi duplikasi token check di 3 service','APA-211','checklist'],
+        ['Dokumentasi ADR-014 disetujui','Platform','Keputusan pemisahan read/write DB','APA-215','checklist'],
+        ['Blueprint integrasi DCB v3 final','DCB','Disepakati dengan tim Airpay','APA-219','mom']],
+  blockers:[['Review arsitektur tertunda karena CTO cuti','P2','Open','Andi','Approval ADR-015 butuh tanda tangan CTO','APA-220','checklist']],
+  deps:[['Butuh skema final dari tim Airpay','Airpay Developer','outbound','In Progress','Andi','AIRPAY-88','checklist'],
+        ['Menunggu akses read replica dari infra','Infra','outbound','Open','Sari','—','mom']],
+  files:[['checklist','Checklist_APA_W32.xlsx','18.2 KB'],['mom','MoM_APA_W32.md','4.1 KB']],
+  unmapped:0},
+ 'IV|W32':{
+  todos:[['Regression test channel Indosat','Sari','2026-08-13','P1','Blocked','IV-412','Menunggu sandbox vendor','checklist'],
+         ['Dokumentasi runbook rekonsiliasi','Budi','2026-08-20','P3','Not Started','IV-415','','checklist'],
+         ['Rollout VAS XL ke 10% traffic','Sari','2026-08-15','P2','In Progress','IV-418','','mom'],
+         ['Review alert threshold pasca-rollout','Andi','2026-08-22','P3','Not Started','IV-420','','mom']],
+  wins:[['Integrasi VAS Telkomsel live','Digital Payment','Rollout bertahap 10% → 100% tanpa insiden','IV-402','mom'],
+        ['Retry queue dipindah ke Redis','Digital Payment','Hilangkan single point of failure','IV-405','mom'],
+        ['Monitoring alert dirapikan','Platform','Alert palsu turun dari 40/hari jadi 6/hari','IV-408','mom'],
+        ['Rekonsiliasi harian otomatis','Digital Payment','Ganti proses manual di spreadsheet','IV-410','mom']],
+  blockers:[],
+  deps:[['Butuh sandbox Indosat untuk regression','Indosat (vendor)','outbound','In Progress','Sari','IV-412','mom']],
+  files:[['mom','MoM_IV_W32.md','5.3 KB']],
+  unmapped:0},
+ 'DSH|W32':{
+  todos:[['Pecah sync Jira jadi batch 10 project','Budi','2026-08-13','P1','In Progress','DSH-84','Rate limit kena tiap sync penuh','checklist'],
+         ['Ganti warna chart ke CSS variable','Sari','2026-08-18','P3','Not Started','DSH-86','','checklist'],
+         ['Tambah cache di halaman Timeline','Budi','2026-08-07','P2','Done','DSH-88','','checklist']],
+  wins:[['Halaman Velocity pakai cache','Platform','Query Jira dipangkas dari 12 jadi 3','DSH-77','checklist'],
+        ['Export CSV di Task Allocation','Platform','Permintaan lama dari tim PMO','DSH-81','checklist']],
+  blockers:[['Rate limit Jira API kena saat sync penuh','P1','In Progress','Budi','Sync 90 project sekaligus melebihi kuota','DSH-84','checklist'],
+            ['Chart tidak terbaca di dark mode','P3','Open','Sari','Warna seri chart hardcoded hex','DSH-86','checklist']],
+  deps:[],
+  files:[['checklist','Checklist_DSH_W32.xlsx','16.8 KB']],
+  unmapped:1},
+ 'AIRPAY|W31':{
+  todos:[['Pasang instrumentasi metrik di gateway v2','Andi','2026-08-14','P1','In Progress','AIRPAY-505','Dibutuhkan tim APMS','checklist'],
+         ['Kirim ulang permintaan kredensial Telkomsel','Andi','2026-08-08','P0','Blocked','AIRPAY-501','Menunggu balasan partner','checklist'],
+         ['Siapkan topic Kafka untuk APMS','Sari','2026-08-12','P2','In Progress','APMS-33','','mom'],
+         ['Review hasil load test bersama infra','Budi','2026-08-05','P2','Done','AIRPAY-494','','mom']],
+  wins:[['Payment gateway v2 live','Digital Payment','Migrasi tanpa downtime, latency 800ms → 210ms','AIRPAY-482','checklist'],
+        ['Retry logic DCB Indosat selesai','DCB','Timeout 30s dengan exponential backoff','AIRPAY-490','checklist'],
+        ['Load test 5k TPS lolos','Platform','Skenario peak Ramadan','AIRPAY-494','mom']],
+  blockers:[['Sandbox Telkomsel DCB belum dapat kredensial','P1','In Progress','Andi','Menunggu approval partner, 9 hari tanpa respons','AIRPAY-501','checklist']],
+  deps:[['Butuh endpoint settlement dari PPOB','PPOB Developer','outbound','Open','Budi','ARC-77','checklist'],
+        ['Tim Monitoring butuh event stream dari kami','APMS','inbound','In Progress','Andi','APMS-33','mom']],
+  files:[['checklist','Checklist_AIRPAY_W31.xlsx','19.4 KB'],['mom','MoM_AIRPAY_W31.md','6.2 KB']],
+  unmapped:0},
+ 'APMS|W31':{
+  todos:[['Pasang dashboard uptime gateway v2','Sari','2026-08-14','P2','Blocked','APMS-35','Menunggu instrumentasi dari AIRPAY','checklist'],
+         ['Tuning threshold alert P2','Andi','2026-08-21','P3','Not Started','APMS-38','','checklist']],
+  wins:[['Dashboard uptime Airpay live','Platform','Grafana + Prometheus, retensi 30 hari','APMS-28','checklist'],
+        ['Alert routing ke PagerDuty','Platform','Pisah jalur P0/P1 dan P2 ke bawah','APMS-31','checklist']],
+  blockers:[['Metrik dari gateway v2 belum lengkap','P2','Open','Sari','Instrumentasi belum dipasang di service baru','APMS-35','checklist']],
+  deps:[['Butuh event stream dari AIRPAY','Airpay Developer','outbound','In Progress','Sari','AIRPAY-88','checklist']],
+  files:[['checklist','Checklist_APMS_W31.xlsx','15.1 KB']],
+  unmapped:0},
+ 'ARC|W31':{
+  todos:[['Meeting eskalasi dengan vendor PPOB','Budi','2026-08-11','P0','Not Started','ARC-72','Sudah 3x follow up tanpa balasan','mom'],
+         ['Minta environment staging terpisah','Budi','2026-08-16','P2','In Progress','ARC-74','','mom'],
+         ['Minta anonymized dump untuk test data','Sari','2026-08-20','P3','Not Started','ARC-75','','mom'],
+         ['Kirim draft kontrak API ke tim Airpay','Budi','2026-08-04','P1','Blocked','AIRPAY-501','Terblokir spec vendor','mom']],
+  wins:[['Desain skema settlement v2 disetujui','Digital Payment','Review bersama finance dan tim Airpay','ARC-70','mom']],
+  blockers:[['Vendor PPOB belum kirim spec callback','P0','Open','Budi','Blokir total implementasi settlement','ARC-72','mom'],
+            ['Environment staging PPOB sering down','P2','In Progress','Budi','Shared dengan tim lain, sering di-restart','ARC-74','mom'],
+            ['Belum ada test data realistis','P3','Open','Sari','Data dummy tidak mencerminkan volume nyata','ARC-75','mom']],
+  deps:[['Menunggu spec callback dari vendor PPOB','Vendor PPOB','outbound','Open','Budi','ARC-72','mom'],
+        ['Tim AIRPAY menunggu endpoint settlement kami','Airpay Developer','inbound','Open','Budi','AIRPAY-501','mom']],
+  files:[['mom','MoM_ARC_W31.docx','88.0 KB']],
+  unmapped:0},
+};
+function detailFor(k,per){
+  return DETAILS[k+'|'+per]||{todos:[],wins:[],blockers:[],deps:[],files:[],unmapped:0};
+}
+function eventsFor(sub,d){
+  const t=sub.at.slice(11), day=sub.at.slice(0,10);
+  const bump=(m)=>{const [hh,mm]=t.split(':').map(Number);
+    const x=new Date(2000,0,1,hh,mm+m);return String(x.getHours()).padStart(2,'0')+':'+String(x.getMinutes()).padStart(2,'0');};
+  const ev=[
+   ['info','Project dipilih',sub.k+' — '+(PROJECTS.find(p=>p.k===sub.k)||{}).n,bump(-3)],
+   ['ok','File diupload',sub.f,bump(-2)],
+   ['ok','Format file diverifikasi',/\.(xlsx|xls|csv)$/i.test(sub.f)?'magic bytes PK\\x03\\x04 → xlsx valid':'text/markdown valid',bump(-2)],
+   ['ok','Sheet Meta dibaca','schema_version 1 · project_key '+sub.k,bump(-1)],
+   ['ok','project_key dicocokkan',sub.k+' di file = '+sub.k+' yang dipilih',bump(-1)],
+   ['ok','Izin diverifikasi',sub.k+' ada di allowed_project_keys',bump(-1)],
+   ['ok','Periode divalidasi',sub.rng+' · sesuai policy',bump(0)],
+  ];
+  const total=d.wins.length+d.blockers.length+d.deps.length+d.todos.length;
+  ev.push(d.unmapped
+   ? ['warn','Parsing selesai',total+' baris terbaca dari '+(total+d.unmapped),bump(0),
+      d.unmapped+' baris dilewati — kolom priority berisi "High", bukan P0–P4']
+   : ['ok','Parsing selesai',total+' baris terbaca · tidak ada yang gagal',bump(0)]);
+  ev.push(['ok','Submission dikonfirmasi','oleh '+sub.by+' · '+day+' '+bump(1),bump(1)]);
+  return ev;
+}
+
+let ddTab='wins', ddCur=null, ddFocus=null;
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+function jira(v){return (!v||v==='—')?'<span style="color:var(--fg-faint)">—</span>'
+  :'<a class="jira" href="#" onclick="return false">'+esc(v)+'</a>';}
+
+function paneWins(w){
+  if(!w.length)return miniEmpty('Tidak ada wins','File ini tidak mencantumkan pencapaian untuk periode tersebut.');
+  return '<div class="tw"><table><thead><tr><th>Pencapaian</th><th>Kategori</th><th>Jira</th><th>Asal</th></tr></thead><tbody>'+
+    w.map(r=>'<tr><td><b style="font-weight:500">'+esc(r[0])+'</b>'+
+      '<div style="color:var(--fg-muted);margin-top:2px">'+esc(r[2])+'</div></td>'+
+      '<td><span class="tag t-n">'+esc(r[1])+'</span></td><td>'+jira(r[3])+'</td>'+
+      '<td>'+srcTag(r[4])+'</td></tr>').join('')+'</tbody></table></div>';
+}
+function paneBlockers(b){
+  if(!b.length)return miniEmpty('Tidak ada blocker','Bagus — tidak ada hambatan yang dilaporkan untuk periode ini.');
+  return '<div class="tw"><table><thead><tr><th>Blocker</th><th>PIC</th><th>Prio</th><th>Status</th><th>Jira</th><th>Asal</th></tr></thead><tbody>'+
+    b.map(r=>'<tr><td><b style="font-weight:500">'+esc(r[0])+'</b>'+
+      '<div style="color:var(--fg-muted);margin-top:2px">'+esc(r[4])+'</div></td>'+
+      '<td>'+esc(r[3])+'</td><td><span class="tag t-'+r[1].toLowerCase()+'">'+esc(r[1])+'</span></td>'+
+      '<td>'+esc(r[2])+'</td><td>'+jira(r[5])+'</td><td>'+srcTag(r[6])+'</td></tr>').join('')+
+    '</tbody></table></div>';
+}
+function paneDeps(d){
+  if(!d.length)return miniEmpty('Tidak ada dependency','Project ini tidak menunggu, dan tidak ditunggu, pihak lain minggu ini.');
+  return '<div class="tw"><table><thead><tr><th>Dependency</th><th>PIC</th><th>Arah</th><th>Status</th><th>Jira</th><th>Asal</th></tr></thead><tbody>'+
+    d.map(r=>'<tr><td><b style="font-weight:500">'+esc(r[0])+'</b>'+
+      '<div style="color:var(--fg-muted);margin-top:2px">'+esc(r[1])+'</div></td>'+
+      '<td>'+esc(r[4])+'</td><td><span class="tag t-n">'+esc(r[2])+'</span></td>'+
+      '<td>'+esc(r[3])+'</td><td>'+jira(r[5])+'</td><td>'+srcTag(r[6])+'</td></tr>').join('')+
+    '</tbody></table></div>';
+}
+function tdState(due,st){
+  const NOW=new Date('2026-08-10');
+  if(st==='Done')return['done','Selesai','i-check'];
+  if(st==='Blocked')return['blocked','Terblokir','i-alert'];
+  const d=Math.round((new Date(due)-NOW)/86400000);
+  if(d<0)return['overdue','Telat '+Math.abs(d)+'h','i-x'];
+  if(d===0)return['due_today','Hari ini','i-clock'];
+  if(d<=3)return['due_soon','H-'+d,'i-clock'];
+  return['on_track','H-'+d,'i-clock'];
+}
+function srcTag(s){return s==='mom'?'<span class="src src-m">MoM</span>':'<span class="src src-c">Checklist</span>';}
+function paneTodos(t){
+  if(!t.length)return miniEmpty('Tidak ada to-do','File ini tidak mencantumkan pekerjaan lanjutan.');
+  const order={overdue:0,due_today:1,due_soon:2,on_track:3,blocked:4,done:5};
+  const rows=t.slice().sort((a,b)=>order[tdState(a[2],a[4])[0]]-order[tdState(b[2],b[4])[0]]);
+  const over=rows.filter(r=>tdState(r[2],r[4])[0]==='overdue').length;
+  const head=over?'<div class="note" style="margin-bottom:12px"><svg><use href="#i-alert"/></svg>'+
+    '<div><b>'+over+' to-do lewat tenggat.</b> Urutan tabel: telat dulu, selesai terakhir.</div></div>':'';
+  return head+'<div class="tw"><table><thead><tr><th>Task</th><th>PIC</th><th>Prio</th>'+
+    '<th>Status</th><th>Asal</th></tr></thead><tbody>'+
+    rows.map(r=>{const[cls,lbl,ic]=tdState(r[2],r[4]);
+      return '<tr><td><b style="font-weight:500'+(cls==='done'?';text-decoration:line-through;color:var(--fg-faint)':'')+'">'+esc(r[0])+'</b>'+
+        '<div style="margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+
+        '<span class="td-state s-'+cls+'"><svg><use href="#'+ic+'"/></svg>'+lbl+'</span>'+
+        '<span class="mono" style="font-size:11px;color:var(--fg-faint)">'+esc(r[2])+'</span>'+
+        (r[6]?'<span style="color:var(--fg-muted);font-size:11.5px">· '+esc(r[6])+'</span>':'')+'</div></td>'+
+        '<td>'+esc(r[1])+'</td><td><span class="tag t-'+r[3].toLowerCase()+'">'+esc(r[3])+'</span></td>'+
+        '<td>'+esc(r[4])+'</td><td>'+srcTag(r[7])+'</td></tr>';}).join('')+
+    '</tbody></table></div>';
+}
+function paneAct(ev){
+  return '<ul class="act">'+ev.map(e=>{
+    const cls={ok:'d-ok',warn:'d-warn',info:'d-info'}[e[0]];
+    const ic={ok:'i-check',warn:'i-alert',info:'i-info'}[e[0]];
+    return '<li><span class="dot '+cls+'"><svg><use href="#'+ic+'"/></svg></span>'+
+      '<div class="at">'+esc(e[1])+'<span style="float:right;font-family:\'Fira Code\',monospace;'+
+      'font-size:11px;color:var(--fg-faint);font-weight:400">'+esc(e[3])+'</span></div>'+
+      '<div class="am">'+esc(e[2])+'</div>'+(e[4]?'<div class="aw">'+esc(e[4])+'</div>':'')+'</li>';
+  }).join('')+'</ul>';
+}
+function miniEmpty(t,p){
+  return '<div class="mini-empty"><svg><use href="#i-inbox"/></svg><b>'+t+'</b><p>'+p+'</p></div>';
+}
+function renderPane(){
+  const {sub,d,ev}=ddCur;
+  $('#ddPane').innerHTML = ddTab==='todos'?paneTodos(d.todos)
+    : ddTab==='wins'?paneWins(d.wins)
+    : ddTab==='blockers'?paneBlockers(d.blockers)
+    : ddTab==='deps'?paneDeps(d.deps) : paneAct(ev);
+  $$('#ddTabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.t===ddTab));
+}
+function openDetail(sub){
+  const p=PROJECTS.find(x=>x.k===sub.k)||{n:'',t:''};
+  const d=detailFor(sub.k,sub.per), ev=eventsFor(sub,d);
+  ddCur={sub,d,ev}; ddTab='todos'; ddFocus=document.activeElement;
+
+  $('#ddTitle').innerHTML='<span class="pk-tag">'+sub.k+'</span> '+esc(p.n);
+  $('#ddSub').textContent=sub.per+' · '+sub.rng+' · '+(sub.kind==='mom'?'MoM':'Checklist');
+  $('#ddMeta').innerHTML=
+    md('Status',statPill(sub.s,sub.note))+md('Team',esc(p.t))+
+    md('Diupload oleh',esc(sub.by))+md('Waktu','<span class="mono">'+esc(sub.at)+'</span>')+
+    md('Jenis',kindLabel(sub.kind))+md('Parse','<span class="mono">done</span>');
+  const files=d.files.length?d.files:[[sub.kind==='mom'?'mom':'checklist',sub.f,'18.2 KB']];
+  $('#ddFiles').innerHTML=files.map((f,i)=>{
+    const isX=f[0]==='checklist';
+    return '<div class="filerow"><div class="fi" aria-hidden="true" style="'+
+      (isX?'':'background:var(--slate-bg);color:var(--slate)')+'">'+
+      '<svg><use href="#'+(isX?'i-sheet':'i-doc')+'"/></svg></div>'+
+      '<div style="flex:1"><div class="fn">'+esc(f[1])+' '+srcTag(f[0])+'</div>'+
+      '<div class="fs">'+esc(f[2])+' · sha256 8f3a…c01'+i+'</div></div>'+
+      '<button class="btn btn-o btn-sm" data-dlf="'+i+'"><svg><use href="#i-dl"/></svg>Unduh</button></div>';
+  }).join('')+(files.length>1
+    ? '<p style="font-size:11.5px;color:var(--fg-faint);margin:-2px 0 14px">'+
+      'Dua file dalam satu submission. Isinya sudah digabung — kolom <b>Asal</b> di tiap tabel '+
+      'menunjukkan baris itu datang dari file yang mana.</p>'
+    : '<div style="height:14px"></div>');
+  $$('#ddFiles [data-dlf]').forEach(b=>b.addEventListener('click',()=>{
+    const f=files[+b.dataset.dlf];
+    toast('Unduh '+(f[0]==='checklist'?'checklist':'MoM'),
+      f[1]+' — di produksi ini membuka signed URL dengan TTL 60 detik.');}));
+  $('#ddWarn').innerHTML = d.unmapped
+    ? '<div class="note" style="margin-bottom:14px"><svg><use href="#i-alert"/></svg><div>'+
+      '<b>'+d.unmapped+' baris tidak terbaca.</b> Kolom <span class="mono">priority</span> berisi '+
+      '<span class="mono">"High"</span>, bukan salah satu dari <span class="mono">P0–P4</span>. '+
+      'Baris lain tetap diproses. <a href="#" onclick="return false">Perbaiki manual</a></div></div>' : '';
+  $('#ddTabs').innerHTML=
+    tb('todos','To Do',d.todos.length)+tb('wins','Wins',d.wins.length)+
+    tb('blockers','Blockers',d.blockers.length)+
+    tb('deps','Dependencies',d.deps.length)+tb('act','Activity',ev.length);
+  $$('#ddTabs button').forEach(b=>b.addEventListener('click',()=>{ddTab=b.dataset.t;renderPane();}));
+  $('#ddFoot').textContent='submission_id 7c1e…4a90';
+  renderPane();
+  const dd=$('#dDrawer');dd.hidden=false;
+  requestAnimationFrame(()=>{dd.classList.add('on');$('#scrim').classList.add('on');});
+  document.body.style.overflow='hidden';
+  setTimeout(()=>$('#ddClose').focus(),RM?0:120);
+}
+function md(l,v){return '<div><dt>'+l+'</dt><dd>'+v+'</dd></div>';}
+function tb(t,l,c){return '<button data-t="'+t+'" role="tab" aria-selected="'+(t==='todos')+'">'+l+
+  '<span class="c">'+c+'</span></button>';}
+function closeDetail(){
+  const dd=$('#dDrawer');dd.classList.remove('on');$('#scrim').classList.remove('on');
+  document.body.style.overflow='';
+  setTimeout(()=>{dd.hidden=true;},RM?0:280);
+  if(ddFocus)ddFocus.focus();
+}
+$('#ddClose').addEventListener('click',closeDetail);
+$('#ddJson').addEventListener('click',()=>toast('analysis.json','Berisi counts_by_source, merged[], dan unmapped_rows[].'));
+
+/* buka detail dari kedua tabel */
+$('#subBody').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-sub]');if(!b)return;
+  openDetail(SUBS[+b.dataset.sub]);
+});
+$('#detailBody').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-proj]');if(!b)return;
+  const k=b.dataset.proj;
+  const s=SUBS.find(x=>x.k===k&&x.per==='W32');
+  if(!s){
+    const prev=SUBS.find(x=>x.k===k);
+    toast('Belum ada submission W32', prev
+      ? k+' terakhir submit '+prev.per+' ('+prev.at+').'
+      : k+' belum pernah mengirim report.');
+    return;}
+  openDetail(s);
+});
+
+renderSubs();renderBoard();resetForm();
+</script>
+</body>
+</html>
