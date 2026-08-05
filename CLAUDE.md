@@ -80,9 +80,10 @@ Reference UI: `docs/Governance_Upload_Mockup.html`.
 
 **Status: Phase 1 (migration), Phase 2 (Jira project sync + tracking),
 Phase 3 (Storage + template downloads), Phase 4 (submission upload +
-authorization), Phase 5 (deterministic checklist parser), and Phase 6
-(MoM-as-Markdown parser + checklist/MoM merge) are built.**
-The Submit page UI and the Compliance Board are not — those are later phases.
+authorization), Phase 5 (deterministic checklist parser), Phase 6
+(MoM-as-Markdown parser + checklist/MoM merge), and Phase 7 (Submit page UI)
+are built.**
+The Compliance Board is not — that's the next phase.
 
 Rules that must not be violated in any future phase:
 - Compliance color is computed **on read** via SQL `compliance_state()`; never
@@ -323,6 +324,59 @@ Rules that must not be violated in any future phase:
   the temporary period, and the temporary test account deleted — confirmed
   by re-querying afterward that no test data remained and that
   pre-existing `wins`/`blockers` rows were untouched).
+
+**Phase 7 (Submit page UI, §9.1/§9.2) rules:**
+- **The submissions list is the page's main view; the upload form only
+  exists inside a drawer** opened via "Submit report" — per the spec's own
+  reasoning, the question people open this page with is "has this week
+  already been sent, and by whom," not "how do I upload." Don't move the
+  form back inline onto the page.
+- **Period is never manually pickable** — step 2 of the drawer only ever
+  displays whatever `GET /api/governance/current-period` resolves to for
+  the selected project. Letting someone pick a period opens the door to
+  submitting against the wrong week with no way to detect it after the
+  fact (spec's own words). If a past-period submission is ever needed,
+  that's a separate, logged admin action — not a field in this form.
+- **`GET /api/governance/current-period`** (new this phase) computes
+  "this week" itself via `currentPeriodStart()` — weekly anchors to Monday
+  (matching every period this app has ever generated), monthly to the 1st,
+  using the same fixed-offset Asia/Jakarta simplification as
+  `computeDueAt()` (no IANA timezone dependency). It then calls the
+  existing `ensureDefaultPolicy()`/`ensurePeriod()` lazily (same as the
+  upload path) and reads `state`/`days_late` from `v_compliance_status`
+  rather than recomputing `compliance_state()` logic — that SQL function
+  stays the one and only place on-time/late is decided.
+- **The drawer's step 3 warns before superseding**, using
+  `current-period`'s `existing_files[]`: if the period's active submission
+  already has a file of the kind being uploaded, the drawer says so before
+  the user submits — because a same-kind re-upload replaces the *whole*
+  submission (invariant above), not just that file, and the other kind's
+  file (if any) would need re-uploading too.
+- **The drawer's step 4 (activity log) is rendered from
+  `submission_events` after the upload's `POST /api/submissions` response
+  returns** — not streamed progressively during validation, because parsing
+  is synchronous end-to-end (Phase 5/6 invariant). At this app's real
+  scale (one small file, milliseconds to parse) the entire log appears at
+  once, which reads the same to a user as the spec's line-by-line
+  description would.
+- **Wins/Blockers/Dependencies/Todos extraction results do NOT appear
+  anywhere on the Submit page** — per §9.2, that content belongs to the
+  Compliance Board (next phase). The Submit page's own detail view (the
+  "Detail" button on each list row, reusing the same drawer in a read-only
+  mode) only ever shows the activity log, matching what a submitter
+  actually needs to know: was the file accepted, and what happened.
+- The searchable-combobox component (`AP_COMBO`, Phase 2's Wins/Blockers
+  task picker) is reused as-is for the drawer's project select
+  (`sub-project`) — no new combobox implementation. Its `onPick(id, value,
+  opt)` callback signature is 3 args, not a single option object; get this
+  wrong and project selection silently no-ops.
+- `GET /api/governance/projects?tracked=true` (already built in Phase 2)
+  is the exact source for the drawer's project list — already scoped to
+  `is_tracked ∩ allowed_project_keys` server-side, so the frontend does
+  no additional filtering. A project with `is_tracked = false` simply
+  never appears as a submit target, by design (that's what "tracked"
+  means) — this bit a live-verification pass in this phase, since AIRPAY
+  itself wasn't tracked at the time.
 
 ## Information architecture
 

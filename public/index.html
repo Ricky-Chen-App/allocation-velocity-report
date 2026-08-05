@@ -933,6 +933,46 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .ap-drawer-overlay.show .ap-drawer{transform:translateX(0)}
 .ap-drawer-close{float:right;cursor:pointer;color:var(--ink-400);background:none;border:none;font-size:18px;line-height:1}
 
+/* Governance: Submit — list badges + drawer steps (Phase 7) */
+.sub-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:var(--r-pill);text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
+.sub-badge.green{background:var(--green-50);color:var(--green-600)}
+.sub-badge.orange{background:var(--amber-50);color:var(--amber-600)}
+.sub-badge.red{background:var(--red-50);color:var(--red-600)}
+.sub-badge.ink{background:var(--ink-50);color:var(--ink-400)}
+
+.sub-step{padding:14px 0;border-top:1px solid var(--ink-100)}
+.sub-step:first-child{border-top:none;padding-top:0}
+.sub-step.locked{opacity:.45}
+.sub-step-title{font-size:11px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
+.sub-step-hint{font-size:12px;color:var(--ink-400)}
+.sub-period-box{font-size:12.5px;color:var(--ink-700);background:var(--ink-50);border-radius:var(--radius-sm);padding:10px 12px}
+
+.sub-tabs{display:flex;gap:6px;margin-bottom:8px}
+.sub-tab{flex:1;font:inherit;font-size:12.5px;font-weight:600;padding:7px 10px;border:1px solid var(--ink-100);background:var(--ink-0);color:var(--ink-500);border-radius:var(--radius-sm);cursor:pointer}
+.sub-tab.active{background:var(--blue-700);color:#fff;border-color:var(--blue-700)}
+
+.sub-template-link{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--blue-700);text-decoration:none;margin-bottom:10px}
+.sub-template-link:hover{text-decoration:underline}
+
+.sub-warning{font-size:11.5px;color:var(--amber-600);background:var(--amber-50);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:10px}
+.sub-error{font-size:11.5px;color:var(--red-600);background:var(--red-50);border-radius:var(--radius-sm);padding:8px 10px;margin-top:8px}
+
+.sub-dropzone{display:flex;align-items:center;justify-content:center;text-align:center;min-height:74px;border:1.5px dashed var(--ink-200);border-radius:var(--radius-sm);padding:12px;cursor:pointer;font-size:12px;color:var(--ink-500)}
+.sub-dropzone:hover,.sub-dropzone.drag{border-color:var(--blue-500);background:var(--blue-50)}
+
+.sub-events{display:flex;flex-direction:column;gap:2px}
+.sub-event{display:flex;gap:8px;padding:7px 0;border-bottom:1px solid var(--ink-50);font-size:12px}
+.sub-event:last-child{border-bottom:none}
+.sub-event-icon{flex-shrink:0;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;margin-top:1px}
+.sub-event-icon.ok{background:var(--green-50);color:var(--green-600)}
+.sub-event-icon.info{background:var(--ink-50);color:var(--ink-400)}
+.sub-event-icon.warn{background:var(--amber-50);color:var(--amber-600)}
+.sub-event-icon.error{background:var(--red-50);color:var(--red-600)}
+.sub-event-body{flex:1;min-width:0}
+.sub-event-label{font-weight:600;color:var(--ink-800);text-transform:capitalize}
+.sub-event-detail{color:var(--ink-500);margin-top:1px}
+.sub-event-time{flex-shrink:0;color:var(--ink-300);font-size:10.5px;white-space:nowrap}
+
 /* Detail Report (standup board) */
 .ap-metric-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:0 24px 16px}
 .ap-sort-toggle{display:flex;gap:10px;align-items:center;padding:0 24px 14px;flex-wrap:wrap}
@@ -1146,6 +1186,10 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 
   <div class="nav-section">
     <div class="nav-label">Governance</div>
+    <button class="nav-item" data-navid="gov-submit" onclick="showPage('gov-submit',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v9M4 7l4-4 4 4"/><path d="M2 12v1.5A1.5 1.5 0 003.5 15h9a1.5 1.5 0 001.5-1.5V12"/></svg>
+      Submit
+    </button>
     <button class="nav-item" data-navid="gov-settings" onclick="showPage('gov-settings',this)">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v1.8M8 12.7v1.8M14.5 8h-1.8M3.3 8H1.5M12.7 3.3l-1.3 1.3M4.6 11.1l-1.3 1.3M12.7 12.7l-1.3-1.3M4.6 4.9L3.3 3.3"/></svg>
       Settings
@@ -1712,6 +1756,21 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
       <div id="um-body" style="padding:0 24px 24px"></div>
     </div>
 
+    <!-- ======== GOVERNANCE: SUBMIT ======== -->
+    <div class="page" id="page-gov-submit">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Submit</div>
+          <div class="page-sub">Checklist &amp; MoM submissions for weekly/monthly compliance</div>
+        </div>
+        <button class="btn btn-primary" onclick="subOpenDrawer()">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M3 8h10"/></svg>
+          Submit report
+        </button>
+      </div>
+      <div id="sub-body" style="padding:0 24px 24px"></div>
+    </div>
+
     <div class="page" id="page-gov-settings">
       <div class="page-header">
         <div>
@@ -1873,6 +1932,7 @@ function showPage(id, btn) {
   if (id === 'airpay-detail') loadAirpayDetailPage();
   if (id === 'usermgmt') loadUserMgmtPage();
   if (id === 'gov-settings') loadGovSettingsPage();
+  if (id === 'gov-submit') loadGovSubmitPage();
 
   toggleSidebar(false); // close mobile drawer after navigating
 }
@@ -1890,6 +1950,7 @@ const NAV_ITEMS = [
   { id: 'members',     label: 'Team Members' },
   { id: 'jirasync',    label: 'Jira Sync' },
   { id: 'usermgmt',    label: 'User Management' },
+  { id: 'gov-submit',   label: 'Submit' },
   { id: 'gov-settings', label: 'Governance Settings' },
   { id: 'orgchart',    label: 'Structure Organization' },
   { id: 'projectteam', label: 'Structure Project Team' },
@@ -2688,6 +2749,380 @@ async function govSyncProjects() {
     btn.disabled = false;
     btn.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8A6 6 0 0114 8M14 8a6 6 0 01-12 0"/><path d="M14 4v4h-4"/></svg> Sync from Jira`;
   }
+}
+
+// ============================================================
+// GOVERNANCE: SUBMIT — Phase 7 (§9.1/§9.2 of the spec)
+// A list of past submissions is the page's main view (§9.1: "the most
+// common question here isn't how to upload, it's whether this week's
+// already been sent, and by whom") — the upload form lives in a drawer
+// opened via "Submit report", not inline on the page.
+// ============================================================
+const SUB = {
+  list: null,
+  q: '',
+  projectFilter: '',
+  statusFilter: '', // '' | 'on_time' | 'late' | 'needs_review'
+  projects: null,   // tracked ∩ allowed_project_keys, for the drawer's step 1
+  drawer: null       // see subOpenDrawer()/subViewDetail() for shape
+};
+
+function subFmtDateTime(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+async function loadGovSubmitPage() {
+  await subFetchList();
+}
+
+async function subFetchList() {
+  const body = document.getElementById('sub-body');
+  if (!body) return;
+  if (!SUB.list) body.innerHTML = emptyState({ icon: '📄', title: 'Loading submissions…', description: '' });
+  const params = new URLSearchParams();
+  if (SUB.projectFilter) params.set('project_key', SUB.projectFilter);
+  if (SUB.statusFilter) params.set('status', SUB.statusFilter);
+  try {
+    SUB.list = await api('/api/submissions?' + params.toString());
+  } catch (e) {
+    body.innerHTML = emptyState({ icon: '⚠️', title: 'Could not load submissions', description: e.message });
+    return;
+  }
+  renderSubBody();
+}
+
+function subFilteredList() {
+  const rows = SUB.list || [];
+  const q = SUB.q.trim().toLowerCase();
+  if (!q) return rows;
+  return rows.filter(r => `${r.project_key} ${r.project_name || ''} ${r.file_name} ${r.uploaded_by_name}`.toLowerCase().includes(q));
+}
+
+// state comes straight from compliance_state() via v_submission_list — this
+// only maps it to a label/color, it never re-derives on/late itself.
+function subStateBadge(state, needsReview) {
+  if (needsReview) return `<span class="sub-badge orange">! Needs review</span>`;
+  const map = {
+    green: ['✓ On time', 'green'], pending: ['· Pending', 'ink'],
+    orange: ['! Late', 'orange'], red: ['✕ Late', 'red']
+  };
+  const [label, cls] = map[state] || ['· —', 'ink'];
+  return `<span class="sub-badge ${cls}">${label}</span>`;
+}
+
+function renderSubBody() {
+  const body = document.getElementById('sub-body');
+  if (!body) return;
+  const rows = subFilteredList();
+
+  const projectKeys = [...new Set((SUB.list || []).map(r => r.project_key))].sort();
+  const projectOptions = projectKeys.map(k => `<option value="${govEsc(k)}" ${SUB.projectFilter === k ? 'selected' : ''}>${govEsc(k)}</option>`).join('');
+
+  let html = `<div class="ap-gantt-toolbar" style="padding:0 0 14px;flex-direction:column;align-items:stretch;gap:12px">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <div class="search-input" style="max-width:280px">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5"/></svg>
+        <input type="text" placeholder="Search project, file, or uploader…" value="${govEsc(SUB.q)}"
+               oninput="SUB.q=this.value;renderSubBody()">
+      </div>
+      <select onchange="SUB.projectFilter=this.value;subFetchList()"
+              style="font:inherit;font-size:12px;padding:7px 9px;border:1px solid var(--ink-100);border-radius:var(--radius-sm);background:var(--ink-0);color:var(--ink-800)">
+        <option value="">All projects</option>${projectOptions}
+      </select>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font-size:10px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0">Status</span>
+      ${apCuratedPill('All', SUB.statusFilter === '', `SUB.statusFilter='';subFetchList()`)}
+      ${apCuratedPill('On time', SUB.statusFilter === 'on_time', `SUB.statusFilter='on_time';subFetchList()`)}
+      ${apCuratedPill('Late', SUB.statusFilter === 'late', `SUB.statusFilter='late';subFetchList()`)}
+      ${apCuratedPill('Needs review', SUB.statusFilter === 'needs_review', `SUB.statusFilter='needs_review';subFetchList()`)}
+    </div>
+  </div>`;
+
+  if (!rows.length) {
+    html += emptyState({
+      icon: '📄', title: SUB.list && SUB.list.length ? 'No submissions match this filter' : 'No submissions yet',
+      description: SUB.list && SUB.list.length ? '' : 'Click "Submit report" above to upload a checklist or MoM.'
+    });
+    body.innerHTML = html;
+    return;
+  }
+
+  html += `<div class="members-table-wrap" style="margin:0"><table><thead><tr>
+    <th>Project</th><th>Period</th><th>Kind</th><th>File</th><th>Uploaded by</th><th>Time</th><th>Status</th><th></th>
+  </tr></thead><tbody>`;
+  rows.forEach(r => {
+    html += `<tr>
+      <td><b>${govEsc(r.project_key)}</b><div style="font-size:11px;color:var(--ink-400)">${govEsc(r.project_name || '')}</div></td>
+      <td>${govEsc(r.week_label)}<div style="font-size:11px;color:var(--ink-400)">${govEsc(r.period_start)} → ${govEsc(r.period_end)}</div></td>
+      <td>${r.kind === 'checklist' ? 'Checklist' : 'MoM'}</td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${govEsc(r.file_name)}">
+        ${govEsc(r.file_name)}${r.superseded ? ' <span class="sub-badge ink">superseded</span>' : ''}
+      </td>
+      <td>${govEsc(r.uploaded_by_name)}</td>
+      <td style="white-space:nowrap">${subFmtDateTime(r.uploaded_at)}</td>
+      <td>${subStateBadge(r.state, r.needs_review)}</td>
+      <td><button class="btn btn-ghost" style="padding:4px 10px;font-size:12px" onclick="subViewDetail('${govEsc(r.id)}')">Detail</button></td>
+    </tr>`;
+  });
+  html += `</tbody></table></div>`;
+  body.innerHTML = html;
+}
+
+// ——— Drawer: 4-step form (§9.1) ———
+// Period is deliberately never manually pickable (§9.1's own reasoning:
+// letting people choose opens the door to submitting against the wrong
+// week, with no way to detect it after the fact) — step 2 only ever
+// displays whatever /api/governance/current-period resolves to.
+function subDrawerOverlay() {
+  let overlay = document.getElementById('sub-drawer-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'sub-drawer-overlay';
+    overlay.className = 'ap-drawer-overlay';
+    overlay.onclick = (e) => { if (e.target === overlay) subCloseDrawer(); };
+    document.body.appendChild(overlay);
+  }
+  return overlay;
+}
+
+function subOpenDrawer() {
+  SUB.drawer = {
+    mode: 'new', step: 1,
+    projectKey: '', project: null, period: null,
+    tab: 'checklist', file: null,
+    busy: false, error: null,
+    submissionId: null, events: null, uploadResult: null
+  };
+  apComboInit('sub-project', { options: [], placeholder: 'Search project…', onPick: subPickProject });
+  renderSubDrawer();
+  subDrawerOverlay().classList.add('show');
+  subEnsureProjectOptions();
+}
+
+function subCloseDrawer() {
+  const overlay = document.getElementById('sub-drawer-overlay');
+  if (overlay) overlay.classList.remove('show');
+  SUB.drawer = null;
+}
+
+async function subEnsureProjectOptions() {
+  if (!SUB.projects) {
+    try { SUB.projects = await api('/api/governance/projects?tracked=true'); }
+    catch (e) { SUB.projects = []; }
+  }
+  if (AP_COMBO['sub-project']) {
+    AP_COMBO['sub-project'].options = (SUB.projects || []).map(p => ({ value: p.key, label: p.name, key: p.key }));
+  }
+  if (SUB.drawer && SUB.drawer.mode === 'new') renderSubDrawer();
+}
+
+async function subPickProject(id, value) {
+  if (!SUB.drawer || !value || value === '__manual__') return;
+  SUB.drawer.projectKey = value;
+  SUB.drawer.project = (SUB.projects || []).find(p => p.key === value) || null;
+  SUB.drawer.period = null;
+  SUB.drawer.error = null;
+  renderSubDrawer();
+  try {
+    SUB.drawer.period = await api(`/api/governance/current-period?project_key=${encodeURIComponent(value)}&period_type=weekly`);
+  } catch (e) {
+    SUB.drawer.error = 'Could not load this project’s current period: ' + e.message;
+  }
+  if (SUB.drawer) renderSubDrawer();
+}
+
+function subSetTab(tab) {
+  if (!SUB.drawer) return;
+  SUB.drawer.tab = tab;
+  SUB.drawer.file = null;
+  renderSubDrawer();
+}
+
+function subOnFileChange(input) {
+  if (!SUB.drawer) return;
+  SUB.drawer.file = input.files && input.files[0] ? input.files[0] : null;
+  renderSubDrawer();
+}
+
+function subDropHandlers(kind) {
+  return `ondragover="event.preventDefault();this.classList.add('drag')" ` +
+         `ondragleave="this.classList.remove('drag')" ` +
+         `ondrop="event.preventDefault();this.classList.remove('drag');subOnFileDrop(event,'${kind}')"`;
+}
+function subOnFileDrop(e, kind) {
+  if (!SUB.drawer || SUB.drawer.tab !== kind) return;
+  const f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) { SUB.drawer.file = f; renderSubDrawer(); }
+}
+
+function subFmtBytes(n) {
+  if (n == null) return '';
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+  return (n / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+async function subDoUpload() {
+  const d = SUB.drawer;
+  if (!d || !d.file || !d.projectKey || !d.period) return;
+  d.busy = true; d.error = null;
+  renderSubDrawer();
+  const form = new FormData();
+  form.append('project_key', d.projectKey);
+  form.append('period_type', d.period.period_type);
+  form.append('period_start', d.period.period_start);
+  form.append('kind', d.tab);
+  form.append('file', d.file);
+  try {
+    const r = await fetch('/api/submissions', { method: 'POST', body: form });
+    const json = await r.json().catch(() => ({}));
+    if (r.status === 401) { onSessionLost(); return; }
+    if (!r.ok) throw new Error(json.message || json.error || `HTTP ${r.status}`);
+    d.uploadResult = json;
+    d.submissionId = json.submission_id;
+    d.step = 4;
+    try { d.events = await api(`/api/submissions/${json.submission_id}/events`); }
+    catch (e) { d.events = null; }
+    d.file = null;
+    subFetchList(); // refresh the list underneath, don't block the drawer on it
+  } catch (e) {
+    d.error = e.message;
+  } finally {
+    d.busy = false;
+    if (SUB.drawer) renderSubDrawer();
+  }
+}
+
+async function subViewDetail(id) {
+  SUB.drawer = { mode: 'view', busy: true, error: null, submissionId: id, submission: null, events: null };
+  renderSubDrawer();
+  subDrawerOverlay().classList.add('show');
+  try {
+    const [submission, events] = await Promise.all([
+      api(`/api/submissions/${id}`), api(`/api/submissions/${id}/events`)
+    ]);
+    if (!SUB.drawer) return;
+    SUB.drawer.submission = submission;
+    SUB.drawer.events = events;
+  } catch (e) {
+    if (SUB.drawer) SUB.drawer.error = e.message;
+  } finally {
+    if (SUB.drawer) { SUB.drawer.busy = false; renderSubDrawer(); }
+  }
+}
+
+function subEventIcon(level) {
+  return ({ ok: '✓', info: '·', warn: '!', error: '✕' })[level] || '·';
+}
+function subEventLine(ev) {
+  const label = ev.event.replace(/_/g, ' ');
+  let detail = '';
+  if (ev.detail) {
+    const d = ev.detail;
+    if (d.note) detail = d.note;
+    else if (d.counts) detail = `${Object.entries(d.counts).map(([k, v]) => `${v} ${k}`).join(', ')}` +
+      (d.unmapped_rows ? ` · ${d.unmapped_rows} row(s) skipped` : '') +
+      (d.merged && d.merged.length ? ` · ${d.merged.length} merged with the other file` : '') +
+      (d.possible_duplicates && d.possible_duplicates.length ? ` · ${d.possible_duplicates.length} possible duplicate(s) flagged` : '');
+    else if (d.error) detail = d.error;
+    else if (d.file_name) detail = `${d.file_name}${d.size != null ? ' · ' + subFmtBytes(d.size) : ''}`;
+    else detail = Object.entries(d).map(([k, v]) => `${k}: ${v}`).join(' · ');
+  }
+  return `<div class="sub-event">
+    <span class="sub-event-icon ${ev.level}">${subEventIcon(ev.level)}</span>
+    <div class="sub-event-body">
+      <div class="sub-event-label">${apEsc(label)}</div>
+      ${detail ? `<div class="sub-event-detail">${apEsc(detail)}</div>` : ''}
+    </div>
+    <div class="sub-event-time">${ev.at ? subFmtDateTime(ev.at) : ''}${ev.actor_name ? ' · ' + apEsc(ev.actor_name) : ''}</div>
+  </div>`;
+}
+
+function subTemplateUrl(kind, d) {
+  const params = new URLSearchParams({ project_key: d.projectKey, period_type: d.period.period_type, period_start: d.period.period_start });
+  return `/api/templates/${kind}?${params.toString()}`;
+}
+
+function renderSubDrawer() {
+  const overlay = subDrawerOverlay();
+  const d = SUB.drawer;
+  if (!d) { overlay.classList.remove('show'); return; }
+
+  if (d.mode === 'view') {
+    const s = d.submission;
+    overlay.innerHTML = `<div class="ap-drawer">
+      <button class="ap-drawer-close" onclick="subCloseDrawer()">✕</button>
+      <div style="font-size:16px;font-weight:700;color:var(--ink-900);margin-bottom:4px">Submission detail</div>
+      ${d.busy ? '<div class="loading-dots" style="margin-top:20px"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div>' : ''}
+      ${d.error ? `<div class="sub-error">${apEsc(d.error)}</div>` : ''}
+      ${s ? `<div style="font-size:12px;color:var(--ink-400);margin-bottom:16px">
+        <b style="color:var(--ink-800)">${apEsc(s.project_key)}</b> · ${apEsc(s.period_start)} → ${apEsc(s.period_end)}
+      </div>` : ''}
+      ${(d.events || []).length ? `<div class="sub-step-title">Activity</div><div class="sub-events">${d.events.map(subEventLine).join('')}</div>` : ''}
+      ${!d.busy && d.events && !d.events.length ? '<div style="color:var(--ink-400);font-size:12px">No activity recorded.</div>' : ''}
+    </div>`;
+    return;
+  }
+
+  // mode === 'new' — the 4-step form.
+  const step1Done = !!d.projectKey;
+  const step2Done = !!d.period;
+  const kindLabel = d.tab === 'checklist' ? 'Checklist' : 'MoM';
+  const existingSameKind = d.period && (d.period.existing_files || []).find(f => f.kind === d.tab);
+
+  overlay.innerHTML = `<div class="ap-drawer">
+    <button class="ap-drawer-close" onclick="subCloseDrawer()">✕</button>
+    <div style="font-size:16px;font-weight:700;color:var(--ink-900);margin-bottom:16px">Submit report</div>
+
+    <div class="sub-step">
+      <div class="sub-step-title">1 · Project</div>
+      ${apComboHtml('sub-project')}
+    </div>
+
+    <div class="sub-step ${step1Done ? '' : 'locked'}">
+      <div class="sub-step-title">2 · Period</div>
+      ${!step1Done ? '<div class="sub-step-hint">Choose a project first.</div>'
+        : !step2Done ? '<div class="sub-step-hint">Loading current period…</div>'
+        : `<div class="sub-period-box">
+            <div><b>${apEsc(d.period.week_label)}</b> · ${apEsc(d.period.period_start)} → ${apEsc(d.period.period_end)}</div>
+            <div style="color:var(--ink-400);margin-top:2px">Due ${subFmtDateTime(d.period.due_at)}</div>
+          </div>`}
+    </div>
+
+    <div class="sub-step ${step2Done ? '' : 'locked'}">
+      <div class="sub-step-title">3 · Upload</div>
+      ${!step2Done ? '<div class="sub-step-hint">Waiting on the period above.</div>' : `
+        <div class="sub-tabs">
+          <button class="sub-tab ${d.tab === 'checklist' ? 'active' : ''}" onclick="subSetTab('checklist')">Checklist</button>
+          <button class="sub-tab ${d.tab === 'mom' ? 'active' : ''}" onclick="subSetTab('mom')">MoM</button>
+        </div>
+        <a href="${subTemplateUrl(d.tab, d)}" class="sub-template-link" target="_blank" rel="noopener">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v9M4 8l4 4 4-4"/><path d="M2 14h12"/></svg>
+          Download ${kindLabel} template
+        </a>
+        ${existingSameKind ? `<div class="sub-warning">This period already has a ${kindLabel} file (${apEsc(existingSameKind.file_name)}). Uploading here will replace the whole submission — any file of the other kind will need to be re-uploaded too.</div>` : ''}
+        <label class="sub-dropzone" ${subDropHandlers(d.tab)}>
+          <input type="file" style="display:none" accept="${d.tab === 'checklist' ? '.xlsx' : '.md,.txt,.docx,.pdf'}" onchange="subOnFileChange(this)">
+          ${d.file
+            ? `<div><b>${apEsc(d.file.name)}</b><div style="color:var(--ink-400);font-size:11px">${subFmtBytes(d.file.size)} · click or drop to replace</div></div>`
+            : `<div>Click or drop a ${d.tab === 'checklist' ? '.xlsx' : '.md/.txt (.docx/.pdf accepted but not parsed yet)'} file here</div>`}
+        </label>
+        ${d.error ? `<div class="sub-error">${apEsc(d.error)}</div>` : ''}
+        <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:10px" ${!d.file || d.busy ? 'disabled' : ''} onclick="subDoUpload()">
+          ${d.busy ? 'Uploading…' : 'Submit ' + kindLabel}
+        </button>
+      `}
+    </div>
+
+    <div class="sub-step ${d.events ? '' : 'locked'}">
+      <div class="sub-step-title">4 · Activity</div>
+      ${!d.events ? '<div class="sub-step-hint">Runs after you submit.</div>' : `<div class="sub-events">${d.events.map(subEventLine).join('')}</div>`}
+    </div>
+  </div>`;
+
+  apComboRenderList('sub-project');
 }
 
 // ——— INIT ———

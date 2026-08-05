@@ -2728,6 +2728,22 @@ function computeDueAt(periodType, periodStart, policy) {
   return due.toISOString();
 }
 
+// Which period is "current" depends on the policy's calendar, not the
+// server's raw UTC clock — reuses computeDueAt's same fixed-offset
+// simplification (Asia/Jakarta only, no DST) rather than a full IANA
+// timezone dependency. Weekly periods anchor to Monday (matches every
+// period this app has ever generated); monthly anchors to the 1st.
+function currentPeriodStart(periodType, timezone) {
+  const offsetHours = TZ_OFFSET_HOURS[timezone] ?? 0;
+  const local = new Date(Date.now() + offsetHours * 3600000);
+  if (periodType === 'monthly') {
+    return new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), 1)).toISOString().slice(0, 10);
+  }
+  const dow = local.getUTCDay() || 7; // Mon=1..Sun=7
+  const monday = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate() - (dow - 1)));
+  return monday.toISOString().slice(0, 10);
+}
+
 // Periods are generated lazily (§4) — created on first use, idempotent via
 // the (project_key, period_type, period_start) unique constraint.
 async function ensurePeriod(projectKey, periodType, periodStart) {
@@ -2742,6 +2758,60 @@ async function ensurePeriod(projectKey, periodType, periodStart) {
   });
   return Array.isArray(created) ? created[0] : created;
 }
+
+// Drives the Submit page drawer's step 2 (§9.1: period is read-only, derived
+// from policy — never manually pickable). Ensures the policy and the current
+// period both exist (same lazy-generation the upload path already relies on)
+// and reads state from v_compliance_status rather than recomputing
+// compliance_state() logic here — that function is the one and only place
+// on/late/orange/red is decided (invariant).
+app.get('/api/governance/current-period', requireSupabase, async (req, res) => {
+  try {
+    const projectKey = trimmed(req.query.project_key).toUpperCase();
+    const periodType = trimmed(req.query.period_type) || 'weekly';
+    if (!GOV_KEY_RE.test(projectKey)) return res.status(400).json({ error: 'project_key is required and must look like a Jira key' });
+    if (!GOV_PERIOD_TYPES.includes(periodType)) return res.status(400).json({ error: `period_type must be one of: ${GOV_PERIOD_TYPES.join(', ')}` });
+    if (!req.user.is_admin && !(req.user.allowed_project_keys || []).includes(projectKey)) {
+      return res.status(403).json({ error: `You do not have access to project ${projectKey}` });
+    }
+
+    const policy = await ensureDefaultPolicy(projectKey, periodType);
+    const periodStart = currentPeriodStart(periodType, policy.timezone);
+    const period = await ensurePeriod(projectKey, periodType, periodStart);
+
+    const statusRows = await supabaseRequest('GET', `v_compliance_status?period_id=eq.${period.id}&select=*`);
+    const status = statusRows && statusRows[0];
+
+    // Which kinds the period's active submission already has — the drawer's
+    // upload step (step 3) uses this to warn "this replaces your existing
+    // file" instead of silently superseding it (§5.4).
+    let existingFiles = [];
+    if (status && status.submission_id) {
+      existingFiles = await supabaseRequest('GET',
+        `submission_files?submission_id=eq.${status.submission_id}&select=kind,file_name,parse_status`);
+    }
+
+    res.json({
+      project_key: projectKey,
+      period_type: periodType,
+      period_start: periodStart,
+      period_end: period.period_end,
+      due_at: period.due_at,
+      week_label: weekLabel(periodType, periodStart),
+      // No compliance_periods row can exist without also having gone through
+      // ensureDefaultPolicy/ensurePeriod above, so status is only ever
+      // missing here if v_compliance_status's own is_tracked/is_active
+      // filter excludes this project — treat that the same as "nothing
+      // submitted yet" rather than erroring the drawer over it.
+      state: status ? status.state : 'pending',
+      days_late: status ? status.days_late : 0,
+      submission_id: status ? status.submission_id : null,
+      existing_files: existingFiles
+    });
+  } catch (e) {
+    sendSupabaseError(res, e, 'governance/current-period');
+  }
+});
 
 // 'new': no active submission exists for this period yet.
 // 'add': one exists but doesn't have this file's kind yet (§5.4 — checklist
