@@ -2744,6 +2744,23 @@ function currentPeriodStart(periodType, timezone) {
   return monday.toISOString().slice(0, 10);
 }
 
+// The Compliance Board (§9.3) needs a fixed run of period_starts (oldest
+// first) ending at the current one, regardless of whether anyone has
+// visited/uploaded for those weeks yet — a project that missed 3 weeks
+// must show 3 red cells, not 3 blank ones.
+function periodStartsBack(periodType, timezone, count) {
+  const starts = [];
+  let cur = currentPeriodStart(periodType, timezone);
+  for (let i = 0; i < count; i++) {
+    starts.unshift(cur);
+    const d = new Date(`${cur}T00:00:00Z`);
+    if (periodType === 'monthly') d.setUTCMonth(d.getUTCMonth() - 1);
+    else d.setUTCDate(d.getUTCDate() - 7);
+    cur = d.toISOString().slice(0, 10);
+  }
+  return starts;
+}
+
 // Periods are generated lazily (§4) — created on first use, idempotent via
 // the (project_key, period_type, period_start) unique constraint.
 async function ensurePeriod(projectKey, periodType, periodStart) {
@@ -2810,6 +2827,83 @@ app.get('/api/governance/current-period', requireSupabase, async (req, res) => {
     });
   } catch (e) {
     sendSupabaseError(res, e, 'governance/current-period');
+  }
+});
+
+// The Compliance Board (§9.3) — grid of project × week state, plus the
+// current week's per-project wins/blockers/dependencies counts. Ensures
+// every expected period in the requested range exists (same lazy
+// generation the upload path uses) BEFORE reading v_compliance_status —
+// without this, weeks nobody has visited yet would show as gaps instead
+// of the red/orange cells they actually are.
+app.get('/api/compliance', requireSupabase, async (req, res) => {
+  try {
+    const periodType = trimmed(req.query.period_type) || 'weekly';
+    if (!GOV_PERIOD_TYPES.includes(periodType)) return res.status(400).json({ error: `period_type must be one of: ${GOV_PERIOD_TYPES.join(', ')}` });
+    const weeks = Math.min(Math.max(parseInt(req.query.weeks, 10) || 8, 1), 26);
+    const projectKeyFilter = trimmed(req.query.project_key).toUpperCase();
+    const teamIdFilter = trimmed(req.query.team_id);
+
+    let projects = await supabaseRequest('GET', 'projects?is_tracked=eq.true&is_active=eq.true&select=key,name,category,team_id&order=key.asc');
+    if (!req.user.is_admin) {
+      const allowed = new Set(req.user.allowed_project_keys || []);
+      projects = (projects || []).filter(p => allowed.has(p.key));
+    }
+    if (projectKeyFilter) projects = projects.filter(p => p.key === projectKeyFilter);
+    if (teamIdFilter) projects = projects.filter(p => p.team_id === teamIdFilter);
+    if (!projects.length) return res.json({ period_type: periodType, period_starts: [], projects: [], rows: [] });
+
+    // All policies share DEFAULT_POLICY's timezone today (no per-project
+    // timezone override exists yet), so the period-start run is the same
+    // for every project — compute it once rather than per project.
+    const periodStarts = periodStartsBack(periodType, DEFAULT_POLICY.timezone, weeks);
+    for (const p of projects) {
+      for (const ps of periodStarts) {
+        await ensurePeriod(p.key, periodType, ps); // idempotent; cheap once the row already exists
+      }
+    }
+
+    const keysParam = projects.map(p => encodeURIComponent(p.key)).join(',');
+    const rows = await supabaseRequest('GET',
+      `v_compliance_status?project_key=in.(${keysParam})&period_type=eq.${periodType}` +
+      `&period_start=gte.${periodStarts[0]}&period_start=lte.${periodStarts[periodStarts.length - 1]}` +
+      `&select=*&order=period_start.asc`);
+
+    // Bulk-computed, not per-row: only the (small) set of submissions in
+    // this window matters, so one fetch per table beats N+1 per cell.
+    const subIds = [...new Set((rows || []).filter(r => r.submission_id).map(r => r.submission_id))];
+    const winCounts = {}, blockerOpen = {}, depOpen = {};
+    if (subIds.length) {
+      const idsParam = subIds.join(',');
+      const [winsRows, blkRows, depRows] = await Promise.all([
+        supabaseRequest('GET', `wins?submission_id=in.(${idsParam})&select=submission_id`),
+        supabaseRequest('GET', `blockers?submission_id=in.(${idsParam})&select=submission_id,status`),
+        supabaseRequest('GET', `dependencies?submission_id=in.(${idsParam})&select=submission_id,status`)
+      ]);
+      (winsRows || []).forEach(w => { winCounts[w.submission_id] = (winCounts[w.submission_id] || 0) + 1; });
+      (blkRows || []).forEach(b => { if (b.status !== 'Resolved') blockerOpen[b.submission_id] = (blockerOpen[b.submission_id] || 0) + 1; });
+      (depRows || []).forEach(d => { if (d.status !== 'Resolved') depOpen[d.submission_id] = (depOpen[d.submission_id] || 0) + 1; });
+    }
+
+    const out = (rows || []).map(r => ({
+      period_id: r.period_id, project_key: r.project_key, project_name: r.project_name,
+      category: r.category, team_id: r.team_id, team_name: r.team_name,
+      period_type: r.period_type, period_start: r.period_start, period_end: r.period_end,
+      due_at: r.due_at, submission_id: r.submission_id, uploaded_at: r.uploaded_at,
+      parse_status: r.parse_status, state: r.state, days_late: r.days_late,
+      counts: r.submission_id
+        ? { wins: winCounts[r.submission_id] || 0, blockers_open: blockerOpen[r.submission_id] || 0, dependencies_open: depOpen[r.submission_id] || 0 }
+        : null
+    }));
+
+    res.json({
+      period_type: periodType,
+      period_starts: periodStarts,
+      projects: projects.map(p => ({ key: p.key, name: p.name, category: p.category, team_id: p.team_id })),
+      rows: out
+    });
+  } catch (e) {
+    sendSupabaseError(res, e, 'compliance');
   }
 });
 

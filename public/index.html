@@ -973,6 +973,21 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .sub-event-detail{color:var(--ink-500);margin-top:1px}
 .sub-event-time{flex-shrink:0;color:var(--ink-300);font-size:10.5px;white-space:nowrap}
 
+/* Governance: Compliance Board (Phase 8) */
+.board-team-row td{background:var(--ink-50);font-size:10px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.04em;padding:6px 14px}
+.board-cell{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:5px;font-size:11px;font-weight:700}
+.board-cell.green{background:var(--green-50);color:var(--green-600)}
+.board-cell.orange{background:var(--amber-50);color:var(--amber-600)}
+.board-cell.red{background:var(--red-50);color:var(--red-600)}
+.board-cell.ink{background:var(--ink-50);color:var(--ink-300)}
+.board-ratio{font-size:11.5px;font-weight:600;color:var(--ink-600);font-family:var(--font-mono)}
+
+.board-detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.board-detail-card{background:var(--ink-0);border:1px solid var(--ink-100);border-radius:var(--radius-lg);padding:14px 16px;box-shadow:var(--shadow-xs)}
+
+.board-content-list{display:flex;flex-direction:column;gap:8px}
+.board-content-item{border-left:2px solid var(--ink-100);padding:2px 0 2px 10px}
+
 /* Detail Report (standup board) */
 .ap-metric-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:0 24px 16px}
 .ap-sort-toggle{display:flex;gap:10px;align-items:center;padding:0 24px 14px;flex-wrap:wrap}
@@ -1189,6 +1204,10 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
     <button class="nav-item" data-navid="gov-submit" onclick="showPage('gov-submit',this)">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v9M4 7l4-4 4 4"/><path d="M2 12v1.5A1.5 1.5 0 003.5 15h9a1.5 1.5 0 001.5-1.5V12"/></svg>
       Submit
+    </button>
+    <button class="nav-item" data-navid="gov-board" onclick="showPage('gov-board',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="14" height="14" rx="1.5"/><path d="M1 6h14M6 6v9"/></svg>
+      Compliance Board
     </button>
     <button class="nav-item" data-navid="gov-settings" onclick="showPage('gov-settings',this)">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v1.8M8 12.7v1.8M14.5 8h-1.8M3.3 8H1.5M12.7 3.3l-1.3 1.3M4.6 11.1l-1.3 1.3M12.7 12.7l-1.3-1.3M4.6 4.9L3.3 3.3"/></svg>
@@ -1771,6 +1790,17 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
       <div id="sub-body" style="padding:0 24px 24px"></div>
     </div>
 
+    <!-- ======== GOVERNANCE: COMPLIANCE BOARD ======== -->
+    <div class="page" id="page-gov-board">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Compliance Board</div>
+          <div class="page-sub">Who's on time, who's late — across every tracked project</div>
+        </div>
+      </div>
+      <div id="board-body" style="padding:0 24px 24px"></div>
+    </div>
+
     <div class="page" id="page-gov-settings">
       <div class="page-header">
         <div>
@@ -1933,6 +1963,7 @@ function showPage(id, btn) {
   if (id === 'usermgmt') loadUserMgmtPage();
   if (id === 'gov-settings') loadGovSettingsPage();
   if (id === 'gov-submit') loadGovSubmitPage();
+  if (id === 'gov-board') loadGovBoardPage();
 
   toggleSidebar(false); // close mobile drawer after navigating
 }
@@ -1951,6 +1982,7 @@ const NAV_ITEMS = [
   { id: 'jirasync',    label: 'Jira Sync' },
   { id: 'usermgmt',    label: 'User Management' },
   { id: 'gov-submit',   label: 'Submit' },
+  { id: 'gov-board',    label: 'Compliance Board' },
   { id: 'gov-settings', label: 'Governance Settings' },
   { id: 'orgchart',    label: 'Structure Organization' },
   { id: 'projectteam', label: 'Structure Project Team' },
@@ -3123,6 +3155,286 @@ function renderSubDrawer() {
   </div>`;
 
   apComboRenderList('sub-project');
+}
+
+// ============================================================
+// GOVERNANCE: COMPLIANCE BOARD — Phase 8 (§9.3 of the spec)
+// KPI summary + a project × week grid (state, not an averaged color, per
+// cell — "merata-ratakan beberapa minggu jadi satu warna menyembunyikan
+// minggu yang bermasalah") + a current-week detail panel where extraction
+// results (wins/blockers/dependencies/todos) are actually read — this is
+// the ONE place that content is shown; the Submit page deliberately never
+// duplicates it (§9.2).
+// ============================================================
+const BOARD = {
+  data: null, teams: null,
+  weeks: 8, teamFilter: '', projectFilter: '',
+  detail: null // { submissionId, submission, busy, error }
+};
+
+const BOARD_STATE_META = {
+  green: { icon: '✓', label: 'On time', cls: 'green' },
+  pending: { icon: '·', label: 'Pending', cls: 'ink' },
+  orange: { icon: '!', label: 'Late', cls: 'orange' },
+  red: { icon: '✕', label: 'Late', cls: 'red' }
+};
+function boardCellMeta(state) {
+  return BOARD_STATE_META[state] || { icon: '–', label: 'No data', cls: 'ink' };
+}
+
+async function loadGovBoardPage() {
+  if (BOARD.teams === null) {
+    try { BOARD.teams = await api('/api/governance/teams'); } catch (e) { BOARD.teams = []; }
+  }
+  await boardFetch();
+}
+
+async function boardFetch() {
+  const body = document.getElementById('board-body');
+  if (!body) return;
+  if (!BOARD.data) body.innerHTML = emptyState({ icon: '📋', title: 'Loading compliance data…', description: '' });
+  const params = new URLSearchParams({ weeks: String(BOARD.weeks) });
+  if (BOARD.projectFilter) params.set('project_key', BOARD.projectFilter);
+  if (BOARD.teamFilter) params.set('team_id', BOARD.teamFilter);
+  try {
+    BOARD.data = await api('/api/compliance?' + params.toString());
+  } catch (e) {
+    body.innerHTML = emptyState({ icon: '⚠️', title: 'Could not load compliance data', description: e.message });
+    return;
+  }
+  renderBoardBody();
+}
+
+function boardRowsByProject() {
+  const byProject = {};
+  (BOARD.data.rows || []).forEach(r => { (byProject[r.project_key] = byProject[r.project_key] || []).push(r); });
+  return byProject;
+}
+
+// Ratio excludes periods that aren't due yet ('pending') — a week that
+// hasn't happened isn't a miss, and counting it would understate the ratio
+// for a project that's actually been on time every week it's had a chance
+// to be.
+function boardOnTimeRatio(rows) {
+  const decided = rows.filter(r => r.state !== 'pending');
+  const onTime = decided.filter(r => r.state === 'green').length;
+  return { onTime, total: decided.length };
+}
+
+// "Team green/orange/red" (top summary) is judged on the CURRENT week only
+// (the last period_start in range), worst-state-wins across a team's
+// projects: red if any project is red, else orange if any is orange, else
+// green. 'pending' (not due yet) is folded into green for this count —
+// it isn't a compliance failure, it's simply not time yet.
+function boardTeamSummary(currentWeekRows) {
+  const byTeam = {};
+  currentWeekRows.forEach(r => {
+    const key = r.team_id || '__none__';
+    if (!byTeam[key]) byTeam[key] = { name: r.team_name || 'No team', worst: 'green' };
+    const rank = { red: 3, orange: 2, pending: 1, green: 1 }[r.state] || 1;
+    const curRank = { red: 3, orange: 2, pending: 1, green: 1 }[byTeam[key].worst] || 1;
+    if (rank > curRank) byTeam[key].worst = r.state === 'pending' ? 'green' : r.state;
+  });
+  const counts = { green: 0, orange: 0, red: 0 };
+  Object.values(byTeam).forEach(t => { counts[t.worst] = (counts[t.worst] || 0) + 1; });
+  return counts;
+}
+
+function renderBoardBody() {
+  const body = document.getElementById('board-body');
+  if (!body) return;
+  const data = BOARD.data;
+
+  if (!data.projects.length) {
+    body.innerHTML = emptyState({
+      icon: '📋', title: 'No tracked projects yet',
+      description: 'Mark projects as tracked in Governance Settings to see them here.'
+    });
+    return;
+  }
+
+  const periodStarts = data.period_starts;
+  const currentWeek = periodStarts[periodStarts.length - 1];
+  const currentWeekRows = (data.rows || []).filter(r => r.period_start === currentWeek);
+  const teamCounts = boardTeamSummary(currentWeekRows);
+  const openBlockers = currentWeekRows.reduce((sum, r) => sum + (r.counts ? r.counts.blockers_open : 0), 0);
+  const openDeps = currentWeekRows.reduce((sum, r) => sum + (r.counts ? r.counts.dependencies_open : 0), 0);
+
+  const teamOptions = (BOARD.teams || []).map(t => `<option value="${govEsc(t.id)}" ${BOARD.teamFilter === t.id ? 'selected' : ''}>${govEsc(t.name)}</option>`).join('');
+  const projectOptions = data.projects.map(p => `<option value="${govEsc(p.key)}" ${BOARD.projectFilter === p.key ? 'selected' : ''}>${govEsc(p.key)}</option>`).join('');
+
+  let html = `<div class="kpi-grid" style="grid-template-columns:repeat(5,1fr);padding:20px 0">
+    <div class="kpi-card"><div class="kpi-label">Green teams</div><div class="kpi-value" style="color:var(--green-600)">${teamCounts.green}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Orange teams</div><div class="kpi-value" style="color:var(--amber-600)">${teamCounts.orange}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Red teams</div><div class="kpi-value" style="color:var(--red-600)">${teamCounts.red}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Open blockers</div><div class="kpi-value">${openBlockers}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Open dependencies</div><div class="kpi-value">${openDeps}</div></div>
+  </div>
+
+  <div class="ap-gantt-toolbar" style="padding:0 0 14px;flex-direction:column;align-items:stretch;gap:12px">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <select onchange="BOARD.projectFilter=this.value;boardFetch()"
+              style="font:inherit;font-size:12px;padding:7px 9px;border:1px solid var(--ink-100);border-radius:var(--radius-sm);background:var(--ink-0);color:var(--ink-800)">
+        <option value="">All projects</option>${projectOptions}
+      </select>
+      <select onchange="BOARD.teamFilter=this.value;boardFetch()" ${(BOARD.teams || []).length ? '' : 'disabled'}
+              style="font:inherit;font-size:12px;padding:7px 9px;border:1px solid var(--ink-100);border-radius:var(--radius-sm);background:var(--ink-0);color:var(--ink-800)">
+        <option value="">${(BOARD.teams || []).length ? 'All teams' : 'No teams yet'}</option>${teamOptions}
+      </select>
+      <div class="pill-group">
+        ${apCuratedPill('4 weeks', BOARD.weeks === 4, `BOARD.weeks=4;boardFetch()`)}
+        ${apCuratedPill('8 weeks', BOARD.weeks === 8, `BOARD.weeks=8;boardFetch()`)}
+        ${apCuratedPill('12 weeks', BOARD.weeks === 12, `BOARD.weeks=12;boardFetch()`)}
+      </div>
+    </div>
+  </div>
+
+  ${boardGridHtml(data, periodStarts)}
+  ${boardDetailHtml(currentWeekRows, currentWeek)}`;
+
+  body.innerHTML = html;
+}
+
+function boardWeekLabel(periodStart) {
+  return weekLabelFromStart(periodStart);
+}
+// Mirrors server.js's weekLabel() (ISO week number) purely for display —
+// this is presentation only, never fed back into any compliance decision.
+function weekLabelFromStart(periodStart) {
+  const d = new Date(`${periodStart}T00:00:00Z`);
+  const target = new Date(d.valueOf());
+  const dayNr = (d.getUTCDay() + 6) % 7;
+  target.setUTCDate(target.getUTCDate() - dayNr + 3);
+  const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4));
+  const week = 1 + Math.round(((target - firstThursday) / 86400000 - 3 + ((firstThursday.getUTCDay() + 6) % 7)) / 7);
+  return `W${String(week).padStart(2, '0')}`;
+}
+
+function boardGridHtml(data, periodStarts) {
+  const byProject = boardRowsByProject();
+  const byTeam = {};
+  data.projects.forEach(p => { const t = p.team_id || '__none__'; (byTeam[t] = byTeam[t] || []).push(p); });
+  const teamName = tid => {
+    if (tid === '__none__') return 'No team';
+    const t = (BOARD.teams || []).find(x => x.id === tid);
+    return t ? t.name : 'No team';
+  };
+
+  const headerCells = periodStarts.map(ps => `<th style="text-align:center;min-width:56px" title="${govEsc(ps)}">${boardWeekLabel(ps)}</th>`).join('');
+
+  let rowsHtml = '';
+  Object.keys(byTeam).sort((a, b) => teamName(a).localeCompare(teamName(b))).forEach(tid => {
+    rowsHtml += `<tr class="board-team-row"><td colspan="${periodStarts.length + 2}">${govEsc(teamName(tid))}</td></tr>`;
+    byTeam[tid].sort((a, b) => a.key.localeCompare(b.key)).forEach(p => {
+      const rows = byProject[p.key] || [];
+      const byWeek = {}; rows.forEach(r => { byWeek[r.period_start] = r; });
+      const ratio = boardOnTimeRatio(rows);
+      rowsHtml += `<tr>
+        <td><b>${govEsc(p.key)}</b><div style="font-size:11px;color:var(--ink-400)">${govEsc(p.name)}</div></td>
+        ${periodStarts.map(ps => {
+          const r = byWeek[ps];
+          const meta = boardCellMeta(r ? r.state : null);
+          const title = r ? `${ps} → ${meta.label}${r.days_late ? ' (' + r.days_late + 'd late)' : ''}` : ps;
+          return `<td style="text-align:center" title="${govEsc(title)}"><span class="board-cell ${meta.cls}">${meta.icon}</span></td>`;
+        }).join('')}
+        <td style="text-align:center"><span class="board-ratio">${ratio.total ? `${ratio.onTime}/${ratio.total}` : '—'}</span></td>
+      </tr>`;
+    });
+  });
+
+  return `<div class="members-table-wrap" style="margin:0 0 24px;overflow-x:auto"><table>
+    <thead><tr><th>Project</th>${headerCells}<th style="text-align:center">On time</th></tr></thead>
+    <tbody>${rowsHtml}</tbody>
+  </table></div>`;
+}
+
+function boardDetailHtml(currentWeekRows, currentWeek) {
+  let html = `<div class="sub-step-title" style="margin:0 0 10px">Current week — ${govEsc(boardWeekLabel(currentWeek))} (${govEsc(currentWeek)})</div>
+    <div class="board-detail-grid">`;
+  currentWeekRows.sort((a, b) => a.project_key.localeCompare(b.project_key)).forEach(r => {
+    const meta = boardCellMeta(r.state);
+    html += `<div class="board-detail-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div><b>${govEsc(r.project_key)}</b><div style="font-size:11px;color:var(--ink-400)">${govEsc(r.project_name)}</div></div>
+        <span class="sub-badge ${meta.cls}">${meta.icon} ${govEsc(meta.label)}</span>
+      </div>
+      <div style="font-size:11.5px;color:var(--ink-400);margin-top:8px">
+        ${r.uploaded_at ? 'Last submit ' + subFmtDateTime(r.uploaded_at) : 'Not submitted yet'}
+      </div>
+      ${r.counts ? `<div style="display:flex;gap:12px;margin-top:8px;font-size:12px;color:var(--ink-700)">
+        <span>${r.counts.wins} wins</span>
+        <span>${r.counts.blockers_open} open blockers</span>
+        <span>${r.counts.dependencies_open} open deps</span>
+      </div>` : ''}
+      ${r.submission_id ? `<button class="btn btn-ghost" style="margin-top:10px;padding:4px 10px;font-size:12px" onclick="boardOpenDetail('${govEsc(r.submission_id)}')">Detail</button>` : ''}
+    </div>`;
+  });
+  html += `</div>`;
+  return html;
+}
+
+function boardDrawerOverlay() {
+  let overlay = document.getElementById('board-drawer-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'board-drawer-overlay';
+    overlay.className = 'ap-drawer-overlay';
+    overlay.onclick = (e) => { if (e.target === overlay) boardCloseDetail(); };
+    document.body.appendChild(overlay);
+  }
+  return overlay;
+}
+function boardCloseDetail() {
+  const overlay = document.getElementById('board-drawer-overlay');
+  if (overlay) overlay.classList.remove('show');
+  BOARD.detail = null;
+}
+async function boardOpenDetail(submissionId) {
+  BOARD.detail = { submissionId, submission: null, busy: true, error: null };
+  renderBoardDetailDrawer();
+  boardDrawerOverlay().classList.add('show');
+  try {
+    BOARD.detail.submission = await api(`/api/submissions/${submissionId}`);
+  } catch (e) {
+    BOARD.detail.error = e.message;
+  } finally {
+    BOARD.detail.busy = false;
+    renderBoardDetailDrawer();
+  }
+}
+
+function boardListSection(title, rows, fields) {
+  if (!rows || !rows.length) return '';
+  return `<div class="sub-step-title" style="margin-top:16px">${apEsc(title)} (${rows.length})</div>
+    <div class="board-content-list">${rows.map(r => `
+      <div class="board-content-item">
+        <div style="font-weight:600;color:var(--ink-800)">${apEsc(r.title || '(untitled)')}</div>
+        ${fields.map(f => r[f] ? `<div style="font-size:11.5px;color:var(--ink-500)"><b>${apEsc(f.replace(/_/g, ' '))}:</b> ${apEsc(r[f])}</div>` : '').join('')}
+      </div>`).join('')}</div>`;
+}
+
+function renderBoardDetailDrawer() {
+  const overlay = boardDrawerOverlay();
+  const d = BOARD.detail;
+  if (!d) { overlay.classList.remove('show'); return; }
+  const s = d.submission;
+  overlay.innerHTML = `<div class="ap-drawer">
+    <button class="ap-drawer-close" onclick="boardCloseDetail()">✕</button>
+    <div style="font-size:16px;font-weight:700;color:var(--ink-900);margin-bottom:4px">Extraction results</div>
+    ${d.busy ? '<div class="loading-dots" style="margin-top:20px"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div>' : ''}
+    ${d.error ? `<div class="sub-error">${apEsc(d.error)}</div>` : ''}
+    ${s ? `<div style="font-size:12px;color:var(--ink-400);margin-bottom:6px">
+      <b style="color:var(--ink-800)">${apEsc(s.project_key)}</b> · ${apEsc(s.period_start)} → ${apEsc(s.period_end)}
+    </div>
+    ${(s.analysis && s.analysis.merged && s.analysis.merged.length) ? `<div class="sub-warning" style="background:var(--green-50);color:var(--green-600)">${s.analysis.merged.length} row(s) merged from checklist + MoM</div>` : ''}
+    ${(s.analysis && s.analysis.possible_duplicates && s.analysis.possible_duplicates.length) ? `<div class="sub-warning">${s.analysis.possible_duplicates.length} possible duplicate(s) flagged — not auto-merged, needs a human look</div>` : ''}
+    ${boardListSection('Wins', s.wins, ['description', 'impact', 'jira_issue_key'])}
+    ${boardListSection('Blockers', s.blockers, ['status', 'pic', 'bottleneck', 'next_action'])}
+    ${boardListSection('Dependencies', s.dependencies, ['status', 'depends_on', 'notes'])}
+    ${boardListSection('Todos', s.todos, ['status', 'pic', 'due_date', 'notes'])}
+    ${!s.wins.length && !s.blockers.length && !s.dependencies.length && !s.todos.length ? '<div style="color:var(--ink-400);font-size:12px;margin-top:16px">Nothing extracted from this submission.</div>' : ''}
+    ` : ''}
+  </div>`;
 }
 
 // ——— INIT ———

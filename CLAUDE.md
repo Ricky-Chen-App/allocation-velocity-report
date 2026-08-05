@@ -78,12 +78,12 @@ Spec: `docs/SPEC_Governance_Checklist.md` (implementation is phased — see the
 spec's §10 order; only the phases actually built are described below).
 Reference UI: `docs/Governance_Upload_Mockup.html`.
 
-**Status: Phase 1 (migration), Phase 2 (Jira project sync + tracking),
+**Status: all 8 phases of the Governance Checklist & MoM Upload spec are
+built** — Phase 1 (migration), Phase 2 (Jira project sync + tracking),
 Phase 3 (Storage + template downloads), Phase 4 (submission upload +
 authorization), Phase 5 (deterministic checklist parser), Phase 6
-(MoM-as-Markdown parser + checklist/MoM merge), and Phase 7 (Submit page UI)
-are built.**
-The Compliance Board is not — that's the next phase.
+(MoM-as-Markdown parser + checklist/MoM merge), Phase 7 (Submit page UI),
+and Phase 8 (Compliance Board).
 
 Rules that must not be violated in any future phase:
 - Compliance color is computed **on read** via SQL `compliance_state()`; never
@@ -378,9 +378,50 @@ Rules that must not be violated in any future phase:
   means) — this bit a live-verification pass in this phase, since AIRPAY
   itself wasn't tracked at the time.
 
+**Phase 8 (Compliance Board, §9.3) rules:**
+- **`GET /api/compliance` backfills every expected period in the requested
+  range before reading `v_compliance_status`** — `periodStartsBack()`
+  generates the Monday-anchored run of weeks (or month-starts) ending at
+  "now", and `ensurePeriod()` runs for every (tracked project × week) pair.
+  Without this, a week nobody has visited Submit or this board for yet has
+  no `compliance_periods` row at all, and the grid would render that week
+  as a gap instead of the red cell it actually is — the whole point of a
+  compliance board is to surface exactly that kind of miss.
+- **Color is never the only signal on a grid cell** — every cell carries
+  an icon+text label (✓/·/!/✕) alongside its background color, per the
+  spec's explicit accessibility requirement. Don't add a cell variant that
+  relies on color alone.
+- **Cells show each week's own state — never an averaged color.** The
+  spec calls this out directly: averaging several weeks into one color
+  hides exactly the problem week a PM needs to see. The per-project "on
+  time" ratio (e.g. "5/6") is a separate summary column, not a replacement
+  for the per-week cells.
+- **The on-time ratio excludes `pending` periods from its denominator** —
+  a week that isn't due yet isn't a miss, and counting it would understate
+  a project's actual on-time rate for the weeks it's had a real chance to
+  submit.
+- **The top KPI's team green/orange/red counts are judged on the current
+  week only** (the grid's last column), worst-state-wins across a team's
+  projects (red beats orange beats green). `pending` is folded into
+  "green" for this specific summary — not submitting yet isn't a
+  compliance failure, and a separate 4th bucket would just be visual noise
+  for a state that isn't actually bad. This is a judgment call I made
+  explicitly rather than something the spec pins down — revisit if a
+  "not yet due" bucket turns out to matter to whoever reads this board.
+- **Wins/blockers/dependencies/todos content is only ever shown from the
+  Compliance Board's current-week detail panel** (`boardOpenDetail()`,
+  reusing `GET /api/submissions/:id`) — never on the Submit page (Phase 7
+  invariant, same spec section). Keeping this in exactly one place is what
+  prevents the two pages' displayed content from silently diverging.
+- `GET /api/compliance`'s bulk-counts pass (wins/open-blockers/open-deps
+  per submission) is a single batched query per table across every
+  submission in the requested range, not N+1 per grid cell — the range is
+  always small (recent weeks × tracked projects only), so this stays cheap
+  without needing real SQL aggregation through PostgREST.
+
 ## Information architecture
 
-Fourteen destinations in the sidebar, five groups. **Do not add, remove,
+Fifteen destinations in the sidebar, five groups. **Do not add, remove,
 rename, merge, or reorder them** without an explicit product decision (the
 Report AirPay group, User Management, and the Governance group were each such
 a deliberate addition — see their notes). Sidebar groups hide themselves when
@@ -453,6 +494,23 @@ instead — keep that in mind if the sheet is ever restructured.
 Supabase tables (`projects`, `teams`, `submissions`, `todos`, `dependencies`,
 ...; see the Governance Checklist section above). Independent of AirPay's
 Supabase tables and of `ensureProjects()`'s Jira-live project cache.
+- `gov-submit` (Submit) — a list of past submissions is the main view
+  (project, period, kind, file, uploader, time, status), not a form; the
+  4-step upload form (project → read-only period → Checklist/MoM upload →
+  activity log) lives in a drawer opened via "Submit report". Never shows
+  wins/blockers/dependencies content — that lives on the Compliance Board
+  only (§9.2's own split). A "Detail" button reopens the drawer read-only
+  to show just the activity log for a past submission.
+- `gov-board` (Compliance Board) — KPI summary (green/orange/red team
+  counts for the current week, total open blockers/dependencies) + a grid
+  (project rows grouped by team, week columns, each cell an icon+color per
+  invariant below, plus an "on time" ratio column) + a current-week detail
+  panel per project with a "Detail" button that's the one place extraction
+  results (wins/blockers/dependencies/todos) are actually read. Backed by
+  `GET /api/compliance`, which backfills every expected period in range
+  (not just ones somebody happened to visit) before reading
+  `v_compliance_status`, so a project that missed 3 weeks shows 3 red
+  cells, not 3 blank ones.
 - `gov-settings` (Settings) — **admin only.** The 90-project mirror synced
   from Jira via "Sync from Jira"; toggle which projects are `is_tracked` (and
   their `tracked_from` start date) for compliance. Search, tracked/untracked
@@ -460,7 +518,6 @@ Supabase tables and of `ensureProjects()`'s Jira-live project cache.
   phase), show-inactive toggle. Sync never touches `is_tracked` and detects
   Jira project-key renames via `jira_id` rather than treating a rename as a
   delete + create.
-- `Submit` and `Compliance Board` are specced but not yet built.
 
 ## Data model
 
