@@ -80,9 +80,9 @@ Reference UI: `docs/Governance_Upload_Mockup.html`.
 
 **Status: Phase 1 (migration), Phase 2 (Jira project sync + tracking),
 Phase 3 (Storage + template downloads), Phase 4 (submission upload +
-authorization), and Phase 5 (deterministic checklist parser) are built.**
-The MoM parser, the checklist+MoM merge, the Submit page UI, and the
-Compliance Board are not — those are later phases.
+authorization), Phase 5 (deterministic checklist parser), and Phase 6
+(MoM-as-Markdown parser + checklist/MoM merge) are built.**
+The Submit page UI and the Compliance Board are not — those are later phases.
 
 Rules that must not be violated in any future phase:
 - Compliance color is computed **on read** via SQL `compliance_state()`; never
@@ -237,6 +237,92 @@ Rules that must not be violated in any future phase:
   fixtures/test-parser.js` to check the parser against them. `_old_schema`
   is tested against Phase 4's upload gate, not the parser — it must never
   reach the parser at all, which is the fixture's entire point.
+
+**Phase 6 (MoM parser + merge) rules:**
+- **`.docx`/`.pdf` MoM extraction is explicitly out of scope**, a deliberate
+  user choice (not a technical limitation) made to avoid adding an LLM
+  dependency and API key to this app. Only `.md`/`.txt` are parsed
+  deterministically. `.docx`/`.pdf` uploads are still accepted (Phase 4's
+  gate already allowed them), stored, and stay `parse_status = 'pending'`
+  forever with a `submission_events` note explaining extraction isn't
+  available — never silent. Revisit only on an explicit product decision to
+  add LLM extraction; don't build a fake/partial `.docx` reader as a
+  stopgap.
+- **Row-validation logic (`validateSheetRow.js`) and cell-interpretation
+  logic (`cellValue.js`) are shared between the xlsx checklist parser and
+  the Markdown MoM parser**, extracted out of the original Phase 5
+  `parseChecklist.js`. Both formats funnel through the same
+  `getCellValue(col) -> validateRow(...)` contract, so a bad `priority` or
+  an ambiguous date produces byte-identical error text regardless of which
+  file format it came from. Keep it this way — don't let the two parsers'
+  validation drift apart.
+- **Markdown structural parsing (`markdownTable.js`: frontmatter split,
+  `## Heading` section extraction, pipe-table extraction) is shared between
+  `readSubmissionMeta.js` (Phase 4's structure-only gate) and `parseMom.js`
+  (Phase 6's content parser)**, so the two layers can never disagree about
+  where a table starts or ends.
+- **Phase 4's MoM structural check was extended, not just reused**: before
+  Phase 6, `readSubmissionMeta.js` only checked MoM `Meta`/frontmatter
+  fields, never table structure, because the table-extraction logic didn't
+  exist yet. `readMomMeta()` now also populates `sheetHeaders` per section
+  and `diffStructure()` runs `diffSheetColumns` unconditionally (the
+  `kind === 'checklist'` gate was removed) — MoM gets the same
+  missing-sheet/missing-column 422 the checklist always had. This was my
+  own design decision (not explicitly requested), made because leaving MoM
+  permanently less strictly checked than the checklist would be an
+  inconsistency with no justification once the capability existed.
+- **Merge/dedup (`mergeSubmissionRows.js`), per spec §5.5**: runs as a
+  reconciliation pass over already-inserted rows, not during parsing —
+  triggered by `finalizeSubmissionParse()` in `server.js` after whichever
+  file (checklist or MoM) parses *second* for a submission, once the other
+  kind's file is confirmed `parse_status = 'done'` for the same
+  `submission_id`. Match tiers, in order: (1) exact `jira_issue_key`
+  (case-insensitive), (2) exact title after normalization (lowercase,
+  collapsed whitespace, trailing punctuation stripped). On a match, the
+  checklist row is always kept — its structured fields win unconditionally
+  — and MoM only fills the narrative fields (`NARRATIVE_FIELDS` per table:
+  wins.description/impact, blockers.bottleneck/next_action,
+  dependencies.notes, todos.notes) the checklist left empty; the matched
+  MoM row is then deleted and recorded in `analysis.merged[]`.
+- **Similarity 0.8–1.0 (Dice's coefficient over character bigrams,
+  `titleSimilarity()`) is a possible-duplicate flag, never an auto-merge** —
+  recorded in `analysis.possible_duplicates[]` with both rows' id/title/key,
+  and **both rows are left in place**. Silently merging two items that only
+  sound alike would drop one from the report with no way for anyone to
+  notice; that is the entire reason this tier is kept separate from the
+  exact-title tier. Verified live: a win titled "Payment gateway v2 goes
+  live" against a checklist win "Payment gateway v2 live" (no shared
+  `jira_issue_key`) scored 0.9 and correctly stayed unmerged in
+  `possible_duplicates`, with neither row deleted.
+- **`submissions.analysis` is extended, not overwritten**, when a
+  submission's second file finishes parsing —
+  `finalizeSubmissionParse()` reads the prior `analysis`, replaces only
+  that file's own `files[]`/`counts_by_source[kind]`/`unmapped_rows`/
+  `warnings` contribution (tagged by `source_kind`/a `[kind]` prefix so the
+  two files' entries never collide), and only overlays `merged[]` /
+  `possible_duplicates[]` / recomputed `counts` once both kinds are
+  confirmed present. `parse_method`/`source_format` become `'hybrid'` once
+  a second file of the other format has contributed.
+- **MoM parsing is synchronous inside `POST /api/submissions`, same
+  reasoning as the Phase 5 checklist parser** (invariant above) — Vercel's
+  serverless runtime gives no guarantee that work started after
+  `res.json()` completes, so blocking the response is what makes
+  `parse_status` ever reliably reach `'done'`/`'failed'` instead of getting
+  stuck at `'pending'`.
+- `fixtures/sample_mom_valid.md` and `fixtures/sample_mom_duplicate.md`
+  exercise, respectively, the merge path (rows matched by
+  `jira_issue_key` and by exact title, one narrative field actually
+  overridden, one left alone because the checklist already had a value,
+  and unmatched new rows on both sides surviving untouched) and the
+  possible-duplicates path (a near-duplicate win title, no merge). `node
+  fixtures/test-mom-parser.js` checks both against the parser and
+  structural gate directly; the merge/possible-duplicates behavior itself
+  needs live Supabase rows and was verified through a real upload against
+  the running server instead (checklist+MoM uploaded together, `analysis`
+  and table rows inspected via SQL, then all test rows, storage objects,
+  the temporary period, and the temporary test account deleted — confirmed
+  by re-querying afterward that no test data remained and that
+  pre-existing `wins`/`blockers` rows were untouched).
 
 ## Information architecture
 

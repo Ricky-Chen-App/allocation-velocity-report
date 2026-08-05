@@ -14,6 +14,8 @@ const {
 } = require('./lib/governance/buildTemplates');
 const { readSubmissionMeta, diffStructure } = require('./lib/governance/readSubmissionMeta');
 const { parseChecklistWorkbook } = require('./lib/governance/parseChecklist');
+const { parseMomWorkbook } = require('./lib/governance/parseMom');
+const { mergeSubmission } = require('./lib/governance/mergeSubmissionRows');
 const multer = require('multer');
 
 const app = express();
@@ -2796,45 +2798,89 @@ async function getActiveWinCategories() {
 // is not a real UX cost. `state` is unaffected either way (invariant 2) —
 // only `parse_status` in the response reflects the real, synchronous result
 // instead of always reporting 'pending'.
+async function insertTableRows(tableRows, submission, projectKey, sourceKind) {
+  const stamp = row => ({ ...row, submission_id: submission.id, project_key: projectKey, source: 'upload', source_kind: sourceKind });
+  await Promise.all([
+    tableRows.wins.length ? supabaseRequest('POST', 'wins', tableRows.wins.map(stamp), 'return=minimal') : null,
+    tableRows.blockers.length ? supabaseRequest('POST', 'blockers', tableRows.blockers.map(stamp), 'return=minimal') : null,
+    tableRows.dependencies.length ? supabaseRequest('POST', 'dependencies', tableRows.dependencies.map(stamp), 'return=minimal') : null,
+    tableRows.todos.length ? supabaseRequest('POST', 'todos', tableRows.todos.map(stamp), 'return=minimal') : null
+  ].filter(Boolean));
+}
+
+// Shared by both parsers (§6): folds this file's own contribution into
+// submissions.analysis, then — if the submission's OTHER kind is already
+// parsed too — runs the checklist/MoM merge (§5.5) and records its result
+// in the same analysis object. Whichever file parses SECOND is what
+// actually triggers a merge; the first one just contributes its own counts.
+async function finalizeSubmissionParse(submission, fileRow, kind, contribution) {
+  const { unmappedRows, warnings, counts } = contribution;
+  const sourceFormat = kind === 'checklist' ? 'xlsx' : 'md';
+  const parseMethod = kind === 'checklist' ? 'column' : 'markdown';
+
+  const existingRows = await supabaseRequest('GET', `submissions?id=eq.${submission.id}&select=analysis`);
+  const prior = (existingRows && existingRows[0] && existingRows[0].analysis) || {};
+
+  const analysis = {
+    schema_version: 1,
+    parse_method: prior.files && prior.files.length ? 'hybrid' : parseMethod,
+    parsed_at: new Date().toISOString(),
+    source_format: prior.source_format && prior.source_format !== sourceFormat ? 'hybrid' : sourceFormat,
+    files: [...(prior.files || []).filter(f => f.kind !== kind), { kind, name: fileRow.file_name, method: parseMethod }],
+    counts_by_source: { ...(prior.counts_by_source || {}), [kind]: counts },
+    unmapped_rows: [...(prior.unmapped_rows || []).filter(u => u.source_kind !== kind), ...unmappedRows.map(u => ({ ...u, source_kind: kind }))],
+    warnings: [...(prior.warnings || []).filter(w => !w.startsWith(`[${kind}]`)), ...warnings.map(w => `[${kind}] ${w}`)],
+    counts, // provisional — replaced below if a merge runs
+    merged: prior.merged || [],
+    possible_duplicates: prior.possible_duplicates || []
+  };
+
+  const otherKind = kind === 'checklist' ? 'mom' : 'checklist';
+  const otherFiles = await supabaseRequest('GET',
+    `submission_files?submission_id=eq.${submission.id}&kind=eq.${otherKind}&parse_status=eq.done&select=id`);
+  if (otherFiles && otherFiles.length) {
+    const { merged, possibleDuplicates, counts: mergedCounts } = await mergeSubmission(supabaseRequest, submission.id);
+    analysis.merged = merged;
+    analysis.possible_duplicates = possibleDuplicates;
+    analysis.counts = mergedCounts;
+  }
+
+  await supabaseRequest('PATCH', `submissions?id=eq.${submission.id}`, { parse_status: 'done', analysis, parse_error: null }, 'return=minimal');
+  return analysis;
+}
+
 async function runChecklistParse(submission, projectKey, fileRow, buffer, parserProfile) {
   try {
     const winCategories = await getActiveWinCategories();
-    const { tableRows, unmappedRows, warnings, counts } = await parseChecklistWorkbook(buffer, parserProfile, winCategories);
-
-    const stamp = row => ({ ...row, submission_id: submission.id, project_key: projectKey, source: 'upload', source_kind: 'checklist' });
-    await Promise.all([
-      tableRows.wins.length ? supabaseRequest('POST', 'wins', tableRows.wins.map(stamp), 'return=minimal') : null,
-      tableRows.blockers.length ? supabaseRequest('POST', 'blockers', tableRows.blockers.map(stamp), 'return=minimal') : null,
-      tableRows.dependencies.length ? supabaseRequest('POST', 'dependencies', tableRows.dependencies.map(stamp), 'return=minimal') : null,
-      tableRows.todos.length ? supabaseRequest('POST', 'todos', tableRows.todos.map(stamp), 'return=minimal') : null
-    ].filter(Boolean));
-
-    // Shape matches spec §5.3. `counts_by_source` is scoped under `checklist`
-    // so Phase 6 can add a `mom` sibling when it exists, without this phase
-    // needing to know anything about that merge.
-    const analysis = {
-      schema_version: 1,
-      parse_method: 'column',
-      parsed_at: new Date().toISOString(),
-      source_format: 'xlsx',
-      files: [{ kind: 'checklist', name: fileRow.file_name, method: 'column' }],
-      counts,
-      counts_by_source: { checklist: counts },
-      unmapped_rows: unmappedRows,
-      warnings
-    };
-
-    await Promise.all([
-      supabaseRequest('PATCH', `submission_files?id=eq.${fileRow.id}`, { parse_status: 'done', parse_method: 'column' }, 'return=minimal'),
-      supabaseRequest('PATCH', `submissions?id=eq.${submission.id}`, { parse_status: 'done', analysis, parse_error: null }, 'return=minimal')
-    ]);
-    return { parse_status: 'done', counts, unmapped_rows: unmappedRows.length, warnings };
+    const contribution = await parseChecklistWorkbook(buffer, parserProfile, winCategories);
+    await insertTableRows(contribution.tableRows, submission, projectKey, 'checklist');
+    await supabaseRequest('PATCH', `submission_files?id=eq.${fileRow.id}`, { parse_status: 'done', parse_method: 'column' }, 'return=minimal');
+    const analysis = await finalizeSubmissionParse(submission, fileRow, 'checklist', contribution);
+    return { parse_status: 'done', counts: analysis.counts, unmapped_rows: contribution.unmappedRows.length, warnings: contribution.warnings, merged: analysis.merged, possible_duplicates: analysis.possible_duplicates };
   } catch (e) {
     // A genuine failure here (not a bad cell — those are unmapped_rows, not
     // exceptions) must never surface as a 5xx on the upload itself: the file
     // is already stored and the submission already exists. Record the
     // failure and let the caller still return 201 (green stays green).
     console.error('checklist parse error:', e.message);
+    await Promise.all([
+      supabaseRequest('PATCH', `submission_files?id=eq.${fileRow.id}`, { parse_status: 'failed', parse_error: e.message }, 'return=minimal').catch(() => {}),
+      supabaseRequest('PATCH', `submissions?id=eq.${submission.id}`, { parse_status: 'failed', parse_error: e.message }, 'return=minimal').catch(() => {})
+    ]);
+    return { parse_status: 'failed', error: e.message };
+  }
+}
+
+async function runMomParse(submission, projectKey, fileRow, buffer, parserProfile) {
+  try {
+    const winCategories = await getActiveWinCategories();
+    const contribution = await parseMomWorkbook(buffer, parserProfile, winCategories);
+    await insertTableRows(contribution.tableRows, submission, projectKey, 'mom');
+    await supabaseRequest('PATCH', `submission_files?id=eq.${fileRow.id}`, { parse_status: 'done', parse_method: 'markdown' }, 'return=minimal');
+    const analysis = await finalizeSubmissionParse(submission, fileRow, 'mom', contribution);
+    return { parse_status: 'done', counts: analysis.counts, unmapped_rows: contribution.unmappedRows.length, warnings: contribution.warnings, merged: analysis.merged, possible_duplicates: analysis.possible_duplicates };
+  } catch (e) {
+    console.error('mom parse error:', e.message);
     await Promise.all([
       supabaseRequest('PATCH', `submission_files?id=eq.${fileRow.id}`, { parse_status: 'failed', parse_error: e.message }, 'return=minimal').catch(() => {}),
       supabaseRequest('PATCH', `submissions?id=eq.${submission.id}`, { parse_status: 'failed', parse_error: e.message }, 'return=minimal').catch(() => {})
@@ -2982,15 +3028,25 @@ app.post('/api/submissions', requireSupabase, (req, res, next) => {
     }
     if (mode === 'supersede') events.push(['superseded', 'warn', { previous_submission_id: existingSubmission.id }]);
 
-    // Checklist parsing (Phase 5) runs synchronously, right here — see the
-    // comment on runChecklistParse for why. MoM has no parser yet (Phase 6),
-    // so a mom upload's parse_status stays 'pending' as before.
+    // Checklist (Phase 5) and MoM-as-Markdown (Phase 6) both parse
+    // synchronously, right here — see the comment on runChecklistParse for
+    // why. .docx/.pdf MoM extraction is explicitly out of scope for Phase 6
+    // (no LLM integration) — those uploads stay 'pending' with an event
+    // noting extraction isn't available yet, rather than silently doing
+    // nothing.
     let parseResult = { parse_status: 'pending' };
     if (kind === 'checklist') {
       parseResult = await runChecklistParse({ id: submissionId }, projectKey, fileRow, file.buffer, parserProfile);
       events.push(parseResult.parse_status === 'done'
-        ? ['parse_finished', 'ok', { counts: parseResult.counts, unmapped_rows: parseResult.unmapped_rows }]
+        ? ['parse_finished', 'ok', { counts: parseResult.counts, unmapped_rows: parseResult.unmapped_rows, merged: parseResult.merged, possible_duplicates: parseResult.possible_duplicates }]
         : ['parse_finished', 'error', { error: parseResult.error }]);
+    } else if (kind === 'mom' && (ext === 'md' || ext === 'txt')) {
+      parseResult = await runMomParse({ id: submissionId }, projectKey, fileRow, file.buffer, parserProfile);
+      events.push(parseResult.parse_status === 'done'
+        ? ['parse_finished', 'ok', { counts: parseResult.counts, unmapped_rows: parseResult.unmapped_rows, merged: parseResult.merged, possible_duplicates: parseResult.possible_duplicates }]
+        : ['parse_finished', 'error', { error: parseResult.error }]);
+    } else if (kind === 'mom') {
+      events.push(['parse_finished', 'info', { note: `Automatic extraction for .${ext} MoM files is not available yet — only .md/.txt are parsed. This file is stored and visible, but its content was not extracted into Wins/Blockers/Dependencies/Todos.` }]);
     }
     await writeSubmissionEvents(submissionId, req.user.id, events);
 
