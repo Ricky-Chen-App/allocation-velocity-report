@@ -78,9 +78,11 @@ Spec: `docs/SPEC_Governance_Checklist.md` (implementation is phased — see the
 spec's §10 order; only the phases actually built are described below).
 Reference UI: `docs/Governance_Upload_Mockup.html`.
 
-**Status: Phase 1 (migration), Phase 2 (Jira project sync + tracking), and
-Phase 3 (Storage + template downloads) are built.** Upload, parsing, Submit
-UI, and Compliance Board are not — those are later phases.
+**Status: Phase 1 (migration), Phase 2 (Jira project sync + tracking),
+Phase 3 (Storage + template downloads), and Phase 4 (submission upload +
+authorization) are built.** The Wins/Blockers/Dependencies/Todos parser
+(reading uploaded row data into those tables), the MoM parser, the Submit
+page UI, and the Compliance Board are not — those are later phases.
 
 Rules that must not be violated in any future phase:
 - Compliance color is computed **on read** via SQL `compliance_state()`; never
@@ -137,8 +139,51 @@ Rules that must not be violated in any future phase:
   table here — access is only ever a server-generated signed URL (TTL 60s,
   `getSignedStorageUrl()`) after an authz check, never a direct object URL.
   Path convention: `compliance/{project_key}/{period_type}/{period_start}/
-  {filename}` (established in Phase 3; not yet exercised — Phase 4 is what
-  actually writes submission files there).
+  {submission_id}__{filename}`.
+- **`POST /api/submissions` checks session authorization BEFORE touching the
+  uploaded file at all** — a deliberate reordering from the spec's literal
+  1-6 layer list (which checks authorization as step 5, after step 4's
+  file-content match). Authorization is a near-free lookup against
+  `req.user.allowed_project_keys`; doing it first means this server never
+  parses a stranger's file. Every single-failure outcome is unchanged (403
+  for authz, 422 for a file layer, 409 for a duplicate) — only a request that
+  fails both authz and a file layer reports differently (403 instead of
+  422). If you touch this route, keep authorization first.
+- Row-level content (a bad `priority` value, a malformed date in a data row)
+  is **never** validated at upload time — only Meta fields and sheet/column
+  *structure*. A row that fails validation becomes the parser's problem
+  (`unmapped_rows`, Phase 5/6), never a reason to reject the whole file.
+  Structure (missing sheet, wrong header, wrong `schema_version`) still
+  rejects with 422, per invariant 10's structure-vs-content split.
+- `.xls` (legacy BIFF) uploads are rejected with a clear message, not
+  silently accepted. The only maintained Node reader for that format, the
+  `xlsx` npm package (SheetJS), currently ships with an **unpatched
+  HIGH-severity** prototype-pollution/ReDoS advisory and no fix on the
+  public registry — exactly the wrong library to hand attacker-controlled
+  uploads to. `.xlsx` is read via `exceljs` (already a dependency). Every
+  file this app's own templates produce is `.xlsx`; a real `.xls` reader can
+  be revisited later (SheetJS's own CDN ships patched builds) if it's ever
+  actually needed.
+- No admin UI exists yet to create `compliance_policies` rows, so a
+  project's first upload auto-provisions a default policy (weekly, Friday
+  17:00 Asia/Jakarta, warn +1/late +3 days) via `ensureDefaultPolicy()`
+  rather than requiring one to pre-exist. Revisit once a policy-editing
+  endpoint exists — don't let two code paths both try to create policies.
+- Re-uploading a `kind` that a period's active submission already has
+  **supersedes the whole submission**, not just that one file — if the other
+  kind's file was still current, it must be re-uploaded too. This is a
+  simpler, more conservative reading of an edge case the spec leaves open
+  (§5.4 only describes "new submission supersedes old" and "adding a second
+  kind isn't a re-upload," not what happens to an unrelated file when the
+  other kind is re-uploaded). Revisit if this proves annoying in practice.
+- `submission_events` can only be written once a `submission` row exists
+  (its FK is `NOT NULL`) — a request rejected at any of the structural gates
+  (1-6, or authz, or the duplicate check) is **not persisted anywhere**,
+  including to the audit log. `submission_events`' own stated purpose
+  ("siapa mengubah data ini dan kapan") therefore only covers successful
+  uploads, not rejected attempts. Flagged, not silently fixed — closing this
+  gap means either a nullable FK or a separate attempts table, a schema
+  decision beyond Phase 4's scope.
 
 ## Information architecture
 

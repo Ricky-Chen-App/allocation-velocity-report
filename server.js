@@ -10,8 +10,10 @@ const { getEffectiveDates, classifyLoad, LOAD_STATUS_LABEL, DEFAULT_FIELD_IDS, v
 const { businessDaysBetween, addBusinessDays, toIso } = require('./businessDays');
 const { parseAirpayCsv } = require('./lib/airpay/parseSheet');
 const {
-  buildChecklistWorkbook, buildMomMarkdown, computePeriodEnd, checklistFileName, momFileName
+  buildChecklistWorkbook, buildMomMarkdown, computePeriodEnd, checklistFileName, momFileName, isoWeek
 } = require('./lib/governance/buildTemplates');
+const { readSubmissionMeta, diffStructure } = require('./lib/governance/readSubmissionMeta');
+const multer = require('multer');
 
 const app = express();
 app.use(express.json());
@@ -2607,6 +2609,466 @@ app.get('/api/templates/mom', requireSupabase, async (req, res) => {
     if (e && e.status) return res.status(e.status).json({ error: e.message });
     console.error('templates/mom error:', e.message);
     res.status(502).json({ error: e.message });
+  }
+});
+
+// ——— Governance — Phase 4: submission upload + layered validation ———
+//
+// Deviation from the spec's literal 1-6 ordering, flagged deliberately:
+// the spec lists "5. project_key ada di allowed_project_keys milik SESSION"
+// AFTER "4. project_key di file == project_key yang dipilih" — i.e. after
+// the file has already been parsed. This implementation checks session
+// authorization FIRST, before touching the file at all: it's a near-free
+// Set lookup, and doing it first means an unauthorized request never causes
+// this server to parse a stranger's file. Every USER-VISIBLE outcome for a
+// single-failure request is unchanged (403 for authz, 422 for the file
+// layers, 409 for a duplicate) — the only case that differs is a request
+// that fails BOTH authz and a file layer, which now reports 403 first
+// instead of 422 first. See CLAUDE.md.
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
+
+const GOV_KINDS = ['checklist', 'mom'];
+const GOV_EXT_BY_KIND = { checklist: ['xlsx', 'xls'], mom: ['docx', 'pdf', 'md', 'txt'] };
+const GOV_MAGIC_BYTES = {
+  xlsx: [0x50, 0x4b, 0x03, 0x04], // PK\x03\x04 (zip/OOXML)
+  docx: [0x50, 0x4b, 0x03, 0x04],
+  xls: [0xd0, 0xcf, 0x11, 0xe0],  // OLE2 compound file (legacy BIFF)
+  pdf: [0x25, 0x50, 0x44, 0x46]   // %PDF
+};
+
+function fileExt(name) {
+  const m = /\.([a-z0-9]+)$/i.exec(name || '');
+  return m ? m[1].toLowerCase() : '';
+}
+function magicBytesMatch(buffer, ext) {
+  const sig = GOV_MAGIC_BYTES[ext];
+  if (!sig) return true; // md/txt: no reliable magic number, checked as plain text below instead
+  if (buffer.length < sig.length) return false;
+  return sig.every((b, i) => buffer[i] === b);
+}
+// .md/.txt have no magic number — the closest thing to a signature check is
+// confirming it isn't binary garbage wearing a text extension.
+function looksLikeText(buffer) {
+  const sample = buffer.subarray(0, 1024);
+  return !sample.includes(0x00);
+}
+
+async function uploadToStorage(objectPath, buffer, contentType) {
+  const r = await fetch(`${SUPABASE_URL}/storage/v1/object/${GOV_BUCKET}/${objectPath}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': contentType || 'application/octet-stream',
+      'x-upsert': 'false'
+    },
+    body: buffer
+  });
+  const json = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(json.message || `Storage upload responded ${r.status}`);
+  return json;
+}
+async function deleteFromStorage(objectPaths) {
+  if (!objectPaths.length) return;
+  await fetch(`${SUPABASE_URL}/storage/v1/object/${GOV_BUCKET}`, {
+    method: 'DELETE',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prefixes: objectPaths })
+  }).catch(e => console.warn('deleteFromStorage: cleanup failed (orphaned object, harmless):', e.message));
+}
+
+function sanitizeFilename(name) {
+  return String(name || 'file').replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 150);
+}
+
+// No admin UI for compliance_policies exists yet, so a project's first
+// upload provisions a sensible default policy rather than requiring one to
+// already exist — otherwise Phase 4 would be untestable end to end until a
+// policies-management phase is built. Friday 17:00 Asia/Jakarta, 1/3-day
+// warn/late thresholds.
+const DEFAULT_POLICY = { due_dow: 5, due_dom: 5, due_time: '17:00:00', timezone: 'Asia/Jakarta', warn_after_days: 1, late_after_days: 3 };
+// Asia/Jakarta has no DST, so a fixed offset is correct (not a general IANA
+// tz solution — fine while every policy uses this one zone).
+const TZ_OFFSET_HOURS = { 'Asia/Jakarta': 7 };
+
+async function ensureDefaultPolicy(projectKey, periodType) {
+  const existing = await supabaseRequest('GET', `compliance_policies?project_key=eq.${encodeURIComponent(projectKey)}&period_type=eq.${periodType}&select=*`);
+  if (existing && existing.length) return existing[0];
+  const created = await supabaseRequest('POST', 'compliance_policies', {
+    project_key: projectKey, period_type: periodType,
+    due_dow: periodType === 'weekly' ? DEFAULT_POLICY.due_dow : null,
+    due_dom: periodType === 'monthly' ? DEFAULT_POLICY.due_dom : null,
+    due_time: DEFAULT_POLICY.due_time, timezone: DEFAULT_POLICY.timezone,
+    warn_after_days: DEFAULT_POLICY.warn_after_days, late_after_days: DEFAULT_POLICY.late_after_days
+  });
+  return Array.isArray(created) ? created[0] : created;
+}
+
+function computeDueAt(periodType, periodStart, policy) {
+  const offsetHours = TZ_OFFSET_HOURS[policy.timezone] ?? 0;
+  const [hh, mm] = String(policy.due_time || '17:00:00').split(':').map(Number);
+  let due;
+  if (periodType === 'monthly') {
+    const start = new Date(`${periodStart}T00:00:00Z`);
+    const lastDom = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0)).getUTCDate();
+    const dom = Math.min(policy.due_dom || 5, lastDom);
+    due = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), dom, hh, mm));
+  } else {
+    const start = new Date(`${periodStart}T00:00:00Z`);
+    const dueDow = policy.due_dow || 5;
+    const startDow = start.getUTCDay() || 7; // Mon=1..Sun=7
+    due = new Date(start);
+    due.setUTCDate(due.getUTCDate() + ((dueDow - startDow + 7) % 7));
+    due.setUTCHours(hh, mm, 0, 0);
+  }
+  due.setUTCHours(due.getUTCHours() - offsetHours); // local wall-clock -> UTC instant
+  return due.toISOString();
+}
+
+// Periods are generated lazily (§4) — created on first use, idempotent via
+// the (project_key, period_type, period_start) unique constraint.
+async function ensurePeriod(projectKey, periodType, periodStart) {
+  const existing = await supabaseRequest('GET',
+    `compliance_periods?project_key=eq.${encodeURIComponent(projectKey)}&period_type=eq.${periodType}&period_start=eq.${periodStart}&select=*`);
+  if (existing && existing.length) return existing[0];
+  const policy = await ensureDefaultPolicy(projectKey, periodType);
+  const created = await supabaseRequest('POST', 'compliance_periods', {
+    project_key: projectKey, policy_id: policy.id, period_type: periodType,
+    period_start: periodStart, period_end: computePeriodEnd(periodType, periodStart),
+    due_at: computeDueAt(periodType, periodStart, policy)
+  });
+  return Array.isArray(created) ? created[0] : created;
+}
+
+// 'new': no active submission exists for this period yet.
+// 'add': one exists but doesn't have this file's kind yet (§5.4 — checklist
+//        now, MoM later, is not a re-upload).
+// 'supersede': one exists and already has this kind — a genuine re-upload.
+//        The OTHER kind's file, if any, is NOT carried over to the new
+//        submission (a simpler, more conservative reading of an edge case
+//        the spec leaves open — see CLAUDE.md); the filler would need to
+//        re-upload it too if it's still current.
+async function resolveSubmissionForUpload(periodId, kind) {
+  const subs = await supabaseRequest('GET',
+    `submissions?period_id=eq.${periodId}&superseded_by=is.null&select=*,submission_files(kind)`);
+  const active = subs && subs[0];
+  if (!active) return { mode: 'new', existingSubmission: null };
+  const hasKind = (active.submission_files || []).some(f => f.kind === kind);
+  return hasKind ? { mode: 'supersede', existingSubmission: active } : { mode: 'add', existingSubmission: active };
+}
+
+function templateMismatchBody(parserProfile, differences, metaFields, project, periodType, periodStart, kind) {
+  return {
+    error: 'template_mismatch',
+    expected: { schema_version: parserProfile.schema_version, parser_profile: parserProfile.code },
+    found: { schema_version: metaFields?.schema_version || null, parser_profile: metaFields?.parser_profile || null },
+    differences,
+    download_url: kind === 'mom'
+      ? `/api/templates/mom?project_key=${project.key}&period_start=${periodStart}&period_type=${periodType}`
+      : `/api/templates/checklist?project_key=${project.key}&period_start=${periodStart}&period_type=${periodType}`
+  };
+}
+
+async function writeSubmissionEvents(submissionId, actorId, events) {
+  const rows = events.map(([event, level, detail]) => ({
+    submission_id: submissionId, actor_id: actorId, event, level: level || 'ok', detail: detail || null
+  }));
+  await supabaseRequest('POST', 'submission_events', rows, 'return=minimal');
+}
+
+app.post('/api/submissions', requireSupabase, (req, res, next) => {
+  upload.single('file')(req, res, err => {
+    if (err) return res.status(422).json({ error: 'file_too_large', message: 'File exceeds the 20MB limit.' });
+    next();
+  });
+}, async (req, res) => {
+  try {
+    const projectKey = trimmed(req.body.project_key).toUpperCase();
+    const periodType = trimmed(req.body.period_type) || 'weekly';
+    const periodStart = trimmed(req.body.period_start);
+    const kind = trimmed(req.body.kind);
+    const file = req.file;
+
+    if (!GOV_KEY_RE.test(projectKey)) return res.status(400).json({ error: 'project_key is required and must look like a Jira key' });
+    if (!GOV_PERIOD_TYPES.includes(periodType)) return res.status(400).json({ error: `period_type must be one of: ${GOV_PERIOD_TYPES.join(', ')}` });
+    if (!ISO_DATE_RE.test(periodStart)) return res.status(400).json({ error: 'period_start is required as YYYY-MM-DD' });
+    if (!GOV_KINDS.includes(kind)) return res.status(400).json({ error: `kind must be one of: ${GOV_KINDS.join(', ')}` });
+    if (!file) return res.status(400).json({ error: 'file is required' });
+
+    const ext = fileExt(file.originalname);
+    if (!GOV_EXT_BY_KIND[kind].includes(ext)) {
+      return res.status(422).json({ error: 'invalid_extension', message: `A ${kind} file must be one of: ${GOV_EXT_BY_KIND[kind].join(', ')}`, found: ext });
+    }
+
+    // Layer: authorization (moved ahead of the file-content layers — see the
+    // comment above this route).
+    if (!req.user.is_admin && !(req.user.allowed_project_keys || []).includes(projectKey)) {
+      return res.status(403).json({ error: `You do not have access to project ${projectKey}` });
+    }
+
+    const projects = await supabaseRequest('GET', `projects?key=eq.${encodeURIComponent(projectKey)}&select=*`);
+    const project = projects && projects[0];
+    if (!project) return res.status(404).json({ error: `Project ${projectKey} not found. Try syncing from Jira first.` });
+
+    // Layer 1: magic bytes.
+    if (ext === 'md' || ext === 'txt') {
+      if (!looksLikeText(file.buffer)) return res.status(422).json({ error: 'invalid_file_signature', message: `${file.originalname} does not look like a text file.` });
+    } else if (!magicBytesMatch(file.buffer, ext)) {
+      return res.status(422).json({ error: 'invalid_file_signature', message: `${file.originalname} does not match the expected .${ext} format.` });
+    }
+    // Layer 2: size (multer's own limit is the hard backstop above; this is
+    // the precise, spec-shaped message).
+    if (file.size > 20 * 1024 * 1024) {
+      return res.status(422).json({ error: 'file_too_large', message: 'File exceeds the 20MB limit.' });
+    }
+
+    const period = await ensurePeriod(projectKey, periodType, periodStart);
+
+    // Duplicate check (409) — cheap enough to run before the more expensive
+    // Meta-parsing layers, and a byte-identical re-upload doesn't need a more
+    // specific structural error.
+    const sha256 = crypto.createHash('sha256').update(file.buffer).digest('hex');
+    const periodSubs = await supabaseRequest('GET', `submissions?period_id=eq.${period.id}&select=id`);
+    if (periodSubs && periodSubs.length) {
+      const subIds = periodSubs.map(s => `"${s.id}"`).join(',');
+      const dupe = await supabaseRequest('GET', `submission_files?submission_id=in.(${subIds})&file_sha256=eq.${sha256}&select=id`);
+      if (dupe && dupe.length) {
+        return res.status(409).json({ error: 'duplicate_file', message: 'This exact file has already been uploaded for this period.' });
+      }
+    }
+
+    const profiles = await supabaseRequest('GET', `parser_profiles?code=eq.${encodeURIComponent(project.parser_profile)}&select=*`);
+    const parserProfile = profiles && profiles[0];
+    if (!parserProfile) return res.status(500).json({ error: `Parser profile "${project.parser_profile}" is not configured` });
+
+    // Layer 3/4/6: Meta structure, project_key match, period match. Only
+    // possible for checklist .xlsx and MoM .md — .docx/.pdf have no
+    // accessible Meta without full text extraction (Phase 6), so those two
+    // formats skip straight to storage, trusting the (already-authorized)
+    // body-supplied project_key/period.
+    const read = await readSubmissionMeta(file.buffer, ext, kind);
+    if (read && read.error === 'unsupported_format') {
+      return res.status(422).json({ error: 'unsupported_format', message: read.message });
+    }
+    if (read && read.error) {
+      const differences = read.error === 'missing_sheet'
+        ? [{ type: 'missing_sheet', sheet: read.sheet }]
+        : [{ type: read.error }];
+      return res.status(422).json(templateMismatchBody(parserProfile, differences, {}, project, periodType, periodStart, kind));
+    }
+    if (read) {
+      const differences = diffStructure(read, parserProfile, kind);
+      if (differences.length) {
+        return res.status(422).json(templateMismatchBody(parserProfile, differences, read.metaFields, project, periodType, periodStart, kind));
+      }
+      const foundKey = (read.metaFields.project_key || '').toUpperCase();
+      if (foundKey !== projectKey) {
+        return res.status(422).json({ error: 'project_mismatch', selected: projectKey, in_file: foundKey });
+      }
+      const foundPeriodType = read.metaFields.period_type;
+      const foundPeriodStart = read.metaFields.period_start;
+      if (foundPeriodType !== periodType || foundPeriodStart !== periodStart) {
+        return res.status(422).json({
+          error: 'period_mismatch',
+          selected: { period_type: periodType, period_start: periodStart },
+          in_file: { period_type: foundPeriodType, period_start: foundPeriodStart }
+        });
+      }
+    }
+
+    // All gates passed — resolve which submission this file belongs to,
+    // store it, and record what happened.
+    const { mode, existingSubmission } = await resolveSubmissionForUpload(period.id, kind);
+    let submissionId;
+    if (mode === 'add') {
+      submissionId = existingSubmission.id;
+    } else {
+      const created = await supabaseRequest('POST', 'submissions', {
+        period_id: period.id, project_key: projectKey, uploaded_by: req.user.id, parse_status: 'pending'
+      });
+      submissionId = (Array.isArray(created) ? created[0] : created).id;
+      if (mode === 'supersede') {
+        await supabaseRequest('PATCH', `submissions?id=eq.${existingSubmission.id}`, { superseded_by: submissionId });
+      }
+    }
+
+    const safeName = sanitizeFilename(file.originalname);
+    const objectPath = `${projectKey}/${periodType}/${periodStart}/${submissionId}__${safeName}`;
+    await uploadToStorage(objectPath, file.buffer, file.mimetype);
+    const fileRow = await supabaseRequest('POST', 'submission_files', {
+      submission_id: submissionId, kind, file_path: objectPath, file_name: file.originalname,
+      file_mime: file.mimetype, file_size: file.size, file_sha256: sha256,
+      parse_method: null, parse_status: 'pending'
+    });
+
+    const events = [
+      ['file_uploaded', 'ok', { file_name: file.originalname, size: file.size, kind }],
+      ['permission_verified', 'ok', { project_key: projectKey }],
+      ['format_verified', 'ok', { ext, magic_bytes_ok: true }]
+    ];
+    if (read) {
+      events.push(['project_key_matched', 'ok', { project_key: projectKey }]);
+      events.push(['period_validated', 'ok', { period_type: periodType, period_start: periodStart }]);
+    } else {
+      events.push(['project_key_matched', 'info', { note: 'Not verifiable for .docx/.pdf — trusted from the authorized request.' }]);
+    }
+    if (mode === 'supersede') events.push(['superseded', 'warn', { previous_submission_id: existingSubmission.id }]);
+    await writeSubmissionEvents(submissionId, req.user.id, events);
+
+    res.status(201).json({ submission_id: submissionId, state: 'green', parse_status: 'pending', mode });
+  } catch (e) {
+    console.error('submissions upload error:', e.message);
+    res.status(502).json({ error: e.message });
+  }
+});
+
+function weekLabel(periodType, periodStart) {
+  if (periodType === 'monthly') {
+    const d = new Date(`${periodStart}T00:00:00Z`);
+    return `M${String(d.getUTCMonth() + 1).padStart(2, '0')} ${d.getUTCFullYear()}`;
+  }
+  const d = new Date(`${periodStart}T00:00:00Z`);
+  return `W${String(isoWeek(d)).padStart(2, '0')} ${d.getUTCFullYear()}`;
+}
+
+// The Submit page's table — one row per file, scoped to the caller's
+// allowed_project_keys (invariant 8's second half: this list is NOT
+// restricted to is_tracked, unlike the Compliance Board, because a
+// submission for an untracked project still legitimately happened).
+app.get('/api/submissions', requireSupabase, async (req, res) => {
+  try {
+    const params = ['select=*&order=uploaded_at.desc'];
+    if (req.query.project_key) params.push(`project_key=eq.${encodeURIComponent(trimmed(req.query.project_key).toUpperCase())}`);
+    if (req.query.from) params.push(`period_start=gte.${encodeURIComponent(req.query.from)}`);
+    if (req.query.to) params.push(`period_start=lte.${encodeURIComponent(req.query.to)}`);
+    if (req.query.status === 'on_time') params.push('late_by_days=eq.0');
+    if (req.query.status === 'late') params.push('late_by_days=gt.0');
+    if (req.query.status === 'needs_review') params.push('needs_review=eq.true');
+
+    let rows = await supabaseRequest('GET', `v_submission_list?${params.join('&')}`);
+    if (!req.user.is_admin) {
+      const allowed = new Set(req.user.allowed_project_keys || []);
+      rows = (rows || []).filter(r => allowed.has(r.project_key));
+    }
+    res.json((rows || []).map(r => ({
+      id: r.submission_id,
+      file_id: r.file_id,
+      project_key: r.project_key,
+      project_name: r.project_name,
+      period_start: r.period_start,
+      period_end: r.period_end,
+      week_label: weekLabel(r.period_type, r.period_start),
+      kind: r.kind,
+      file_name: r.file_name,
+      uploaded_by_name: r.uploaded_by_name || r.uploaded_by_username || 'Unknown',
+      uploaded_at: r.uploaded_at,
+      state: r.state,
+      parse_status: r.submission_parse_status,
+      needs_review: r.needs_review,
+      superseded: !!r.superseded_by
+    })));
+  } catch (e) {
+    sendSupabaseError(res, e, 'submissions');
+  }
+});
+
+// Shared by the :id endpoints below — loads the submission and checks the
+// caller is authorized for its project (invariant 19: re-verified server
+// side on every access, not just at upload time).
+async function loadAuthorizedSubmission(req, id) {
+  if (!UUID_RE.test(id)) { const e = new Error('Invalid id'); e.status = 400; throw e; }
+  const rows = await supabaseRequest('GET', `submissions?id=eq.${id}&select=*`);
+  const submission = rows && rows[0];
+  if (!submission) { const e = new Error('Submission not found'); e.status = 404; throw e; }
+  if (!req.user.is_admin && !(req.user.allowed_project_keys || []).includes(submission.project_key)) {
+    const e = new Error('You do not have access to this submission'); e.status = 403; throw e;
+  }
+  return submission;
+}
+
+app.get('/api/submissions/:id', requireSupabase, async (req, res) => {
+  try {
+    const submission = await loadAuthorizedSubmission(req, req.params.id);
+    const [files, wins, blockers, dependencies, todos] = await Promise.all([
+      supabaseRequest('GET', `submission_files?submission_id=eq.${submission.id}&select=*`),
+      supabaseRequest('GET', `wins?submission_id=eq.${submission.id}&select=*`),
+      supabaseRequest('GET', `blockers?submission_id=eq.${submission.id}&select=*`),
+      supabaseRequest('GET', `dependencies?submission_id=eq.${submission.id}&select=*`),
+      supabaseRequest('GET', `todos?submission_id=eq.${submission.id}&select=*`)
+    ]);
+    // wins/blockers/dependencies/todos are always empty until the Phase 5/6
+    // parser exists to write them — that's expected, not a bug in this route.
+    res.json({ ...submission, files, wins, blockers, dependencies, todos });
+  } catch (e) {
+    if (e.status) return res.status(e.status).json({ error: e.message });
+    sendSupabaseError(res, e, 'submissions/:id');
+  }
+});
+
+app.get('/api/submissions/:id/events', requireSupabase, async (req, res) => {
+  try {
+    const submission = await loadAuthorizedSubmission(req, req.params.id);
+    const events = await supabaseRequest('GET',
+      `submission_events?submission_id=eq.${submission.id}&select=*,app_users(display_name,username)&order=at.asc`);
+    res.json((events || []).map(ev => ({
+      at: ev.at, event: ev.event, level: ev.level, detail: ev.detail,
+      actor_name: ev.app_users ? (ev.app_users.display_name || ev.app_users.username) : 'System'
+    })));
+  } catch (e) {
+    if (e.status) return res.status(e.status).json({ error: e.message });
+    sendSupabaseError(res, e, 'submissions/:id/events');
+  }
+});
+
+// Redirects to a freshly-generated signed URL (TTL 60s) rather than ever
+// exposing the object path or a long-lived link — invariant 21.
+app.get('/api/submissions/:id/file', requireSupabase, async (req, res) => {
+  try {
+    const submission = await loadAuthorizedSubmission(req, req.params.id);
+    const files = await supabaseRequest('GET', `submission_files?submission_id=eq.${submission.id}&select=*`);
+    let file;
+    if (req.query.file_id) file = (files || []).find(f => f.id === req.query.file_id);
+    else if (req.query.kind) file = (files || []).find(f => f.kind === req.query.kind);
+    else if (files && files.length === 1) file = files[0];
+    if (!file) {
+      return res.status(files && files.length > 1 ? 400 : 404).json({
+        error: files && files.length > 1
+          ? 'This submission has more than one file — pass ?kind=checklist|mom or ?file_id='
+          : 'File not found'
+      });
+    }
+    const signedUrl = await getSignedStorageUrl(file.file_path, 60);
+    res.redirect(302, signedUrl);
+  } catch (e) {
+    if (e.status) return res.status(e.status).json({ error: e.message });
+    console.error('submissions/:id/file error:', e.message);
+    res.status(502).json({ error: e.message });
+  }
+});
+
+// Admin-only, and a real DELETE (unlike wins/blockers/users) — submissions
+// are file uploads a person may need to retract entirely (wrong project,
+// wrong file), not records where "corrected" makes sense. Cascades via the
+// FKs already in place (submission_files, wins, blockers, dependencies,
+// todos, submission_events all reference submission_id ON DELETE CASCADE);
+// Storage objects are cleaned up best-effort after the DB delete succeeds.
+app.delete('/api/submissions/:id', requireSupabase, requireAdmin, async (req, res) => {
+  try {
+    if (!UUID_RE.test(req.params.id)) return res.status(400).json({ error: 'Invalid id' });
+    const files = await supabaseRequest('GET', `submission_files?submission_id=eq.${req.params.id}&select=file_path`);
+    const deleted = await supabaseRequest('DELETE', `submissions?id=eq.${req.params.id}&select=id`);
+    if (!deleted || !deleted.length) return res.status(404).json({ error: 'Submission not found' });
+    await deleteFromStorage((files || []).map(f => f.file_path));
+    res.json({ ok: true });
+  } catch (e) {
+    // A submission that another submission's superseded_by still points at
+    // can't be deleted first — Postgres (correctly) rejects it as a foreign
+    // key violation. Give the admin something actionable instead of a raw
+    // constraint string: delete the newer (superseding) submission first.
+    if (e.status === 409 || /foreign key|violates/i.test(e.message)) {
+      return res.status(409).json({ error: 'This submission was superseded by a newer one — delete the newer submission first.' });
+    }
+    sendSupabaseError(res, e, 'submissions delete');
   }
 });
 
