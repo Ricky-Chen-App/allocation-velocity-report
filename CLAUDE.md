@@ -79,10 +79,10 @@ spec's §10 order; only the phases actually built are described below).
 Reference UI: `docs/Governance_Upload_Mockup.html`.
 
 **Status: Phase 1 (migration), Phase 2 (Jira project sync + tracking),
-Phase 3 (Storage + template downloads), and Phase 4 (submission upload +
-authorization) are built.** The Wins/Blockers/Dependencies/Todos parser
-(reading uploaded row data into those tables), the MoM parser, the Submit
-page UI, and the Compliance Board are not — those are later phases.
+Phase 3 (Storage + template downloads), Phase 4 (submission upload +
+authorization), and Phase 5 (deterministic checklist parser) are built.**
+The MoM parser, the checklist+MoM merge, the Submit page UI, and the
+Compliance Board are not — those are later phases.
 
 Rules that must not be violated in any future phase:
 - Compliance color is computed **on read** via SQL `compliance_state()`; never
@@ -184,6 +184,59 @@ Rules that must not be violated in any future phase:
   uploads, not rejected attempts. Flagged, not silently fixed — closing this
   gap means either a nullable FK or a separate attempts table, a schema
   decision beyond Phase 4's scope.
+- **The checklist parser (`lib/governance/parseChecklist.js`) runs
+  synchronously inside `POST /api/submissions`**, not as an async job — a
+  deliberate deviation from the spec's "Edge Function ... async" framing.
+  Work started after `res.json()` has no guarantee of completing on Vercel's
+  serverless runtime once the invocation ends, which would leave
+  `parse_status` stuck at `'pending'` forever with the failure surfaced
+  nowhere. A single checklist parses in milliseconds, so blocking the
+  response is not a real cost. `state` is unaffected by parse outcome either
+  way (invariant 2); only the response's `parse_status` now reports the real
+  `'done'`/`'failed'` result instead of always `'pending'`.
+- **Row content is validated, but a bad row is never an exception** — a bad
+  `priority`, an unparseable date, an unrecognized `win_category`, all
+  become one `unmapped_rows[]` entry with a specific error message and the
+  row is simply skipped. Only a genuine failure (can't open the workbook,
+  a database write fails) sets `parse_status = 'failed'`; that distinction
+  is the entire point of invariant 10's structure-vs-content split, and it's
+  what makes "one bad cell doesn't kill the upload" true without the parser
+  needing any special-case for it.
+- **Which columns are dates lives in `parser_profiles.sheets` too** (a
+  `dates: [...]` array per sheet, added in the `governance_09` migration) —
+  not inferred from a `_date`-suffix naming convention in code. Same reason
+  as `enums`/`columns`/`required`: a naming convention embedded in code is
+  exactly the kind of structural assumption invariant 11 exists to prevent.
+- **Only a native Excel date cell or an exact `YYYY-MM-DD` string is
+  accepted for a date column.** A string like `05/08/2026` is genuinely
+  ambiguous (5 Aug or Aug 5?) and is rejected with a message saying so, never
+  guessed — guessing wrong silently corrupts a real deadline.
+- **`wins.category` is validated against `win_categories` live** (`select
+  code where is_active`), never against a list in the profile or in code —
+  that table becoming a lookup table (see above) is what lets a new category
+  get added without touching the parser at all; hardcoding the values
+  anywhere in this parser would defeat that.
+- **A blank row stops the scan for that sheet** — rows after it are not
+  read, per the template's own README instruction
+  ("baris kosong di tengah — parser berhenti di situ"). This is deliberate,
+  not a bug: verified with a fixture row placed after the gap that must
+  never appear in the parsed output.
+- **Column order is never assumed** — Phase 4's structural check only
+  requires each expected column name to be *present* in a sheet's header
+  row, not in a specific position, so the parser resolves columns by name
+  from wherever they actually are.
+- `wins` gained an `impact` column (`governance_09` migration) — the Wins
+  sheet has always had this column (both in `parser_profiles.default` and
+  in the real `Checklist_AIRPAY_W32_v2.xlsx` sample), but the table never
+  did. Found by cross-checking every sheet column against its target
+  table's columns before writing the parser — worth repeating that check if
+  a profile's column list ever changes.
+- `fixtures/build-fixtures.js` regenerates the three test fixtures
+  (`sample_checklist_valid.xlsx`, `_broken.xlsx`, `_old_schema.xlsx`); run
+  it again if `parser_profiles.default`'s columns change, and `node
+  fixtures/test-parser.js` to check the parser against them. `_old_schema`
+  is tested against Phase 4's upload gate, not the parser — it must never
+  reach the parser at all, which is the fixture's entire point.
 
 ## Information architecture
 

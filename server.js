@@ -13,6 +13,7 @@ const {
   buildChecklistWorkbook, buildMomMarkdown, computePeriodEnd, checklistFileName, momFileName, isoWeek
 } = require('./lib/governance/buildTemplates');
 const { readSubmissionMeta, diffStructure } = require('./lib/governance/readSubmissionMeta');
+const { parseChecklistWorkbook } = require('./lib/governance/parseChecklist');
 const multer = require('multer');
 
 const app = express();
@@ -2776,6 +2777,72 @@ async function writeSubmissionEvents(submissionId, actorId, events) {
   await supabaseRequest('POST', 'submission_events', rows, 'return=minimal');
 }
 
+// wins.category is a lookup table specifically so new codes don't require a
+// parser/profile change (see CLAUDE.md) — the checklist parser must ask this
+// table live, never validate against a list baked into the profile or code.
+async function getActiveWinCategories() {
+  const rows = await supabaseRequest('GET', 'win_categories?is_active=eq.true&select=code');
+  return new Set((rows || []).map(r => r.code));
+}
+
+// Phase 5: deterministic checklist parsing, run synchronously as part of the
+// upload request rather than fired-and-forgotten afterward. The spec frames
+// this as an async Edge Function ("status UI langsung green, tidak menunggu
+// parsing selesai") — deliberately not followed here: on Vercel's serverless
+// runtime, work started after res.json() has no guarantee of running to
+// completion once the function's invocation ends, which would leave
+// parse_status stuck at 'pending' forever with no error surfaced anywhere.
+// A single small checklist parses in milliseconds, so blocking the response
+// is not a real UX cost. `state` is unaffected either way (invariant 2) —
+// only `parse_status` in the response reflects the real, synchronous result
+// instead of always reporting 'pending'.
+async function runChecklistParse(submission, projectKey, fileRow, buffer, parserProfile) {
+  try {
+    const winCategories = await getActiveWinCategories();
+    const { tableRows, unmappedRows, warnings, counts } = await parseChecklistWorkbook(buffer, parserProfile, winCategories);
+
+    const stamp = row => ({ ...row, submission_id: submission.id, project_key: projectKey, source: 'upload', source_kind: 'checklist' });
+    await Promise.all([
+      tableRows.wins.length ? supabaseRequest('POST', 'wins', tableRows.wins.map(stamp), 'return=minimal') : null,
+      tableRows.blockers.length ? supabaseRequest('POST', 'blockers', tableRows.blockers.map(stamp), 'return=minimal') : null,
+      tableRows.dependencies.length ? supabaseRequest('POST', 'dependencies', tableRows.dependencies.map(stamp), 'return=minimal') : null,
+      tableRows.todos.length ? supabaseRequest('POST', 'todos', tableRows.todos.map(stamp), 'return=minimal') : null
+    ].filter(Boolean));
+
+    // Shape matches spec §5.3. `counts_by_source` is scoped under `checklist`
+    // so Phase 6 can add a `mom` sibling when it exists, without this phase
+    // needing to know anything about that merge.
+    const analysis = {
+      schema_version: 1,
+      parse_method: 'column',
+      parsed_at: new Date().toISOString(),
+      source_format: 'xlsx',
+      files: [{ kind: 'checklist', name: fileRow.file_name, method: 'column' }],
+      counts,
+      counts_by_source: { checklist: counts },
+      unmapped_rows: unmappedRows,
+      warnings
+    };
+
+    await Promise.all([
+      supabaseRequest('PATCH', `submission_files?id=eq.${fileRow.id}`, { parse_status: 'done', parse_method: 'column' }, 'return=minimal'),
+      supabaseRequest('PATCH', `submissions?id=eq.${submission.id}`, { parse_status: 'done', analysis, parse_error: null }, 'return=minimal')
+    ]);
+    return { parse_status: 'done', counts, unmapped_rows: unmappedRows.length, warnings };
+  } catch (e) {
+    // A genuine failure here (not a bad cell — those are unmapped_rows, not
+    // exceptions) must never surface as a 5xx on the upload itself: the file
+    // is already stored and the submission already exists. Record the
+    // failure and let the caller still return 201 (green stays green).
+    console.error('checklist parse error:', e.message);
+    await Promise.all([
+      supabaseRequest('PATCH', `submission_files?id=eq.${fileRow.id}`, { parse_status: 'failed', parse_error: e.message }, 'return=minimal').catch(() => {}),
+      supabaseRequest('PATCH', `submissions?id=eq.${submission.id}`, { parse_status: 'failed', parse_error: e.message }, 'return=minimal').catch(() => {})
+    ]);
+    return { parse_status: 'failed', error: e.message };
+  }
+}
+
 app.post('/api/submissions', requireSupabase, (req, res, next) => {
   upload.single('file')(req, res, err => {
     if (err) return res.status(422).json({ error: 'file_too_large', message: 'File exceeds the 20MB limit.' });
@@ -2895,11 +2962,12 @@ app.post('/api/submissions', requireSupabase, (req, res, next) => {
     const safeName = sanitizeFilename(file.originalname);
     const objectPath = `${projectKey}/${periodType}/${periodStart}/${submissionId}__${safeName}`;
     await uploadToStorage(objectPath, file.buffer, file.mimetype);
-    const fileRow = await supabaseRequest('POST', 'submission_files', {
+    const createdFile = await supabaseRequest('POST', 'submission_files', {
       submission_id: submissionId, kind, file_path: objectPath, file_name: file.originalname,
       file_mime: file.mimetype, file_size: file.size, file_sha256: sha256,
       parse_method: null, parse_status: 'pending'
     });
+    const fileRow = Array.isArray(createdFile) ? createdFile[0] : createdFile;
 
     const events = [
       ['file_uploaded', 'ok', { file_name: file.originalname, size: file.size, kind }],
@@ -2913,9 +2981,20 @@ app.post('/api/submissions', requireSupabase, (req, res, next) => {
       events.push(['project_key_matched', 'info', { note: 'Not verifiable for .docx/.pdf — trusted from the authorized request.' }]);
     }
     if (mode === 'supersede') events.push(['superseded', 'warn', { previous_submission_id: existingSubmission.id }]);
+
+    // Checklist parsing (Phase 5) runs synchronously, right here — see the
+    // comment on runChecklistParse for why. MoM has no parser yet (Phase 6),
+    // so a mom upload's parse_status stays 'pending' as before.
+    let parseResult = { parse_status: 'pending' };
+    if (kind === 'checklist') {
+      parseResult = await runChecklistParse({ id: submissionId }, projectKey, fileRow, file.buffer, parserProfile);
+      events.push(parseResult.parse_status === 'done'
+        ? ['parse_finished', 'ok', { counts: parseResult.counts, unmapped_rows: parseResult.unmapped_rows }]
+        : ['parse_finished', 'error', { error: parseResult.error }]);
+    }
     await writeSubmissionEvents(submissionId, req.user.id, events);
 
-    res.status(201).json({ submission_id: submissionId, state: 'green', parse_status: 'pending', mode });
+    res.status(201).json({ submission_id: submissionId, state: 'green', parse_status: parseResult.parse_status, mode });
   } catch (e) {
     console.error('submissions upload error:', e.message);
     res.status(502).json({ error: e.message });
