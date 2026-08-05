@@ -105,7 +105,9 @@ Rules that must not be violated in any future phase:
   rows here vs. the 90 live ones `/project/search` returns) and has no
   `archived` filter.
 - **This is a separate concept from `ensureProjects()`/`cache.projects`.**
-  That system is a Jira-live, 8-category slice powering the Capacity/
+  That system is a Jira-live, 9-category slice (`TARGET_CATEGORIES` in
+  server.js — "SaaS Project" added 2026-08-05 alongside AIRPAY/RTM being
+  marked `is_tracked` for Governance) powering the Capacity/
   Timeline/Velocity selectors. Governance's `public.projects` table mirrors
   *all* Jira projects for compliance tracking. They deliberately don't share
   a cache, an endpoint, or a route prefix (`/api/governance/*` vs

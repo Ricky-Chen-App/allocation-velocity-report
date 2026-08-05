@@ -216,7 +216,7 @@ function requireAdmin(req, res, next) {
 // Target project categories — EXACT names (case-insensitive).
 // Jira renames (per 2026): "Product"→"Product OTT", "Project OTT"→"Project". + RnD.
 // "Team Product" sengaja TIDAK disertakan.
-const TARGET_CATEGORIES = ['VAS Project', 'Product OTT', 'Project', 'Platform Internal', 'QA', 'RnD', 'Pre Sales', 'Surat Sakit & Cepat Sehat'];
+const TARGET_CATEGORIES = ['VAS Project', 'Product OTT', 'Project', 'Platform Internal', 'QA', 'RnD', 'Pre Sales', 'Surat Sakit & Cepat Sehat', 'SaaS Project'];
 
 // Target user groups
 const TARGET_GROUPS = [
