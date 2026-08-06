@@ -1358,69 +1358,70 @@ app.get('/api/boards', async (req, res) => {
 });
 
 // ——— MEMBER PROFILES (jabatan + level) ———
-// On serverless the project FS is read-only; use /tmp (ephemeral — resets on
-// cold start). The repo's data/ copy is used as a read-only seed if present.
-const SEED_PROFILES_PATH = path.join(__dirname, 'data', 'member-profiles.json');
-const PROFILES_PATH = IS_SERVERLESS
-  ? path.join('/tmp', 'member-profiles.json')
-  : SEED_PROFILES_PATH;
-
-// In-memory copy so writes survive within a warm serverless instance
-let profilesMem = null;
-
-function readProfiles() {
-  if (profilesMem) return profilesMem;
-  for (const p of [PROFILES_PATH, SEED_PROFILES_PATH]) {
-    try { profilesMem = JSON.parse(fs.readFileSync(p, 'utf8')); return profilesMem; }
-    catch { /* try next */ }
-  }
-  profilesMem = {};
-  return profilesMem;
-}
-
-function writeProfiles(data) {
-  profilesMem = data;
-  try {
-    fs.mkdirSync(path.dirname(PROFILES_PATH), { recursive: true });
-    fs.writeFileSync(PROFILES_PATH, JSON.stringify(data, null, 2), 'utf8');
-  } catch (e) {
-    // Read-only FS on serverless — kept in memory only; logged, not fatal
-    console.warn('writeProfiles: could not persist to disk:', e.message);
-  }
-}
-
+// Backed by Supabase's member_profiles table, keyed by Jira accountId. This
+// used to be a JSON file (data/ locally, /tmp on Vercel) — on serverless
+// /tmp is per-instance and ephemeral, so edits silently vanished on the next
+// cold start. Moving it into Supabase is what actually makes "Save" durable.
 const JABATAN_LEVELS = {
-  CTO:   ['CTO'],
-  PM:    ['Project Manager', 'Senior PM', 'PM Lead'],
-  BA:    ['Junior BA', 'Business Analyst', 'Senior BA', 'BA Lead'],
-  QA:    ['Junior QA', 'QA Engineer', 'Senior QA', 'QA Lead'],
-  Dev:   ['Junior Developer', 'Developer', 'Mid Developer', 'Senior Developer', 'Lead Developer', 'Staff Engineer']
+  CTO:        ['CTO'],
+  PM:         ['Project Manager', 'Senior PM', 'PM Lead'],
+  BA:         ['Junior BA', 'Business Analyst', 'Senior BA', 'BA Lead'],
+  QA:         ['Junior QA', 'QA Engineer', 'Senior QA', 'QA Lead'],
+  Dev:        ['Junior Developer', 'Developer', 'Mid Developer', 'Senior Developer', 'Lead Developer', 'Staff Engineer'],
+  Specialist: ['AI Specialist', 'Data Analyst', 'Data Engineering', 'Other Specialist']
 };
 
-app.get('/api/member-profiles', (req, res) => {
-  res.json({ profiles: readProfiles(), jabatanLevels: JABATAN_LEVELS });
+function profileFromRow(row) {
+  return { accountId: row.account_id, displayName: row.display_name, jabatan: row.jabatan, level: row.level, updatedAt: row.updated_at };
+}
+
+app.get('/api/member-profiles', requireSupabase, async (req, res) => {
+  try {
+    const rows = await supabaseRequest('GET', 'member_profiles?select=*');
+    const profiles = {};
+    (rows || []).forEach(r => { profiles[r.account_id] = profileFromRow(r); });
+    res.json({ profiles, jabatanLevels: JABATAN_LEVELS });
+  } catch (e) {
+    sendSupabaseError(res, e, 'member-profiles');
+  }
 });
 
-app.put('/api/member-profiles/:accountId', (req, res) => {
+app.put('/api/member-profiles/:accountId', requireSupabase, async (req, res) => {
   const { accountId } = req.params;
   const { jabatan, level, displayName } = req.body;
   if (!jabatan || !JABATAN_LEVELS[jabatan]) return res.status(400).json({ error: 'Invalid jabatan' });
-  const profiles = readProfiles();
-  profiles[accountId] = { accountId, displayName, jabatan, level: level || JABATAN_LEVELS[jabatan][0], updatedAt: new Date().toISOString() };
-  writeProfiles(profiles);
-  res.json(profiles[accountId]);
+  try {
+    const updated = await supabaseRequest(
+      'POST',
+      'member_profiles?on_conflict=account_id&select=*',
+      [{
+        account_id: accountId, display_name: displayName, jabatan,
+        level: level || JABATAN_LEVELS[jabatan][0], updated_at: new Date().toISOString(), updated_by: req.user.id
+      }],
+      'resolution=merge-duplicates,return=representation'
+    );
+    res.json(profileFromRow(updated[0]));
+  } catch (e) {
+    sendSupabaseError(res, e, 'member-profiles');
+  }
 });
 
-app.post('/api/member-profiles/bulk', (req, res) => {
+app.post('/api/member-profiles/bulk', requireSupabase, async (req, res) => {
   const { updates } = req.body; // [{ accountId, displayName, jabatan, level }]
   if (!Array.isArray(updates)) return res.status(400).json({ error: 'updates must be array' });
-  const profiles = readProfiles();
-  for (const u of updates) {
-    if (!u.accountId || !JABATAN_LEVELS[u.jabatan]) continue;
-    profiles[u.accountId] = { accountId: u.accountId, displayName: u.displayName, jabatan: u.jabatan, level: u.level || JABATAN_LEVELS[u.jabatan][0], updatedAt: new Date().toISOString() };
+  const rows = updates
+    .filter(u => u.accountId && JABATAN_LEVELS[u.jabatan])
+    .map(u => ({
+      account_id: u.accountId, display_name: u.displayName, jabatan: u.jabatan,
+      level: u.level || JABATAN_LEVELS[u.jabatan][0], updated_at: new Date().toISOString(), updated_by: req.user.id
+    }));
+  if (!rows.length) return res.json({ updated: 0 });
+  try {
+    await supabaseRequest('POST', 'member_profiles?on_conflict=account_id', rows, 'resolution=merge-duplicates,return=minimal');
+    res.json({ updated: rows.length });
+  } catch (e) {
+    sendSupabaseError(res, e, 'member-profiles/bulk');
   }
-  writeProfiles(profiles);
-  res.json({ updated: Object.keys(profiles).length });
 });
 
 // ——— Generic node/edge canvas store (Structure Organization + Structure Project Team) ———
@@ -2536,10 +2537,16 @@ app.put('/api/governance/projects/:key/tracking', requireSupabase, requireAdmin,
 // on app_users: that column gates dashboard/submit *access*, while this is
 // just "who's on this project" metadata for the Settings page — someone can
 // be listed here without ever being granted app access, and vice versa.
-// Explicit FK hint (app_users!project_team_members_user_id_fkey) — the table
-// has two FKs into app_users (user_id and added_by), and PostgREST 400s on an
-// unqualified embed since it can't pick one on its own.
-const TEAM_MEMBER_SELECT = 'id,user_id,is_active,added_at,added_by,app_users!project_team_members_user_id_fkey(id,username,display_name,email,is_active)';
+// Members here are the Jira roster (STATE.members / GET /api/members — the
+// same "Team Members" page uses), identified by Jira accountId, NOT
+// app_users login accounts. Jira members aren't mirrored into a Supabase
+// table, so there's nothing to embed here — the client cross-references
+// member_account_id against its already-loaded members list for display.
+const TEAM_MEMBER_SELECT = 'id,member_account_id,is_active,added_at,added_by';
+// Jira accountIds look like "712020:<uuid>" or occasionally a bare token
+// (e.g. seed/test data) — loose but still injection-safe for use in a
+// PostgREST eq. filter and a URL path segment.
+const MEMBER_ACCOUNT_ID_RE = /^[A-Za-z0-9:_-]{1,100}$/;
 
 app.get('/api/governance/projects/:key/team', requireSupabase, requireAdmin, async (req, res) => {
   const key = req.params.key;
@@ -2553,21 +2560,23 @@ app.get('/api/governance/projects/:key/team', requireSupabase, requireAdmin, asy
   }
 });
 
-// Adds one or more app_users to a project's team. Already-assigned users are
-// silently skipped (idempotent) — the modal re-submits its whole current
-// selection on every save, so a repeat isn't an error. A user who has already
-// submitted for this project can still be added/removed here; this table
-// doesn't gate submission history, it's purely a roster.
+// Adds one or more Jira members to a project's team. Already-assigned
+// members are silently skipped (idempotent) — the modal re-submits its
+// whole current selection on every save, so a repeat isn't an error. A
+// member who has already submitted for this project can still be
+// added/removed here; this table doesn't gate submission history, it's
+// purely a roster.
 app.post('/api/governance/projects/:key/team', requireSupabase, requireAdmin, async (req, res) => {
   const key = req.params.key;
   if (!GOV_KEY_RE.test(key)) return res.status(400).json({ error: 'Invalid project key' });
-  const userIds = [...new Set(Array.isArray(req.body?.user_ids) ? req.body.user_ids : [])].filter(id => UUID_RE.test(id));
-  if (!userIds.length) return res.status(400).json({ error: 'user_ids must be a non-empty array of user ids' });
+  const memberIds = [...new Set(Array.isArray(req.body?.member_account_ids) ? req.body.member_account_ids : [])]
+    .filter(id => MEMBER_ACCOUNT_ID_RE.test(id));
+  if (!memberIds.length) return res.status(400).json({ error: 'member_account_ids must be a non-empty array of Jira account ids' });
   try {
-    const rows = userIds.map(user_id => ({ project_key: key, user_id, added_by: req.user.id }));
+    const rows = memberIds.map(member_account_id => ({ project_key: key, member_account_id, added_by: req.user.id }));
     const created = await supabaseRequest(
       'POST',
-      `project_team_members?on_conflict=project_key,user_id&select=${TEAM_MEMBER_SELECT}`,
+      `project_team_members?on_conflict=project_key,member_account_id&select=${TEAM_MEMBER_SELECT}`,
       rows,
       'resolution=ignore-duplicates,return=representation'
     );
@@ -2580,15 +2589,15 @@ app.post('/api/governance/projects/:key/team', requireSupabase, requireAdmin, as
 // Toggles one member's active flag. Rows are never deleted from here —
 // deactivating keeps added_at/added_by history intact instead of losing who
 // was on a project and when.
-app.put('/api/governance/projects/:key/team/:userId', requireSupabase, requireAdmin, async (req, res) => {
+app.put('/api/governance/projects/:key/team/:accountId', requireSupabase, requireAdmin, async (req, res) => {
   const key = req.params.key;
-  const userId = req.params.userId;
+  const accountId = req.params.accountId;
   if (!GOV_KEY_RE.test(key)) return res.status(400).json({ error: 'Invalid project key' });
-  if (!UUID_RE.test(userId)) return res.status(400).json({ error: 'Invalid user id' });
+  if (!MEMBER_ACCOUNT_ID_RE.test(accountId)) return res.status(400).json({ error: 'Invalid member account id' });
   try {
     const updated = await supabaseRequest(
       'PATCH',
-      `project_team_members?project_key=eq.${encodeURIComponent(key)}&user_id=eq.${userId}&select=${TEAM_MEMBER_SELECT}`,
+      `project_team_members?project_key=eq.${encodeURIComponent(key)}&member_account_id=eq.${encodeURIComponent(accountId)}&select=${TEAM_MEMBER_SELECT}`,
       { is_active: req.body?.is_active === true }
     );
     if (!updated || !updated.length) return res.status(404).json({ error: 'Not a team member of this project' });

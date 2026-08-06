@@ -27,6 +27,7 @@
   /* —— Project / secondary violet —— */
   --violet-600:oklch(0.48 0.18 300);--violet-500:oklch(0.55 0.19 300);--violet-400:oklch(0.62 0.20 300);--violet-100:oklch(0.91 0.06 300);--violet-50:oklch(0.96 0.03 300);
   --teal-600:oklch(0.50 0.09 198);--teal-500:oklch(0.60 0.11 196);--teal-400:oklch(0.72 0.12 195);--teal-100:oklch(0.91 0.05 196);--teal-50:oklch(0.96 0.025 196);
+  --pink-600:oklch(0.52 0.19 350);--pink-500:oklch(0.60 0.20 350);--pink-400:oklch(0.68 0.19 350);--pink-100:oklch(0.90 0.07 350);--pink-50:oklch(0.96 0.03 350);
   /* —— Momentum extras: warm canvas bg, deep plum sidebar, gradient accent —— */
   --bg:oklch(0.984 0.012 75);--surface-2:oklch(0.975 0.01 75);
   --side:oklch(0.23 0.04 295);--side-2:oklch(0.28 0.045 295);--side-deep:oklch(0.20 0.04 298);
@@ -465,6 +466,17 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .j-BA{background:var(--teal-50);color:var(--teal-700)}
 .j-QA{background:var(--green-50);color:var(--green-700)}
 .j-Dev{background:var(--blue-50);color:var(--blue-700)}
+.j-Specialist{background:var(--pink-50);color:var(--pink-600)}
+.members-th-sort{cursor:pointer;user-select:none;white-space:nowrap}
+.members-th-sort:hover{color:var(--ink-800)}
+.members-th-sort .sort-arrow{display:inline-block;margin-left:3px;color:var(--ink-300);font-size:9px}
+.members-th-sort.active .sort-arrow{color:var(--accent)}
+.members-pagination{display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid var(--ink-100);background:var(--ink-0)}
+.members-pagination .mp-info{font-size:11.5px;color:var(--ink-400)}
+.members-pagination .mp-pages{display:flex;align-items:center;gap:6px;margin-left:auto}
+.mp-btn{padding:5px 11px;border:1px solid var(--ink-200);border-radius:var(--radius-sm);background:var(--ink-0);color:var(--ink-700);font-size:11.5px;font-family:var(--font-body);cursor:pointer;transition:background var(--transition)}
+.mp-btn:hover:not(:disabled){background:var(--ink-50)}
+.mp-btn:disabled{opacity:.4;cursor:not-allowed}
 .save-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:var(--radius-sm);font-size:11.5px;font-weight:500;cursor:pointer;border:1px solid var(--blue-200);background:var(--blue-50);color:var(--blue-700);font-family:var(--font-body);transition:all var(--transition)}
 .save-btn:hover{background:var(--blue-100)}
 .save-btn.saved{background:var(--green-50);border-color:var(--green-200);color:var(--green-700)}
@@ -1576,19 +1588,20 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
       </div>
 
       <!-- Stats bar — reactive, updates live as jabatan dipilih (tanpa perlu Save) -->
-      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;padding:16px 32px 0" id="jabatan-stats">
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:12px;padding:16px 32px 0" id="jabatan-stats">
         <div class="sync-stat"><div class="ss-label">CTO</div><div class="ss-val" id="stat-CTO">—</div></div>
         <div class="sync-stat"><div class="ss-label">PM</div><div class="ss-val" id="stat-PM">—</div></div>
         <div class="sync-stat"><div class="ss-label">BA</div><div class="ss-val" id="stat-BA">—</div></div>
         <div class="sync-stat"><div class="ss-label">QA</div><div class="ss-val" id="stat-QA">—</div></div>
         <div class="sync-stat"><div class="ss-label">Developer</div><div class="ss-val" id="stat-Dev">—</div></div>
+        <div class="sync-stat"><div class="ss-label">Specialist</div><div class="ss-val" id="stat-Specialist">—</div></div>
         <div class="sync-stat" style="background:var(--ink-50)"><div class="ss-label" style="color:var(--ink-400)">Not set</div><div class="ss-val" id="stat-unset" style="color:var(--ink-400)">—</div></div>
       </div>
 
       <div class="members-toolbar">
         <div class="search-input" style="max-width:260px">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5"/></svg>
-          <input type="text" id="members-search" placeholder="Search name or email…" oninput="filterMembersTable()">
+          <input type="text" id="members-search" placeholder="Search name…" oninput="filterMembersTable()">
         </div>
         <select class="select-filter" id="members-group-filter" onchange="filterMembersTable()">
           <option value="">All Groups</option>
@@ -1604,7 +1617,7 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
         </select>
         <select class="select-filter" id="members-jabatan-filter" onchange="filterMembersTable()">
           <option value="">All Positions</option>
-          <option>CTO</option><option>PM</option><option>BA</option><option>QA</option><option>Dev</option>
+          <option>CTO</option><option>PM</option><option>BA</option><option>QA</option><option>Dev</option><option>Specialist</option>
           <option value="unset">Not set</option>
         </select>
         <select class="select-filter" id="members-workload-filter" onchange="filterMembersTable()">
@@ -1614,7 +1627,16 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
           <option value="low">Rendah (30–70%)</option>
           <option value="idle">Inactive (&lt;30%)</option>
         </select>
-        <span style="font-size:11.5px;color:var(--ink-400);margin-left:auto" id="members-count-label"></span>
+        <span style="display:flex;align-items:center;gap:6px;margin-left:auto;font-size:11.5px;color:var(--ink-400)">
+          Show
+          <select class="select-filter" id="members-page-size" onchange="changeMembersPageSize(this.value)">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+          per page
+        </span>
       </div>
 
       <div class="members-table-wrap">
@@ -1622,20 +1644,20 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
           <thead>
             <tr>
               <th style="width:44px">#</th>
-              <th style="width:240px">Name</th>
-              <th>Group / Team</th>
-              <th>Email</th>
-              <th>Position</th>
-              <th>Level</th>
-              <th style="width:130px">Workload ↓</th>
+              <th style="width:240px" class="members-th-sort" data-key="displayName" onclick="sortMembersBy('displayName')">Name<span class="sort-arrow"></span></th>
+              <th class="members-th-sort" data-key="group" onclick="sortMembersBy('group')">Group / Team<span class="sort-arrow"></span></th>
+              <th class="members-th-sort" data-key="jabatan" onclick="sortMembersBy('jabatan')">Position<span class="sort-arrow"></span></th>
+              <th class="members-th-sort" data-key="level" onclick="sortMembersBy('level')">Level<span class="sort-arrow"></span></th>
+              <th style="width:130px" class="members-th-sort" data-key="utilization" onclick="sortMembersBy('utilization')">Workload<span class="sort-arrow"></span></th>
               <th style="width:110px">Status</th>
               <th style="width:100px">Aksi</th>
             </tr>
           </thead>
           <tbody id="members-tbody">
-            <tr><td colspan="9" style="padding:40px;text-align:center;color:var(--ink-400)">Loading members…</td></tr>
+            <tr><td colspan="8" style="padding:40px;text-align:center;color:var(--ink-400)">Loading members…</td></tr>
           </tbody>
         </table>
+        <div class="members-pagination" id="members-pagination"></div>
       </div>
     </div>
 
@@ -2616,7 +2638,6 @@ const GOV = {
   teamId: '',       // '' = all teams
   showInactive: false,
   busy: false,
-  allUsers: null,   // cached GET /api/users, shared across every team-edit modal open
   team: null        // { key, name, members, error, busy, addError } while the team modal is open
 };
 
@@ -2816,10 +2837,15 @@ async function govSyncProjects() {
 }
 
 // ——— Governance Settings: per-project team members modal ———
-// GOV.allUsers is the full app_users roster (not filtered by is_active or by
-// allowed_project_keys) — someone who's inactive or who already submitted for
-// this project can still be picked, same as User Management's project picker
-// doesn't hide anyone either.
+// Candidates come from the "Team Members" roster (STATE.members — the same
+// Jira-synced list that page uses, keyed by Jira accountId), NOT
+// /api/users — that's the small set of app login accounts, a different
+// identity system entirely. Someone who's already submitted for this
+// project can still be picked; this table is just a roster, not a gate.
+function govMemberById(accountId) {
+  return (STATE.members || []).find(m => m.accountId === accountId) || null;
+}
+
 async function govOpenTeamModal(key) {
   const p = govFindProject(key);
   GOV.team = { key, members: null, error: null, busy: false, addError: null };
@@ -2830,7 +2856,7 @@ async function govOpenTeamModal(key) {
   try {
     const [members] = await Promise.all([
       api(`/api/governance/projects/${encodeURIComponent(key)}/team`),
-      GOV.allUsers ? Promise.resolve() : api('/api/users').then(u => { GOV.allUsers = u; })
+      STATE.members?.length ? Promise.resolve() : api('/api/members').then(m => { STATE.members = m; })
     ]);
     if (!GOV.team || GOV.team.key !== key) return; // modal was closed/reopened while this was in flight
     GOV.team.members = members;
@@ -2846,17 +2872,17 @@ function govCloseTeamModal() {
 }
 
 function govTeamMemberRowHtml(m) {
-  const u = m.app_users || {};
-  const name = govEsc(u.display_name || u.username || '(deleted user)');
-  const sub = [u.email || u.username || '', u.is_active === false ? 'account inactive' : ''].filter(Boolean).join(' · ');
+  const u = govMemberById(m.member_account_id);
+  const name = govEsc(u ? u.displayName : '(unknown member)');
+  const group = govEsc((u?.groups?.[0] || '').replace(' Developer', '').replace(' Team', ''));
   return `<div class="ov-modal-row" style="cursor:default;justify-content:space-between">
     <div style="min-width:0;overflow:hidden">
       <div style="font-weight:600;color:var(--ink-800);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
-      <div style="font-size:11px;color:var(--ink-400);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${govEsc(sub)}</div>
+      <div style="font-size:11px;color:var(--ink-400);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${group || '—'}</div>
     </div>
     <label class="um-check" style="flex-shrink:0">
       <input type="checkbox" ${m.is_active ? 'checked' : ''} ${GOV.team.busy ? 'disabled' : ''}
-             onchange="govToggleTeamMember('${govEsc(m.user_id)}', this.checked)">
+             onchange="govToggleTeamMember('${govEsc(m.member_account_id)}', this.checked)">
       <span>Active</span>
     </label>
   </div>`;
@@ -2870,7 +2896,7 @@ function renderGovTeamModal() {
     body.innerHTML = emptyState({ icon: '⚠️', title: 'Could not load team', description: t.error });
     return;
   }
-  if (!t.members || !GOV.allUsers) {
+  if (!t.members || !STATE.members) {
     body.innerHTML = emptyState({ icon: '👥', title: 'Loading team…', description: '' });
     return;
   }
@@ -2879,13 +2905,13 @@ function renderGovTeamModal() {
     ? t.members.map(govTeamMemberRowHtml).join('')
     : `<div style="padding:14px 2px;color:var(--ink-400);font-size:12px">No one assigned yet — add someone below.</div>`;
 
-  const assignedIds = new Set(t.members.map(m => m.user_id));
-  const candidates = GOV.allUsers.filter(u => !assignedIds.has(u.id));
+  const assignedIds = new Set(t.members.map(m => m.member_account_id));
+  const candidates = STATE.members.filter(u => !assignedIds.has(u.accountId));
   const pickerRows = candidates.length
     ? candidates.map(u => `
         <label class="um-check">
-          <input type="checkbox" class="gov-team-add" value="${govEsc(u.id)}">
-          <span>${govEsc(u.display_name || u.username)} <span style="color:var(--ink-400);font-size:10.5px">${govEsc(u.username)}</span></span>
+          <input type="checkbox" class="gov-team-add" value="${govEsc(u.accountId)}">
+          <span>${govEsc(u.displayName)} <span style="color:var(--ink-400);font-size:10.5px">${govEsc((u.groups?.[0] || '').replace(' Developer', '').replace(' Team', ''))}</span></span>
         </label>`).join('')
     : `<div style="color:var(--ink-400);font-size:12px;padding:2px">Everyone is already on this team.</div>`;
 
@@ -2908,20 +2934,20 @@ function renderGovTeamModal() {
     </div>`;
 }
 
-async function govToggleTeamMember(userId, checked) {
+async function govToggleTeamMember(accountId, checked) {
   const t = GOV.team;
   if (!t) return;
   t.busy = true;
   renderGovTeamModal();
   try {
-    const r = await fetch(`/api/governance/projects/${encodeURIComponent(t.key)}/team/${userId}`, {
+    const r = await fetch(`/api/governance/projects/${encodeURIComponent(t.key)}/team/${encodeURIComponent(accountId)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_active: checked })
     });
     const json = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(json.error || `HTTP ${r.status}`);
-    const m = t.members.find(x => x.user_id === userId);
+    const m = t.members.find(x => x.member_account_id === accountId);
     if (m) Object.assign(m, json);
   } catch (e) {
     showError(`Could not update member: ${e.message}`);
@@ -2943,7 +2969,7 @@ async function govAddTeamMembers() {
     const r = await fetch(`/api/governance/projects/${encodeURIComponent(t.key)}/team`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_ids: ids })
+      body: JSON.stringify({ member_account_ids: ids })
     });
     const json = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(json.error || `HTTP ${r.status}`);
@@ -6380,7 +6406,8 @@ document.addEventListener('mousemove', e => {
 });
 
 // ======== MEMBERS ========
-let membersData = { all: [], profiles: {}, jabatanLevels: {}, dirty: {} };
+let membersData = { all: [], profiles: {}, jabatanLevels: {}, dirty: {}, sort: { key: 'utilization', dir: 'desc' }, page: 1, pageSize: 10 };
+const JABATAN_LIST = ['CTO', 'PM', 'BA', 'QA', 'Dev', 'Specialist'];
 
 // Utilization per member from capacity data (null if not loaded yet)
 function getMemberUtil(accountId) {
@@ -6418,11 +6445,10 @@ async function loadMembersPage() {
       ...(membersData.profiles[m.accountId] || {}),
       utilization: getMemberUtil(m.accountId)
     }));
-    // 3b. Sort default: utilization DESC (overloaded di atas)
-    membersData.all.sort((a, b) => (b.utilization ?? -1) - (a.utilization ?? -1));
     STATE.memberProfiles = membersData.profiles;
+    membersData.page = 1;
     updateJabatanStats();
-    renderMembersTable(membersData.all);
+    renderMembersPage();
   } catch(e) {
     showError('Failed to load members: ' + e.message);
   } finally {
@@ -6431,7 +6457,7 @@ async function loadMembersPage() {
 }
 
 function updateJabatanStats() {
-  const counts = { CTO:0, PM:0, BA:0, QA:0, Dev:0 };
+  const counts = { CTO:0, PM:0, BA:0, QA:0, Dev:0, Specialist:0 };
   let unset = 0;
   for (const m of membersData.all) {
     if (m.jabatan && counts[m.jabatan] !== undefined) counts[m.jabatan]++;
@@ -6445,23 +6471,126 @@ function updateJabatanStats() {
   if (unsetEl) unsetEl.textContent = unset || '—';
 }
 
-function renderMembersTable(members) {
-  document.getElementById('members-count-label').textContent = `${members.length} members shown`;
-  const JABATAN_LIST = ['CTO','PM','BA','QA','Dev'];
+// Filter (search/group/position/workload) + sort — the single source both
+// the table and the pagination bar render from, so page count always
+// matches what's actually shown.
+function getFilteredSortedMembers() {
+  const q       = document.getElementById('members-search')?.value.toLowerCase() || '';
+  const grp     = document.getElementById('members-group-filter')?.value || '';
+  const jabatan = document.getElementById('members-jabatan-filter')?.value || '';
+  const wl      = document.getElementById('members-workload-filter')?.value || '';
 
-  document.getElementById('members-tbody').innerHTML = members.map((m, i) => {
+  const filtered = membersData.all.filter(m => {
+    if (q && !m.displayName?.toLowerCase().includes(q)) return false;
+    if (grp && !m.groups?.includes(grp)) return false;
+    if (jabatan === 'unset' && m.jabatan) return false;
+    if (jabatan && jabatan !== 'unset' && m.jabatan !== jabatan) return false;
+    if (wl) {
+      const u = m.utilization ?? 0;
+      if (wl === 'overloaded' && !(u > 100)) return false;
+      if (wl === 'normal'     && !(u >= 70 && u <= 100)) return false;
+      if (wl === 'low'        && !(u >= 30 && u < 70)) return false;
+      if (wl === 'idle'       && !(u < 30)) return false;
+    }
+    return true;
+  });
+
+  const { key, dir } = membersData.sort;
+  const mult = dir === 'asc' ? 1 : -1;
+  filtered.sort((a, b) => {
+    if (key === 'utilization') return ((a.utilization ?? -1) - (b.utilization ?? -1)) * mult;
+    const av = (key === 'group' ? (a.groups?.[0] || '') : (a[key] || '')).toString().toLowerCase();
+    const bv = (key === 'group' ? (b.groups?.[0] || '') : (b[key] || '')).toString().toLowerCase();
+    if (av < bv) return -1 * mult;
+    if (av > bv) return 1 * mult;
+    return 0;
+  });
+  return filtered;
+}
+
+// Any filter change or sort click resets to page 1 — the "N members shown"
+// count would otherwise silently disagree with what's on screen.
+function filterMembersTable() {
+  membersData.page = 1;
+  renderMembersPage();
+}
+
+function sortMembersBy(key) {
+  if (membersData.sort.key === key) {
+    membersData.sort.dir = membersData.sort.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    membersData.sort = { key, dir: key === 'utilization' ? 'desc' : 'asc' };
+  }
+  membersData.page = 1;
+  renderMembersPage();
+}
+
+function changeMembersPageSize(v) {
+  membersData.pageSize = parseInt(v, 10) || 10;
+  membersData.page = 1;
+  renderMembersPage();
+}
+
+function goToMembersPage(n) {
+  membersData.page = n;
+  renderMembersPage();
+}
+
+function updateSortHeaders() {
+  document.querySelectorAll('#members-table .members-th-sort').forEach(th => {
+    const active = th.dataset.key === membersData.sort.key;
+    th.classList.toggle('active', active);
+    const arrow = th.querySelector('.sort-arrow');
+    if (arrow) arrow.textContent = active ? (membersData.sort.dir === 'asc' ? '▲' : '▼') : '';
+  });
+}
+
+function renderMembersPage() {
+  const filtered = getFilteredSortedMembers();
+  const totalPages = Math.max(1, Math.ceil(filtered.length / membersData.pageSize));
+  if (membersData.page > totalPages) membersData.page = totalPages;
+  const start = (membersData.page - 1) * membersData.pageSize;
+  updateSortHeaders();
+  renderMembersTable(filtered.slice(start, start + membersData.pageSize), start);
+  renderMembersPagination(filtered.length, totalPages, start);
+}
+
+function renderMembersPagination(total, totalPages, start) {
+  const el = document.getElementById('members-pagination');
+  if (!el) return;
+  if (!total) {
+    el.innerHTML = `<span class="mp-info">No members match this filter</span>`;
+    return;
+  }
+  const shownTo = Math.min(start + membersData.pageSize, total);
+  const page = membersData.page;
+  // Compact page-number window (max 5) so the bar doesn't sprawl when there
+  // are many pages — same idea as most admin table paginators.
+  const windowStart = Math.max(1, Math.min(page - 2, totalPages - 4));
+  const windowEnd   = Math.min(totalPages, windowStart + 4);
+  let pageBtns = '';
+  for (let p = windowStart; p <= windowEnd; p++) {
+    pageBtns += `<button class="mp-btn" ${p === page ? 'disabled style="background:var(--accent);color:#fff;border-color:var(--accent)"' : ''} onclick="goToMembersPage(${p})">${p}</button>`;
+  }
+  el.innerHTML = `
+    <span class="mp-info">Showing ${start + 1}–${shownTo} of ${total} members</span>
+    <div class="mp-pages">
+      <button class="mp-btn" ${page <= 1 ? 'disabled' : ''} onclick="goToMembersPage(${page - 1})">‹ Prev</button>
+      ${pageBtns}
+      <button class="mp-btn" ${page >= totalPages ? 'disabled' : ''} onclick="goToMembersPage(${page + 1})">Next ›</button>
+    </div>`;
+}
+
+function renderMembersTable(members, startIndex) {
+  document.getElementById('members-tbody').innerHTML = members.length ? members.map((m, i) => {
     const gc = GROUP_COLORS[m.groups?.[0]] || { bg:'var(--blue-50)', color:'var(--blue-700)' };
     const initials = m.displayName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
     const jabatan  = m.jabatan || '';
     const level    = m.level   || '';
     const levels   = jabatan ? (membersData.jabatanLevels[jabatan] || []) : [];
 
-    const jabBadge = jabatan
-      ? `<span class="jabatan-badge j-${jabatan}">${jabatan}</span>`
-      : `<span style="font-size:11px;color:var(--ink-300)">Not set</span>`;
-
     return `<tr id="mrow-${m.accountId}">
-      <td style="color:var(--ink-400);font-size:12px">${i+1}</td>
+      <td style="color:var(--ink-400);font-size:12px">${startIndex + i + 1}</td>
       <td>
         <div style="display:flex;align-items:center;gap:8px">
           <div class="dev-init" style="background:${gc.bg};color:${gc.color}">${initials}</div>
@@ -6476,7 +6605,6 @@ function renderMembersTable(members) {
           ${(m.groups?.[0] || '').replace(' Developer','').replace(' Team','')}
         </span>
       </td>
-      <td style="font-size:11.5px;color:var(--ink-500)">${m.emailAddress || '—'}</td>
       <td>
         <select class="jabatan-select" data-id="${m.accountId}" onchange="onJabatanChange(this)">
           <option value="">— Select —</option>
@@ -6499,7 +6627,7 @@ function renderMembersTable(members) {
         </button>
       </td>
     </tr>`;
-  }).join('');
+  }).join('') : `<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--ink-400)">No members match this filter</td></tr>`;
 }
 
 function onJabatanChange(sel) {
@@ -6531,22 +6659,21 @@ function onLevelChange(accountId, level) {
 }
 
 async function saveSingleProfile(accountId) {
-  const jabSel = document.querySelector(`.jabatan-select[data-id="${accountId}"]`);
-  const lvlSel = document.getElementById('lvl-' + accountId);
-  const btn    = document.getElementById('sbtn-' + accountId);
-  const m      = membersData.all.find(x => x.accountId === accountId);
-  if (!jabSel?.value) return alert('Select a position first');
+  const btn = document.getElementById('sbtn-' + accountId);
+  const m   = membersData.all.find(x => x.accountId === accountId);
+  if (!m?.jabatan) return alert('Select a position first');
 
   btn.textContent = 'Menyimpan…'; btn.disabled = true;
   try {
     await fetch(`/api/member-profiles/${accountId}`, {
       method: 'PUT',
       headers: { 'Content-Type':'application/json' },
-      body: JSON.stringify({ jabatan: jabSel.value, level: lvlSel.value, displayName: m?.displayName })
+      body: JSON.stringify({ jabatan: m.jabatan, level: m.level, displayName: m.displayName })
     });
-    membersData.profiles[accountId] = { jabatan: jabSel.value, level: lvlSel.value };
+    membersData.profiles[accountId] = { jabatan: m.jabatan, level: m.level };
     STATE.memberProfiles = membersData.profiles;
     delete membersData.dirty[accountId];
+    if (!Object.keys(membersData.dirty).length) document.getElementById('bulk-save-btn').style.display = 'none';
     btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l4 4 6-7"/></svg> Tersimpan`;
     btn.classList.add('saved');
     setTimeout(() => { btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l4 4 6-7"/></svg> Save`; btn.classList.remove('saved'); btn.disabled = false; }, 2000);
@@ -6555,7 +6682,7 @@ async function saveSingleProfile(accountId) {
     const row = document.getElementById('mrow-' + accountId);
     if (row) {
       const sub = row.querySelector('.dev-init + div > div:last-child');
-      if (sub) sub.textContent = lvlSel.value;
+      if (sub) sub.textContent = m.level;
     }
   } catch(e) {
     alert('Failed to save: ' + e.message);
@@ -6563,17 +6690,19 @@ async function saveSingleProfile(accountId) {
   }
 }
 
+// Reads pending edits from membersData.all (kept in sync by onJabatanChange/
+// onLevelChange) rather than querying the DOM — with pagination, a row
+// edited on page 1 no longer exists in the DOM once the user moves to page
+// 2, so a dirty accountId's <select> may not be mounted when this runs.
 async function saveAllProfiles() {
   const dirtyIds = Object.keys(membersData.dirty);
   if (!dirtyIds.length) return;
   showLoading('Saving all changes…');
   try {
-    const updates = dirtyIds.map(id => {
-      const jabSel = document.querySelector(`.jabatan-select[data-id="${id}"]`);
-      const lvlSel = document.getElementById('lvl-' + id);
-      const m      = membersData.all.find(x => x.accountId === id);
-      return { accountId: id, displayName: m?.displayName, jabatan: jabSel?.value, level: lvlSel?.value };
-    }).filter(u => u.jabatan);
+    const updates = dirtyIds
+      .map(id => membersData.all.find(x => x.accountId === id))
+      .filter(m => m?.jabatan)
+      .map(m => ({ accountId: m.accountId, displayName: m.displayName, jabatan: m.jabatan, level: m.level }));
     await fetch('/api/member-profiles/bulk', {
       method: 'POST',
       headers: { 'Content-Type':'application/json' },
@@ -6592,29 +6721,6 @@ async function saveAllProfiles() {
   } finally {
     hideLoading();
   }
-}
-
-function filterMembersTable() {
-  const q       = document.getElementById('members-search').value.toLowerCase();
-  const grp     = document.getElementById('members-group-filter').value;
-  const jabatan = document.getElementById('members-jabatan-filter').value;
-  const wl      = document.getElementById('members-workload-filter')?.value || '';
-
-  const filtered = membersData.all.filter(m => {
-    if (q && !m.displayName?.toLowerCase().includes(q) && !m.emailAddress?.toLowerCase().includes(q)) return false;
-    if (grp && !m.groups?.includes(grp)) return false;
-    if (jabatan === 'unset' && m.jabatan) return false;
-    if (jabatan && jabatan !== 'unset' && m.jabatan !== jabatan) return false;
-    if (wl) {
-      const u = m.utilization ?? 0;
-      if (wl === 'overloaded' && !(u > 100)) return false;
-      if (wl === 'normal'     && !(u >= 70 && u <= 100)) return false;
-      if (wl === 'low'        && !(u >= 30 && u < 70)) return false;
-      if (wl === 'idle'       && !(u < 30)) return false;
-    }
-    return true;
-  });
-  renderMembersTable(filtered);
 }
 
 function exportMembersCSV() {
