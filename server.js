@@ -2116,7 +2116,7 @@ const NAV_IDS = [
   'members', 'jirasync', 'usermgmt',
   'orgchart', 'projectteam',
   'airpay-summary', 'airpay-detail',
-  'gov-settings'
+  'gov-submit', 'gov-board', 'gov-settings'
 ];
 const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{2,31}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
