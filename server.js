@@ -1368,7 +1368,9 @@ const JABATAN_LEVELS = {
   BA:         ['Junior BA', 'Business Analyst', 'Senior BA', 'BA Lead'],
   QA:         ['Junior QA', 'QA Engineer', 'Senior QA', 'QA Lead'],
   Dev:        ['Junior Developer', 'Developer', 'Mid Developer', 'Senior Developer', 'Lead Developer', 'Staff Engineer'],
-  Specialist: ['AI Specialist', 'Data Analyst', 'Data Engineering', 'Other Specialist']
+  Specialist: ['AI Specialist', 'Data Analyst', 'Data Engineering', 'Other Specialist'],
+  // No preset list — the level is a free-text field the admin fills in by hand.
+  Other:      []
 };
 
 function profileFromRow(row) {
@@ -1396,7 +1398,7 @@ app.put('/api/member-profiles/:accountId', requireSupabase, async (req, res) => 
       'member_profiles?on_conflict=account_id&select=*',
       [{
         account_id: accountId, display_name: displayName, jabatan,
-        level: level || JABATAN_LEVELS[jabatan][0], updated_at: new Date().toISOString(), updated_by: req.user.id
+        level: level || JABATAN_LEVELS[jabatan][0] || null, updated_at: new Date().toISOString(), updated_by: req.user.id
       }],
       'resolution=merge-duplicates,return=representation'
     );
@@ -1413,7 +1415,7 @@ app.post('/api/member-profiles/bulk', requireSupabase, async (req, res) => {
     .filter(u => u.accountId && JABATAN_LEVELS[u.jabatan])
     .map(u => ({
       account_id: u.accountId, display_name: u.displayName, jabatan: u.jabatan,
-      level: u.level || JABATAN_LEVELS[u.jabatan][0], updated_at: new Date().toISOString(), updated_by: req.user.id
+      level: u.level || JABATAN_LEVELS[u.jabatan][0] || null, updated_at: new Date().toISOString(), updated_by: req.user.id
     }));
   if (!rows.length) return res.json({ updated: 0 });
   try {
