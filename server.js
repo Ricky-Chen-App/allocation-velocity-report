@@ -2460,6 +2460,21 @@ app.get('/api/governance/projects', requireSupabase, async (req, res) => {
     if (req.query.tracked === 'false') params.push('is_tracked=eq.false');
     if (req.query.active !== 'all') params.push('is_active=eq.true'); // default: hide inactive
     if (req.query.team_id) params.push(`team_id=eq.${encodeURIComponent(req.query.team_id)}`);
+    // Governance Settings scopes its list to the same 9 categories the
+    // Dashboard menus use (TARGET_CATEGORIES), rather than every category
+    // Jira happens to have — a deliberate product decision (2026-08-05) to
+    // keep the compliance-tracking list focused on categories the rest of
+    // the app already treats as "real" projects. Governance's own
+    // `projects` table still mirrors ALL of Jira underneath; this only
+    // narrows what this particular list endpoint call returns.
+    if (req.query.categories === 'dashboard') {
+      // The whole in.(...) value must be URL-encoded as one unit — several
+      // category names contain "&" (e.g. "Surat Sakit & Cepat Sehat"),
+      // which otherwise gets read as a query-string separator and corrupts
+      // the filter before PostgREST ever sees it.
+      const catList = TARGET_CATEGORIES.map(c => `"${c}"`).join(',');
+      params.push(`category=${encodeURIComponent(`in.(${catList})`)}`);
+    }
     if (req.query.q) {
       // Strip characters PostgREST's or() filter treats as syntax (commas,
       // parens) so a stray character in a search box can't produce a
@@ -2513,6 +2528,73 @@ app.put('/api/governance/projects/:key/tracking', requireSupabase, requireAdmin,
     res.json(updated[0]);
   } catch (e) {
     sendSupabaseError(res, e, 'governance/projects/tracking');
+  }
+});
+
+// ——— Governance — per-project team members (Settings "Edit" button) ———
+// Membership lives in its own table rather than reusing allowed_project_keys
+// on app_users: that column gates dashboard/submit *access*, while this is
+// just "who's on this project" metadata for the Settings page — someone can
+// be listed here without ever being granted app access, and vice versa.
+// Explicit FK hint (app_users!project_team_members_user_id_fkey) — the table
+// has two FKs into app_users (user_id and added_by), and PostgREST 400s on an
+// unqualified embed since it can't pick one on its own.
+const TEAM_MEMBER_SELECT = 'id,user_id,is_active,added_at,added_by,app_users!project_team_members_user_id_fkey(id,username,display_name,email,is_active)';
+
+app.get('/api/governance/projects/:key/team', requireSupabase, requireAdmin, async (req, res) => {
+  const key = req.params.key;
+  if (!GOV_KEY_RE.test(key)) return res.status(400).json({ error: 'Invalid project key' });
+  try {
+    const rows = await supabaseRequest('GET',
+      `project_team_members?project_key=eq.${encodeURIComponent(key)}&select=${TEAM_MEMBER_SELECT}&order=added_at.asc`);
+    res.json(rows);
+  } catch (e) {
+    sendSupabaseError(res, e, 'governance/projects/team');
+  }
+});
+
+// Adds one or more app_users to a project's team. Already-assigned users are
+// silently skipped (idempotent) — the modal re-submits its whole current
+// selection on every save, so a repeat isn't an error. A user who has already
+// submitted for this project can still be added/removed here; this table
+// doesn't gate submission history, it's purely a roster.
+app.post('/api/governance/projects/:key/team', requireSupabase, requireAdmin, async (req, res) => {
+  const key = req.params.key;
+  if (!GOV_KEY_RE.test(key)) return res.status(400).json({ error: 'Invalid project key' });
+  const userIds = [...new Set(Array.isArray(req.body?.user_ids) ? req.body.user_ids : [])].filter(id => UUID_RE.test(id));
+  if (!userIds.length) return res.status(400).json({ error: 'user_ids must be a non-empty array of user ids' });
+  try {
+    const rows = userIds.map(user_id => ({ project_key: key, user_id, added_by: req.user.id }));
+    const created = await supabaseRequest(
+      'POST',
+      `project_team_members?on_conflict=project_key,user_id&select=${TEAM_MEMBER_SELECT}`,
+      rows,
+      'resolution=ignore-duplicates,return=representation'
+    );
+    res.status(201).json(created);
+  } catch (e) {
+    sendSupabaseError(res, e, 'governance/projects/team');
+  }
+});
+
+// Toggles one member's active flag. Rows are never deleted from here —
+// deactivating keeps added_at/added_by history intact instead of losing who
+// was on a project and when.
+app.put('/api/governance/projects/:key/team/:userId', requireSupabase, requireAdmin, async (req, res) => {
+  const key = req.params.key;
+  const userId = req.params.userId;
+  if (!GOV_KEY_RE.test(key)) return res.status(400).json({ error: 'Invalid project key' });
+  if (!UUID_RE.test(userId)) return res.status(400).json({ error: 'Invalid user id' });
+  try {
+    const updated = await supabaseRequest(
+      'PATCH',
+      `project_team_members?project_key=eq.${encodeURIComponent(key)}&user_id=eq.${userId}&select=${TEAM_MEMBER_SELECT}`,
+      { is_active: req.body?.is_active === true }
+    );
+    if (!updated || !updated.length) return res.status(404).json({ error: 'Not a team member of this project' });
+    res.json(updated[0]);
+  } catch (e) {
+    sendSupabaseError(res, e, 'governance/projects/team');
   }
 });
 

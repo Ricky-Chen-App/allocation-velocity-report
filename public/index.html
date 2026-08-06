@@ -1082,6 +1082,8 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .um-role{font-size:10px;font-weight:700;padding:2px 8px;border-radius:var(--r-pill);background:var(--violet-50);color:var(--violet-600)}
 .um-sub{font-size:10.5px;color:var(--ink-400);margin-top:2px}
 .scoped-note{font-size:11px;color:var(--ink-400);font-style:italic;margin-top:6px;line-height:1.45}
+.gov-cat-row td{background:var(--ink-50);font-size:10px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.04em;padding:6px 14px}
+.gov-cat-row .um-count{margin-left:8px;font-weight:600;color:var(--ink-300);text-transform:none;letter-spacing:normal}
 
 /* Touch sizing for the AirPay forms. Placed last so it beats the base
    .ap-form control rules, which would otherwise win on source order. */
@@ -1833,6 +1835,20 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
     </div>
     <div class="ov-modal-list"></div>
     <div class="ov-modal-foot">Click a project to view epic &amp; task detail</div>
+  </div>
+</div>
+
+<!-- PROJECT TEAM MEMBERS MODAL (Governance Settings) -->
+<div class="ov-modal-overlay" id="gov-team-modal" onclick="if(event.target===this)govCloseTeamModal()">
+  <div class="ov-modal" style="max-width:560px">
+    <div class="ov-modal-head">
+      <div>
+        <div class="ov-modal-title" id="gov-team-modal-title" style="font-size:13.5px;font-weight:600;color:var(--ink-900)">Team</div>
+        <div class="ov-modal-sub" id="gov-team-modal-sub" style="font-size:11.5px;color:var(--ink-400);margin-top:2px"></div>
+      </div>
+      <button class="drill-close" onclick="govCloseTeamModal()">✕ Tutup</button>
+    </div>
+    <div class="ov-modal-list" id="gov-team-modal-body"></div>
   </div>
 </div>
 
@@ -2599,7 +2615,9 @@ const GOV = {
   tracked: 'all',   // 'all' | 'true' | 'false'
   teamId: '',       // '' = all teams
   showInactive: false,
-  busy: false
+  busy: false,
+  allUsers: null,   // cached GET /api/users, shared across every team-edit modal open
+  team: null        // { key, name, members, error, busy, addError } while the team modal is open
 };
 
 function govEsc(v) { return apEsc(v); }
@@ -2615,7 +2633,7 @@ async function loadGovSettingsPage() {
 async function govFetchProjects() {
   const body = document.getElementById('gov-body');
   if (!GOV.projects) body.innerHTML = emptyState({ icon: '🗂️', title: 'Loading projects…', description: '' });
-  const params = new URLSearchParams();
+  const params = new URLSearchParams({ categories: 'dashboard' });
   if (GOV.tracked !== 'all') params.set('tracked', GOV.tracked);
   if (GOV.teamId) params.set('team_id', GOV.teamId);
   if (GOV.showInactive) params.set('active', 'all');
@@ -2645,7 +2663,6 @@ function govRowHtml(p) {
       <div class="um-sub">Synced ${govFmtWhen(p.last_synced_at)}</div>
     </td>
     <td>${govEsc(p.name)}</td>
-    <td>${govEsc(p.category || '—')}</td>
     <td>${govEsc(govTeamName(p.team_id))}</td>
     <td>
       <label class="um-check">
@@ -2661,9 +2678,16 @@ function govRowHtml(p) {
         : '<span style="color:var(--ink-400)">—</span>'}
     </td>
     <td><span class="um-status ${p.is_active ? 'active' : 'inactive'}">${p.is_active ? 'Active' : 'Inactive'}</span></td>
+    <td><button class="drill-close" onclick="govOpenTeamModal('${govEsc(p.key)}')">Edit</button></td>
   </tr>`;
 }
 
+// Grouped by category (2026-08-05) — scoped server-side to the same 9
+// categories the Dashboard menus use (`categories=dashboard` on
+// GET /api/governance/projects), then broken into one section per
+// category here so the list reads the same way the User Management
+// project picker already groups projects, instead of a flat table with a
+// repeated Category column.
 function renderGovSettings() {
   const rows = GOV.projects || [];
   const trackedCount = rows.filter(p => p.is_tracked).length;
@@ -2674,6 +2698,17 @@ function renderGovSettings() {
   const teamOptions = (GOV.teams || [])
     .map(t => `<option value="${govEsc(t.id)}" ${GOV.teamId === t.id ? 'selected' : ''}>${govEsc(t.name)}</option>`)
     .join('');
+
+  const byCategory = {};
+  rows.forEach(p => { (byCategory[p.category || 'Uncategorized'] = byCategory[p.category || 'Uncategorized'] || []).push(p); });
+  const categoryNames = Object.keys(byCategory).sort();
+
+  const tableBody = categoryNames.length ? categoryNames.map(cat => `
+    <tr class="gov-cat-row"><td colspan="7">${govEsc(cat)} <span class="um-count">${byCategory[cat].length}</span></td></tr>
+    ${byCategory[cat].map(govRowHtml).join('')}
+  `).join('') : `<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--ink-400)">
+      No projects match this filter. ${GOV.projects && !GOV.projects.length && GOV.tracked === 'all' && !GOV.q ? 'Click “Sync from Jira” to import projects.' : ''}
+    </td></tr>`;
 
   document.getElementById('gov-body').innerHTML = `
     <div class="ap-gantt-toolbar" style="padding:0 0 14px;flex-direction:column;align-items:stretch;gap:12px">
@@ -2706,17 +2741,14 @@ function renderGovSettings() {
           <tr>
             <th style="width:130px">Key</th>
             <th>Name</th>
-            <th style="width:150px">Category</th>
             <th style="width:130px">Team</th>
             <th style="width:110px">Tracked</th>
             <th style="width:160px">Tracked from</th>
             <th style="width:100px">Status</th>
+            <th style="width:80px">Members</th>
           </tr>
         </thead>
-        <tbody>${rows.length ? rows.map(govRowHtml).join('') :
-          `<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--ink-400)">
-            No projects match this filter. ${GOV.projects && !GOV.projects.length && GOV.tracked === 'all' && !GOV.q ? 'Click “Sync from Jira” to import the 90 projects.' : ''}
-          </td></tr>`}</tbody>
+        <tbody>${tableBody}</tbody>
       </table>
     </div>`;
 }
@@ -2780,6 +2812,147 @@ async function govSyncProjects() {
     GOV.busy = false;
     btn.disabled = false;
     btn.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8A6 6 0 0114 8M14 8a6 6 0 01-12 0"/><path d="M14 4v4h-4"/></svg> Sync from Jira`;
+  }
+}
+
+// ——— Governance Settings: per-project team members modal ———
+// GOV.allUsers is the full app_users roster (not filtered by is_active or by
+// allowed_project_keys) — someone who's inactive or who already submitted for
+// this project can still be picked, same as User Management's project picker
+// doesn't hide anyone either.
+async function govOpenTeamModal(key) {
+  const p = govFindProject(key);
+  GOV.team = { key, members: null, error: null, busy: false, addError: null };
+  document.getElementById('gov-team-modal-title').textContent = `Team — ${key}`;
+  document.getElementById('gov-team-modal-sub').textContent = p ? p.name : '';
+  document.getElementById('gov-team-modal').classList.add('show');
+  renderGovTeamModal();
+  try {
+    const [members] = await Promise.all([
+      api(`/api/governance/projects/${encodeURIComponent(key)}/team`),
+      GOV.allUsers ? Promise.resolve() : api('/api/users').then(u => { GOV.allUsers = u; })
+    ]);
+    if (!GOV.team || GOV.team.key !== key) return; // modal was closed/reopened while this was in flight
+    GOV.team.members = members;
+  } catch (e) {
+    if (GOV.team && GOV.team.key === key) GOV.team.error = e.message;
+  }
+  renderGovTeamModal();
+}
+
+function govCloseTeamModal() {
+  document.getElementById('gov-team-modal').classList.remove('show');
+  GOV.team = null;
+}
+
+function govTeamMemberRowHtml(m) {
+  const u = m.app_users || {};
+  const name = govEsc(u.display_name || u.username || '(deleted user)');
+  const sub = [u.email || u.username || '', u.is_active === false ? 'account inactive' : ''].filter(Boolean).join(' · ');
+  return `<div class="ov-modal-row" style="cursor:default;justify-content:space-between">
+    <div style="min-width:0;overflow:hidden">
+      <div style="font-weight:600;color:var(--ink-800);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
+      <div style="font-size:11px;color:var(--ink-400);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${govEsc(sub)}</div>
+    </div>
+    <label class="um-check" style="flex-shrink:0">
+      <input type="checkbox" ${m.is_active ? 'checked' : ''} ${GOV.team.busy ? 'disabled' : ''}
+             onchange="govToggleTeamMember('${govEsc(m.user_id)}', this.checked)">
+      <span>Active</span>
+    </label>
+  </div>`;
+}
+
+function renderGovTeamModal() {
+  const body = document.getElementById('gov-team-modal-body');
+  const t = GOV.team;
+  if (!t) return;
+  if (t.error) {
+    body.innerHTML = emptyState({ icon: '⚠️', title: 'Could not load team', description: t.error });
+    return;
+  }
+  if (!t.members || !GOV.allUsers) {
+    body.innerHTML = emptyState({ icon: '👥', title: 'Loading team…', description: '' });
+    return;
+  }
+
+  const memberRows = t.members.length
+    ? t.members.map(govTeamMemberRowHtml).join('')
+    : `<div style="padding:14px 2px;color:var(--ink-400);font-size:12px">No one assigned yet — add someone below.</div>`;
+
+  const assignedIds = new Set(t.members.map(m => m.user_id));
+  const candidates = GOV.allUsers.filter(u => !assignedIds.has(u.id));
+  const pickerRows = candidates.length
+    ? candidates.map(u => `
+        <label class="um-check">
+          <input type="checkbox" class="gov-team-add" value="${govEsc(u.id)}">
+          <span>${govEsc(u.display_name || u.username)} <span style="color:var(--ink-400);font-size:10.5px">${govEsc(u.username)}</span></span>
+        </label>`).join('')
+    : `<div style="color:var(--ink-400);font-size:12px;padding:2px">Everyone is already on this team.</div>`;
+
+  body.innerHTML = `
+    <div>
+      <div style="font-size:10px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">
+        Current team (${t.members.length})
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">${memberRows}</div>
+    </div>
+    <div style="margin-top:16px">
+      <div style="font-size:10px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">
+        Add members
+      </div>
+      <div class="um-scroll" style="max-height:160px">
+        <div class="um-perm-body" style="grid-template-columns:1fr">${pickerRows}</div>
+      </div>
+      ${candidates.length ? `<button class="btn btn-primary" style="margin-top:10px" onclick="govAddTeamMembers()" ${t.busy ? 'disabled' : ''}>${t.busy ? 'Adding…' : '+ Add selected'}</button>` : ''}
+      ${t.addError ? `<div class="ap-form-err" style="margin-top:8px">${govEsc(t.addError)}</div>` : ''}
+    </div>`;
+}
+
+async function govToggleTeamMember(userId, checked) {
+  const t = GOV.team;
+  if (!t) return;
+  t.busy = true;
+  renderGovTeamModal();
+  try {
+    const r = await fetch(`/api/governance/projects/${encodeURIComponent(t.key)}/team/${userId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active: checked })
+    });
+    const json = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(json.error || `HTTP ${r.status}`);
+    const m = t.members.find(x => x.user_id === userId);
+    if (m) Object.assign(m, json);
+  } catch (e) {
+    showError(`Could not update member: ${e.message}`);
+  } finally {
+    t.busy = false;
+    renderGovTeamModal();
+  }
+}
+
+async function govAddTeamMembers() {
+  const t = GOV.team;
+  if (!t) return;
+  const ids = [...document.querySelectorAll('.gov-team-add')].filter(c => c.checked).map(c => c.value);
+  if (!ids.length) return;
+  t.busy = true;
+  t.addError = null;
+  renderGovTeamModal();
+  try {
+    const r = await fetch(`/api/governance/projects/${encodeURIComponent(t.key)}/team`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_ids: ids })
+    });
+    const json = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(json.error || `HTTP ${r.status}`);
+    t.members = [...t.members, ...json];
+  } catch (e) {
+    t.addError = e.message;
+  } finally {
+    t.busy = false;
+    renderGovTeamModal();
   }
 }
 
