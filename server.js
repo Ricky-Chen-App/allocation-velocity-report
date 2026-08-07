@@ -3036,13 +3036,6 @@ async function writeSubmissionEvents(submissionId, actorId, events) {
   await supabaseRequest('POST', 'submission_events', rows, 'return=minimal');
 }
 
-// wins.category is a lookup table specifically so new codes don't require a
-// parser/profile change (see CLAUDE.md) — the checklist parser must ask this
-// table live, never validate against a list baked into the profile or code.
-async function getActiveWinCategories() {
-  const rows = await supabaseRequest('GET', 'win_categories?is_active=eq.true&select=code');
-  return new Set((rows || []).map(r => r.code));
-}
 
 // Phase 5: deterministic checklist parsing, run synchronously as part of the
 // upload request rather than fired-and-forgotten afterward. The spec frames
@@ -3108,8 +3101,7 @@ async function finalizeSubmissionParse(submission, fileRow, kind, contribution) 
 
 async function runChecklistParse(submission, projectKey, fileRow, buffer, parserProfile) {
   try {
-    const winCategories = await getActiveWinCategories();
-    const contribution = await parseChecklistWorkbook(buffer, parserProfile, winCategories);
+    const contribution = await parseChecklistWorkbook(buffer, parserProfile);
     await insertTableRows(contribution.tableRows, submission, projectKey, 'checklist');
     await supabaseRequest('PATCH', `submission_files?id=eq.${fileRow.id}`, { parse_status: 'done', parse_method: 'column' }, 'return=minimal');
     const analysis = await finalizeSubmissionParse(submission, fileRow, 'checklist', contribution);
@@ -3130,8 +3122,7 @@ async function runChecklistParse(submission, projectKey, fileRow, buffer, parser
 
 async function runMomParse(submission, projectKey, fileRow, buffer, parserProfile) {
   try {
-    const winCategories = await getActiveWinCategories();
-    const contribution = await parseMomWorkbook(buffer, parserProfile, winCategories);
+    const contribution = await parseMomWorkbook(buffer, parserProfile);
     await insertTableRows(contribution.tableRows, submission, projectKey, 'mom');
     await supabaseRequest('PATCH', `submission_files?id=eq.${fileRow.id}`, { parse_status: 'done', parse_method: 'markdown' }, 'return=minimal');
     const analysis = await finalizeSubmissionParse(submission, fileRow, 'mom', contribution);
