@@ -2724,11 +2724,16 @@ app.get('/api/templates/mom', requireSupabase, async (req, res) => {
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
 const GOV_KINDS = ['checklist', 'mom'];
-const GOV_EXT_BY_KIND = { checklist: ['xlsx', 'xls'], mom: ['docx', 'pdf', 'md', 'txt'] };
+// pptx/ppt/pdf are storage-only for MoM — same as docx already was, never
+// parsed for data (readSubmissionMeta returns null for anything but
+// md/txt/xlsx), just kept on file.
+const GOV_EXT_BY_KIND = { checklist: ['xlsx', 'xls'], mom: ['docx', 'pdf', 'pptx', 'ppt', 'md', 'txt'] };
 const GOV_MAGIC_BYTES = {
   xlsx: [0x50, 0x4b, 0x03, 0x04], // PK\x03\x04 (zip/OOXML)
   docx: [0x50, 0x4b, 0x03, 0x04],
+  pptx: [0x50, 0x4b, 0x03, 0x04],
   xls: [0xd0, 0xcf, 0x11, 0xe0],  // OLE2 compound file (legacy BIFF)
+  ppt: [0xd0, 0xcf, 0x11, 0xe0],  // legacy PowerPoint, same OLE2 container as .xls
   pdf: [0x25, 0x50, 0x44, 0x46]   // %PDF
 };
 
@@ -3373,7 +3378,7 @@ app.get('/api/submissions/:id', requireSupabase, async (req, res) => {
   try {
     const submission = await loadAuthorizedSubmission(req, req.params.id);
     const [files, wins, blockers, dependencies, todos] = await Promise.all([
-      supabaseRequest('GET', `submission_files?submission_id=eq.${submission.id}&select=*`),
+      supabaseRequest('GET', `submission_files?submission_id=eq.${submission.id}&select=*,app_users(display_name,username)`),
       supabaseRequest('GET', `wins?submission_id=eq.${submission.id}&select=*`),
       supabaseRequest('GET', `blockers?submission_id=eq.${submission.id}&select=*`),
       supabaseRequest('GET', `dependencies?submission_id=eq.${submission.id}&select=*`),
@@ -3381,7 +3386,11 @@ app.get('/api/submissions/:id', requireSupabase, async (req, res) => {
     ]);
     // wins/blockers/dependencies/todos are always empty until the Phase 5/6
     // parser exists to write them — that's expected, not a bug in this route.
-    res.json({ ...submission, files, wins, blockers, dependencies, todos });
+    const filesOut = (files || []).map(f => {
+      const { app_users, ...rest } = f;
+      return { ...rest, updated_by_name: app_users ? (app_users.display_name || app_users.username) : null };
+    });
+    res.json({ ...submission, files: filesOut, wins, blockers, dependencies, todos });
   } catch (e) {
     if (e.status) return res.status(e.status).json({ error: e.message });
     sendSupabaseError(res, e, 'submissions/:id');
@@ -3425,6 +3434,75 @@ app.get('/api/submissions/:id/file', requireSupabase, async (req, res) => {
   } catch (e) {
     if (e.status) return res.status(e.status).json({ error: e.message });
     console.error('submissions/:id/file error:', e.message);
+    res.status(502).json({ error: e.message });
+  }
+});
+
+// Swaps the stored object for one already-attached file — storage object +
+// submission_files row only (file_path/file_name/file_mime/file_size/sha256,
+// updated_at/updated_by). Deliberately does NOT reparse: parse_status and
+// every already-extracted wins/blockers/dependencies/todos row stay exactly
+// as they were, and the other file (checklist vs MoM) is untouched. This is
+// "fix a wrong file", not "resubmit" — a real content correction still goes
+// through POST /api/submissions like any other week.
+app.put('/api/submissions/:id/files/:fileId', requireSupabase, upload.single('file'), async (req, res) => {
+  try {
+    const submission = await loadAuthorizedSubmission(req, req.params.id);
+    if (!UUID_RE.test(req.params.fileId)) return res.status(400).json({ error: 'Invalid file id' });
+
+    const files = await supabaseRequest('GET', `submission_files?id=eq.${req.params.fileId}&submission_id=eq.${submission.id}&select=*`);
+    const fileRow = files && files[0];
+    if (!fileRow) return res.status(404).json({ error: 'File not found on this submission' });
+
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: 'file is required' });
+
+    const ext = fileExt(file.originalname);
+    if (!GOV_EXT_BY_KIND[fileRow.kind].includes(ext)) {
+      return res.status(422).json({
+        error: 'invalid_extension',
+        message: `A ${fileRow.kind} file must be one of: ${GOV_EXT_BY_KIND[fileRow.kind].join(', ')}`,
+        found: ext
+      });
+    }
+    if (ext === 'md' || ext === 'txt') {
+      if (!looksLikeText(file.buffer)) return res.status(422).json({ error: 'invalid_file_signature', message: `${file.originalname} does not look like a text file.` });
+    } else if (!magicBytesMatch(file.buffer, ext)) {
+      return res.status(422).json({ error: 'invalid_file_signature', message: `${file.originalname} does not match the expected .${ext} format.` });
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      return res.status(422).json({ error: 'file_too_large', message: 'File exceeds the 20MB limit.' });
+    }
+
+    const periodRows = await supabaseRequest('GET', `compliance_periods?id=eq.${submission.period_id}&select=period_type,period_start`);
+    const period = periodRows && periodRows[0];
+    const sha256 = crypto.createHash('sha256').update(file.buffer).digest('hex');
+    const safeName = sanitizeFilename(file.originalname);
+    // Timestamp-suffixed path (not the plain submissionId__name the original
+    // upload uses) — re-uploading a file with the same name here must not
+    // collide with the object it's replacing.
+    const objectPath = `${submission.project_key}/${period.period_type}/${period.period_start}/${submission.id}__${Date.now()}__${safeName}`;
+
+    await uploadToStorage(objectPath, file.buffer, file.mimetype);
+    const updated = await supabaseRequest(
+      'PATCH',
+      `submission_files?id=eq.${fileRow.id}&select=*`,
+      {
+        file_path: objectPath, file_name: file.originalname, file_mime: file.mimetype,
+        file_size: file.size, file_sha256: sha256,
+        updated_at: new Date().toISOString(), updated_by: req.user.id
+      }
+    );
+    deleteFromStorage([fileRow.file_path]); // best-effort — old object would otherwise be orphaned
+
+    await writeSubmissionEvents(submission.id, req.user.id, [
+      ['file_replaced', 'ok', { kind: fileRow.kind, old_file_name: fileRow.file_name, new_file_name: file.originalname }]
+    ]);
+
+    res.json(updated[0]);
+  } catch (e) {
+    if (e.status) return res.status(e.status).json({ error: e.message });
+    console.error('submissions/:id/files/:fileId error:', e.message);
     res.status(502).json({ error: e.message });
   }
 });

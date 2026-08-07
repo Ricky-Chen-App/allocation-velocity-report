@@ -3197,6 +3197,56 @@ function subFmtBytes(n) {
   return (n / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
+// Shared by the Submit drawer (editable — can replace the stored file) and
+// the Compliance Board detail drawer (download-only). Download always goes
+// through the signed-URL redirect endpoint, never a stored public path.
+function subFilesSectionHtml(files, submissionId, editable) {
+  if (!files || !files.length) return '';
+  return `<div class="sub-step-title" style="margin-top:16px">Files (${files.length})</div>
+    <div class="board-content-list">${files.map(f => `
+      <div class="board-content-item" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div style="min-width:0">
+          <div style="font-weight:600;color:var(--ink-800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${apEsc(f.file_name)}</div>
+          <div style="font-size:11px;color:var(--ink-400)">
+            ${f.kind === 'checklist' ? 'Checklist' : 'MoM'} · ${subFmtBytes(f.file_size)}
+            ${f.updated_at ? ` · updated ${subFmtDateTime(f.updated_at)}${f.updated_by_name ? ' by ' + apEsc(f.updated_by_name) : ''}` : ''}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <a class="btn btn-ghost" style="padding:4px 10px;font-size:11.5px" href="/api/submissions/${submissionId}/file?file_id=${f.id}" target="_blank" rel="noopener">Download</a>
+          ${editable ? `<label class="btn btn-ghost" style="padding:4px 10px;font-size:11.5px;cursor:pointer">
+            Replace
+            <input type="file" style="display:none" onchange="subReplaceFile('${submissionId}','${f.id}',this)">
+          </label>` : ''}
+        </div>
+      </div>`).join('')}</div>`;
+}
+
+// Replaces the stored object + submission_files row only — never touches
+// parse_status or the already-extracted wins/blockers/dependencies/todos
+// (see the matching comment on the server route). Reloads via
+// subViewDetail() afterward so the file list, "updated by", and the new
+// file_replaced Activity entry all come back in one consistent read.
+async function subReplaceFile(submissionId, fileId, input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const d = SUB.drawer;
+  if (d) { d.busy = true; renderSubDrawer(); }
+  const form = new FormData();
+  form.append('file', file);
+  try {
+    const r = await fetch(`/api/submissions/${submissionId}/files/${fileId}`, { method: 'PUT', body: form });
+    const json = await r.json().catch(() => ({}));
+    if (r.status === 401) { onSessionLost(); return; }
+    if (!r.ok) throw new Error(json.message || json.error || `HTTP ${r.status}`);
+    showError('✓ File replaced');
+    await subViewDetail(submissionId);
+  } catch (e) {
+    showError('Could not replace file: ' + e.message);
+    if (d) { d.busy = false; renderSubDrawer(); }
+  }
+}
+
 async function subDoUpload() {
   const d = SUB.drawer;
   if (!d || !d.file || !d.projectKey || !d.period) return;
@@ -3293,7 +3343,8 @@ function renderSubDrawer() {
       ${s ? `<div style="font-size:12px;color:var(--ink-400);margin-bottom:16px">
         <b style="color:var(--ink-800)">${apEsc(s.project_key)}</b> · ${apEsc(s.period_start)} → ${apEsc(s.period_end)}
       </div>` : ''}
-      ${(d.events || []).length ? `<div class="sub-step-title">Activity</div><div class="sub-events">${d.events.map(subEventLine).join('')}</div>` : ''}
+      ${s ? subFilesSectionHtml(s.files, s.id, true) : ''}
+      ${(d.events || []).length ? `<div class="sub-step-title" style="margin-top:16px">Activity</div><div class="sub-events">${d.events.map(subEventLine).join('')}</div>` : ''}
       ${!d.busy && d.events && !d.events.length ? '<div style="color:var(--ink-400);font-size:12px">No activity recorded.</div>' : ''}
     </div>`;
     return;
@@ -3337,10 +3388,10 @@ function renderSubDrawer() {
         </a>
         ${existingSameKind ? `<div class="sub-warning">This period already has a ${kindLabel} file (${apEsc(existingSameKind.file_name)}). Uploading here will replace the whole submission — any file of the other kind will need to be re-uploaded too.</div>` : ''}
         <label class="sub-dropzone" ${subDropHandlers(d.tab)}>
-          <input type="file" style="display:none" accept="${d.tab === 'checklist' ? '.xlsx' : '.md,.txt,.docx,.pdf'}" onchange="subOnFileChange(this)">
+          <input type="file" style="display:none" accept="${d.tab === 'checklist' ? '.xlsx' : '.md,.txt,.docx,.pdf,.pptx,.ppt'}" onchange="subOnFileChange(this)">
           ${d.file
             ? `<div><b>${apEsc(d.file.name)}</b><div style="color:var(--ink-400);font-size:11px">${subFmtBytes(d.file.size)} · click or drop to replace</div></div>`
-            : `<div>Click or drop a ${d.tab === 'checklist' ? '.xlsx' : '.md/.txt (.docx/.pdf accepted but not parsed yet)'} file here</div>`}
+            : `<div>Click or drop a ${d.tab === 'checklist' ? '.xlsx' : '.md/.txt (.docx/.pdf/.pptx/.ppt accepted but not parsed yet)'} file here</div>`}
         </label>
         ${d.error ? `<div class="sub-error">${apEsc(d.error)}</div>` : ''}
         <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:10px" ${!d.file || d.busy ? 'disabled' : ''} onclick="subDoUpload()">
@@ -3629,6 +3680,7 @@ function renderBoardDetailDrawer() {
     </div>
     ${(s.analysis && s.analysis.merged && s.analysis.merged.length) ? `<div class="sub-warning" style="background:var(--green-50);color:var(--green-600)">${s.analysis.merged.length} row(s) merged from checklist + MoM</div>` : ''}
     ${(s.analysis && s.analysis.possible_duplicates && s.analysis.possible_duplicates.length) ? `<div class="sub-warning">${s.analysis.possible_duplicates.length} possible duplicate(s) flagged — not auto-merged, needs a human look</div>` : ''}
+    ${subFilesSectionHtml(s.files, s.id, false)}
     ${boardListSection('Wins', s.wins, ['description', 'impact', 'jira_issue_key'])}
     ${boardListSection('Blockers', s.blockers, ['status', 'pic', 'bottleneck', 'next_action'])}
     ${boardListSection('Dependencies', s.dependencies, ['status', 'depends_on', 'notes'])}
