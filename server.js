@@ -3365,7 +3365,7 @@ app.get('/api/submissions', requireSupabase, async (req, res) => {
 // side on every access, not just at upload time).
 async function loadAuthorizedSubmission(req, id) {
   if (!UUID_RE.test(id)) { const e = new Error('Invalid id'); e.status = 400; throw e; }
-  const rows = await supabaseRequest('GET', `submissions?id=eq.${id}&select=*`);
+  const rows = await supabaseRequest('GET', `submissions?id=eq.${id}&select=*,app_users(display_name,username)`);
   const submission = rows && rows[0];
   if (!submission) { const e = new Error('Submission not found'); e.status = 404; throw e; }
   if (!req.user.is_admin && !(req.user.allowed_project_keys || []).includes(submission.project_key)) {
@@ -3390,7 +3390,12 @@ app.get('/api/submissions/:id', requireSupabase, async (req, res) => {
       const { app_users, ...rest } = f;
       return { ...rest, updated_by_name: app_users ? (app_users.display_name || app_users.username) : null };
     });
-    res.json({ ...submission, files: filesOut, wins, blockers, dependencies, todos });
+    const { app_users: uploader, ...submissionRest } = submission;
+    res.json({
+      ...submissionRest,
+      uploaded_by_name: uploader ? (uploader.display_name || uploader.username) : null,
+      files: filesOut, wins, blockers, dependencies, todos
+    });
   } catch (e) {
     if (e.status) return res.status(e.status).json({ error: e.message });
     sendSupabaseError(res, e, 'submissions/:id');
