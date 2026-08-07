@@ -7749,6 +7749,7 @@ const AIRPAY = {
   curStatus: 'idle',        // idle | loading | live | error  (curated data only)
   curErrorMsg: null,
   winsCategory: '',         // '' (all) | Platform | DCB | Digital Payment
+  winsDays: 7,              // 7 | 14 | 30 | 90 | 'all' — how far back the Wins panel looks
   blockerPrio: '',          // '' (all) | P0..P4
   blockerStatus: 'active',  // 'active' (Open+In Progress) | 'all' | Open | In Progress | Resolved
   jiraIssues: null,         // dropdown reference, fetched once
@@ -7960,7 +7961,7 @@ const AP_WIN_CATEGORIES = ['Platform', 'DCB', 'Digital Payment'];
 const AP_PRIORITIES = ['P0', 'P1', 'P2', 'P3', 'P4'];
 const AP_BLOCKER_STATUSES = ['Open', 'In Progress', 'Resolved'];
 const AP_PRIO_RANK = { P0: 0, P1: 1, P2: 2, P3: 3, P4: 4 };
-const AP_WINS_WINDOW_DAYS = 7;
+const AP_WINS_DAY_OPTIONS = [7, 14, 30, 90, 'all'];
 const AP_PANEL_CAP = 12;
 
 function apJiraKeyHtml(key) {
@@ -7981,14 +7982,17 @@ function apCuratedEmpty(msg) {
 function apWinsHtml() {
   if (AIRPAY.wins === null) return apCuratedEmpty('Loading wins…');
   const today = apToday();
-  let rows = AIRPAY.wins.filter(w => w.win_date && apWithinDays(w.win_date, today, AP_WINS_WINDOW_DAYS, 0));
+  let rows = AIRPAY.winsDays === 'all'
+    ? AIRPAY.wins.slice()
+    : AIRPAY.wins.filter(w => w.win_date && apWithinDays(w.win_date, today, AIRPAY.winsDays, 0));
   if (AIRPAY.winsCategory) rows = rows.filter(w => w.category === AIRPAY.winsCategory);
   rows = rows.sort((a, b) => (b.win_date || '').localeCompare(a.win_date || '')).slice(0, AP_PANEL_CAP);
 
   if (!rows.length) {
+    const period = AIRPAY.winsDays === 'all' ? '' : ` in the last ${AIRPAY.winsDays} days`;
     return apCuratedEmpty(AIRPAY.winsCategory
-      ? `No ${AIRPAY.winsCategory} wins in the last 7 days.`
-      : 'No wins recorded in the last 7 days. Use “+ Add” to log one.');
+      ? `No ${AIRPAY.winsCategory} wins${period}.`
+      : `No wins recorded${period}. Use “+ Add” to log one.`);
   }
   return rows.map(w => `
     <div class="ap-item-row">
@@ -8562,6 +8566,13 @@ function apWinsFilterHtml() {
   return `<div style="display:flex;gap:5px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--ink-50)">
     ${apCuratedPill('All', AIRPAY.winsCategory === '', `AIRPAY.winsCategory='';renderAirpaySummary()`)}
     ${AP_WIN_CATEGORIES.map(c => apCuratedPill(c, AIRPAY.winsCategory === c, `AIRPAY.winsCategory='${c}';renderAirpaySummary()`)).join('')}
+  </div>
+  <div style="display:flex;gap:5px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--ink-50)">
+    ${AP_WINS_DAY_OPTIONS.map(d => apCuratedPill(
+      d === 'all' ? 'All time' : `${d} days`,
+      AIRPAY.winsDays === d,
+      `AIRPAY.winsDays=${d === 'all' ? "'all'" : d};renderAirpaySummary()`
+    )).join('')}
   </div>`;
 }
 function apBlockersFilterHtml() {
@@ -8782,7 +8793,7 @@ function renderAirpaySummary() {
     <div class="ap-2col">
       <div class="ap-panel">
         <div class="ap-panel-head">
-          <span>🏆 Wins (last 7 days)</span>
+          <span>🏆 Wins</span>
           <button class="ap-panel-add" onclick="apOpenForm('win')">+ Add</button>
         </div>
         ${apCuratedErrorHtml()}
