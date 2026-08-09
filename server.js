@@ -1643,7 +1643,16 @@ app.get('/api/timeline', async (req, res) => {
     if (categories.length)  projects = projects.filter(p => categories.includes(p.category) || categories.includes(p.projectCategory?.name));
     if (reqProjKeys.length) projects = projects.filter(p => reqProjKeys.includes(p.key));
     const projectKeys = projects.map(p => p.key);
-    const profiles = readProfiles();
+    // member_profiles moved to Supabase — readProfiles() (file-based) no
+    // longer exists. Best-effort: jabatan/level are decorative on this
+    // page, so a failed fetch degrades to blank labels, not a 500.
+    const profiles = {};
+    try {
+      const profileRows = await supabaseRequest('GET', 'member_profiles?select=account_id,jabatan,level');
+      (profileRows || []).forEach(r => { profiles[r.account_id] = { jabatan: r.jabatan, level: r.level }; });
+    } catch (e) {
+      console.warn('timeline: could not load member profiles:', e.message);
+    }
 
     // Batch members into small groups so the batches can run IN PARALLEL
     // (smaller batches → each fits in one 1000-row page → faster fan-out)
