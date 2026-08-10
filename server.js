@@ -2080,10 +2080,15 @@ function sendSupabaseError(res, e, label) {
 // Generates GET/POST/PUT for one table — wins and blockers differ only by
 // table name, validator and sort order, so the routes are built from one
 // definition instead of six near-identical handlers.
+// wins/blockers are shared with Governance checklist/MoM submissions
+// (source='upload', always carrying project_key + submission_id) — these
+// AirPay routes are a separate, manually-curated feed and must never mix
+// with or mutate uploaded rows. source=eq.manual keeps the two feeds apart
+// on every verb: list, create, and edit.
 function registerCrudRoutes(routeName, table, validate, order) {
   app.get(`/api/${routeName}`, requireSupabase, async (req, res) => {
     try {
-      res.json(await supabaseRequest('GET', `${table}?select=*&order=${order}`));
+      res.json(await supabaseRequest('GET', `${table}?source=eq.manual&select=*&order=${order}`));
     } catch (e) { sendSupabaseError(res, e, routeName); }
   });
 
@@ -2091,7 +2096,7 @@ function registerCrudRoutes(routeName, table, validate, order) {
     const { errors, row } = validate(req.body);
     if (errors.length) return res.status(400).json({ error: errors.join('; ') });
     try {
-      const created = await supabaseRequest('POST', table, row);
+      const created = await supabaseRequest('POST', table, { ...row, source: 'manual' });
       res.status(201).json(Array.isArray(created) ? created[0] : created);
     } catch (e) { sendSupabaseError(res, e, routeName); }
   });
@@ -2102,7 +2107,7 @@ function registerCrudRoutes(routeName, table, validate, order) {
     if (errors.length) return res.status(400).json({ error: errors.join('; ') });
     row.updated_at = new Date().toISOString();
     try {
-      const updated = await supabaseRequest('PATCH', `${table}?id=eq.${req.params.id}`, row);
+      const updated = await supabaseRequest('PATCH', `${table}?id=eq.${req.params.id}&source=eq.manual`, row);
       if (!updated || !updated.length) return res.status(404).json({ error: 'Not found' });
       res.json(updated[0]);
     } catch (e) { sendSupabaseError(res, e, routeName); }
