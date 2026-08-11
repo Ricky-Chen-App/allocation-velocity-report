@@ -10,7 +10,7 @@ const { getEffectiveDates, classifyLoad, LOAD_STATUS_LABEL, DEFAULT_FIELD_IDS, v
 const { businessDaysBetween, addBusinessDays, toIso } = require('./businessDays');
 const { parseAirpayCsv } = require('./lib/airpay/parseSheet');
 const {
-  buildChecklistWorkbook, buildMomMarkdown, computePeriodEnd, checklistFileName, momFileName, isoWeek
+  buildChecklistWorkbook, buildMomMarkdown, computePeriodEnd, checklistFileName, momFileName, isoWeek, companyWeekDate
 } = require('./lib/governance/buildTemplates');
 const { readSubmissionMeta, diffStructure } = require('./lib/governance/readSubmissionMeta');
 const { parseChecklistWorkbook } = require('./lib/governance/parseChecklist');
@@ -3330,7 +3330,8 @@ function weekLabel(periodType, periodStart) {
     return `M${String(d.getUTCMonth() + 1).padStart(2, '0')} ${d.getUTCFullYear()}`;
   }
   const d = new Date(`${periodStart}T00:00:00Z`);
-  return `W${String(isoWeek(d)).padStart(2, '0')} ${d.getUTCFullYear()}`;
+  const cw = companyWeekDate(d);
+  return `W${String(isoWeek(cw)).padStart(2, '0')} ${cw.getUTCFullYear()}`;
 }
 
 // The Submit page's table — one row per file, scoped to the caller's

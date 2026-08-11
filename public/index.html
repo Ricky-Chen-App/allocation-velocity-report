@@ -3566,10 +3566,13 @@ function renderBoardBody() {
 function boardWeekLabel(periodStart) {
   return weekLabelFromStart(periodStart);
 }
-// Mirrors server.js's weekLabel() (ISO week number) purely for display —
-// this is presentation only, never fed back into any compliance decision.
+// Mirrors server.js's weekLabel() (ISO week number, shifted -7 days for the
+// org's own week-numbering — see companyWeekDate() in
+// lib/governance/buildTemplates.js) purely for display — this is
+// presentation only, never fed back into any compliance decision.
 function weekLabelFromStart(periodStart) {
-  const d = new Date(`${periodStart}T00:00:00Z`);
+  const d0 = new Date(`${periodStart}T00:00:00Z`);
+  const d = new Date(d0.getTime() - 7 * 86400000);
   const target = new Date(d.valueOf());
   const dayNr = (d.getUTCDay() + 6) % 7;
   target.setUTCDate(target.getUTCDate() - dayNr + 3);
