@@ -2938,6 +2938,25 @@ function periodStartsBack(periodType, timezone, count) {
   return starts;
 }
 
+// `count` consecutive periods starting AT startIso, oldest first — used
+// instead of periodStartsBack() once a tracked_from floor is known, so the
+// board's "N weeks" selector always shows N columns (extending into
+// upcoming, not-yet-due weeks once history is shorter than N) rather than
+// silently shrinking to however many weeks have actually elapsed since
+// tracking began.
+function periodStartsForward(periodType, startIso, count) {
+  const starts = [];
+  let cur = startIso;
+  for (let i = 0; i < count; i++) {
+    starts.push(cur);
+    const d = new Date(`${cur}T00:00:00Z`);
+    if (periodType === 'monthly') d.setUTCMonth(d.getUTCMonth() + 1);
+    else d.setUTCDate(d.getUTCDate() + 7);
+    cur = d.toISOString().slice(0, 10);
+  }
+  return starts;
+}
+
 // Periods are generated lazily (§4) — created on first use, idempotent via
 // the (project_key, period_type, period_start) unique constraint.
 async function ensurePeriod(projectKey, periodType, periodStart) {
@@ -3028,7 +3047,13 @@ app.get('/api/compliance', requireSupabase, async (req, res) => {
     }
     if (projectKeyFilter) projects = projects.filter(p => p.key === projectKeyFilter);
     if (teamIdFilter) projects = projects.filter(p => p.team_id === teamIdFilter);
-    if (!projects.length) return res.json({ period_type: periodType, period_starts: [], projects: [], rows: [] });
+    if (!projects.length) {
+      return res.json({
+        period_type: periodType, period_starts: [],
+        current_period_start: currentPeriodStart(periodType, DEFAULT_POLICY.timezone),
+        projects: [], rows: []
+      });
+    }
 
     // A project's own tracked_from — not "N weeks back from today" — is what
     // actually bounds how far back it can have anything to show. Weeks
@@ -3042,15 +3067,34 @@ app.get('/api/compliance', requireSupabase, async (req, res) => {
     // All policies share DEFAULT_POLICY's timezone today (no per-project
     // timezone override exists yet), so the period-start run is the same
     // for every project — compute it once rather than per project.
-    let periodStarts = periodStartsBack(periodType, DEFAULT_POLICY.timezone, weeks);
-    if (earliestFloor) periodStarts = periodStarts.filter(ps => ps >= earliestFloor);
-    if (!periodStarts.length) periodStarts = [periodStartsBack(periodType, DEFAULT_POLICY.timezone, 1)[0]];
+    //
+    // Anchored at the earliest tracked_from and running FORWARD, not at
+    // "today" running backward — otherwise the "N weeks" selector would
+    // silently shrink to however many weeks have actually elapsed since
+    // tracking began (2 so far), instead of showing N columns including
+    // upcoming not-yet-due weeks. The real current period is tracked
+    // separately (currentStart) since it's no longer always the last column.
+    const currentStart = currentPeriodStart(periodType, DEFAULT_POLICY.timezone);
+    let periodStarts = earliestFloor
+      ? periodStartsForward(periodType, earliestFloor, weeks)
+      : periodStartsBack(periodType, DEFAULT_POLICY.timezone, weeks);
+    // One `await` per (project, week) pair run sequentially here used to mean
+    // 37 projects × 8 weeks = ~300 round trips one at a time — the actual
+    // cause of the board feeling slow to load, worse now that a wider
+    // forward-looking range means more of those pairs are brand new periods
+    // needing an insert, not just a cache-hit GET. Batched in parallel
+    // instead; ensurePeriod is idempotent so batch order doesn't matter.
+    const pairs = [];
     for (const p of projects) {
       const floor = floorByProject[p.key];
       for (const ps of periodStarts) {
         if (floor && ps < floor) continue; // this project wasn't tracked yet in this week
-        await ensurePeriod(p.key, periodType, ps); // idempotent; cheap once the row already exists
+        pairs.push([p.key, ps]);
       }
+    }
+    const ENSURE_BATCH = 20;
+    for (let i = 0; i < pairs.length; i += ENSURE_BATCH) {
+      await Promise.all(pairs.slice(i, i + ENSURE_BATCH).map(([key, ps]) => ensurePeriod(key, periodType, ps)));
     }
 
     const keysParam = projects.map(p => encodeURIComponent(p.key)).join(',');
@@ -3089,6 +3133,7 @@ app.get('/api/compliance', requireSupabase, async (req, res) => {
     res.json({
       period_type: periodType,
       period_starts: periodStarts,
+      current_period_start: currentStart,
       projects: projects.map(p => ({ key: p.key, name: p.name, category: p.category, team_id: p.team_id })),
       rows: out
     });

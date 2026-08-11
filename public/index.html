@@ -3579,7 +3579,11 @@ function renderBoardBody() {
   }
 
   const periodStarts = data.period_starts;
-  const currentWeek = periodStarts[periodStarts.length - 1];
+  // The grid can now extend past today into upcoming, not-yet-due weeks
+  // (server always returns N columns from the tracking floor forward), so
+  // "current" is no longer always the last column — the server says which
+  // one it actually is.
+  const currentWeek = data.current_period_start || periodStarts[periodStarts.length - 1];
   const currentWeekRows = (data.rows || []).filter(r => r.period_start === currentWeek && submittedKeys.has(r.project_key));
   const teamCounts = boardTeamSummary(currentWeekRows);
   const openBlockers = currentWeekRows.reduce((sum, r) => sum + (r.counts ? r.counts.blockers_open : 0), 0);
