@@ -2689,9 +2689,23 @@ function govFmtWhen(iso) {
   return new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-function govTeamName(id) {
-  if (!id) return '—';
-  return (GOV.teams || []).find(t => t.id === id)?.name || '—';
+// Empty when nobody with that jabatan is actively assigned via the
+// Members modal — not an error state, just "not assigned yet".
+function govPeopleCellHtml(names) {
+  if (!names || !names.length) return '<span style="color:var(--ink-300);font-size:12px">—</span>';
+  return `<span style="font-size:12px;color:var(--ink-700)">${names.map(govEsc).join(', ')}</span>`;
+}
+
+// Deadline + compliance-state badge for the CURRENT period only — same
+// green/pending/orange/red compliance_state() the Board computes, just
+// surfaced here so a late upload is visible without leaving Settings.
+// Untracked projects have no policy/period at all, hence no deadline.
+function govMaxUploadCellHtml(p) {
+  if (!p.is_tracked) return '<span style="color:var(--ink-300)">—</span>';
+  if (!p.current_due_at) return '<span style="color:var(--ink-400);font-size:12px">—</span>';
+  const meta = boardCellMeta(p.current_state);
+  return `<div style="font-size:11.5px;color:var(--ink-600)">${subFmtDateTime(p.current_due_at)}</div>
+    <span class="sub-badge ${meta.cls}" style="margin-top:3px;display:inline-block">${meta.icon} ${govEsc(meta.label)}</span>`;
 }
 
 function govRowHtml(p) {
@@ -2701,7 +2715,8 @@ function govRowHtml(p) {
       <div class="um-sub">Synced ${govFmtWhen(p.last_synced_at)}</div>
     </td>
     <td>${govEsc(p.name)}</td>
-    <td>${govEsc(govTeamName(p.team_id))}</td>
+    <td>${govPeopleCellHtml(p.assigned_ba)}</td>
+    <td>${govPeopleCellHtml(p.assigned_dev)}</td>
     <td>
       <label class="um-check">
         <input type="checkbox" ${p.is_tracked ? 'checked' : ''} ${GOV.busy ? 'disabled' : ''}
@@ -2716,6 +2731,7 @@ function govRowHtml(p) {
         : '<span style="color:var(--ink-400)">—</span>'}
     </td>
     <td><span class="um-status ${p.is_active ? 'active' : 'inactive'}">${p.is_active ? 'Active' : 'Inactive'}</span></td>
+    <td>${govMaxUploadCellHtml(p)}</td>
     <td><button class="drill-close" onclick="govOpenTeamModal('${govEsc(p.key)}')">Edit</button></td>
   </tr>`;
 }
@@ -2742,9 +2758,9 @@ function renderGovSettings() {
   const categoryNames = Object.keys(byCategory).sort();
 
   const tableBody = categoryNames.length ? categoryNames.map(cat => `
-    <tr class="gov-cat-row"><td colspan="7">${govEsc(cat)} <span class="um-count">${byCategory[cat].length}</span></td></tr>
+    <tr class="gov-cat-row"><td colspan="9">${govEsc(cat)} <span class="um-count">${byCategory[cat].length}</span></td></tr>
     ${byCategory[cat].map(govRowHtml).join('')}
-  `).join('') : `<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--ink-400)">
+  `).join('') : `<tr><td colspan="9" style="padding:40px;text-align:center;color:var(--ink-400)">
       No projects match this filter. ${GOV.projects && !GOV.projects.length && GOV.tracked === 'all' && !GOV.q ? 'Click “Sync from Jira” to import projects.' : ''}
     </td></tr>`;
 
@@ -2779,10 +2795,12 @@ function renderGovSettings() {
           <tr>
             <th style="width:130px">Key</th>
             <th>Name</th>
-            <th style="width:130px">Team</th>
+            <th style="width:150px">Business Analyst</th>
+            <th style="width:150px">Team Developer</th>
             <th style="width:110px">Tracked</th>
             <th style="width:160px">Tracked from</th>
             <th style="width:100px">Status</th>
+            <th style="width:150px">Max Upload</th>
             <th style="width:80px">Members</th>
           </tr>
         </thead>

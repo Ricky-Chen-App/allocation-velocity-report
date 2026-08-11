@@ -2507,6 +2507,55 @@ app.get('/api/governance/projects', requireSupabase, async (req, res) => {
       const allowed = new Set(req.user.allowed_project_keys || []);
       rows = (rows || []).filter(p => allowed.has(p.key));
     }
+
+    // Enrich with assigned Business Analyst / Developer (from
+    // project_team_members' active roster × Team Members' jabatan) and the
+    // current period's deadline/state — the same compliance_state the
+    // Board already computes, surfaced here too so admins can see who's
+    // about to be late without leaving Settings.
+    if (rows.length) {
+      const keysParam = rows.map(p => encodeURIComponent(p.key)).join(',');
+
+      await ensureMembers();
+      const memberByAccount = new Map((cache.members || []).map(m => [m.accountId, m]));
+
+      const ptmRows = await supabaseRequest('GET',
+        `project_team_members?project_key=in.(${keysParam})&is_active=eq.true&select=project_key,member_account_id`);
+      const accountIds = [...new Set((ptmRows || []).map(r => r.member_account_id))];
+      const profileRows = accountIds.length
+        ? await supabaseRequest('GET', `member_profiles?account_id=in.(${accountIds.map(encodeURIComponent).join(',')})&select=account_id,jabatan`)
+        : [];
+      const jabatanByAccount = new Map((profileRows || []).map(r => [r.account_id, r.jabatan]));
+
+      const baByProject = {}, devByProject = {};
+      (ptmRows || []).forEach(r => {
+        const jabatan = jabatanByAccount.get(r.member_account_id);
+        if (jabatan !== 'BA' && jabatan !== 'Dev') return;
+        const name = memberByAccount.get(r.member_account_id)?.displayName || r.member_account_id;
+        const bucket = jabatan === 'BA' ? baByProject : devByProject;
+        (bucket[r.project_key] = bucket[r.project_key] || []).push(name);
+      });
+
+      const trackedKeys = rows.filter(p => p.is_tracked).map(p => p.key);
+      const dueByProject = {};
+      if (trackedKeys.length) {
+        const periodStart = currentPeriodStart('weekly', DEFAULT_POLICY.timezone);
+        await Promise.all(trackedKeys.map(k => ensurePeriod(k, 'weekly', periodStart)));
+        const trackedParam = trackedKeys.map(encodeURIComponent).join(',');
+        const statusRows = await supabaseRequest('GET',
+          `v_compliance_status?project_key=in.(${trackedParam})&period_type=eq.weekly&period_start=eq.${periodStart}&select=project_key,due_at,state`);
+        (statusRows || []).forEach(r => { dueByProject[r.project_key] = { due_at: r.due_at, state: r.state }; });
+      }
+
+      rows = rows.map(p => ({
+        ...p,
+        assigned_ba: baByProject[p.key] || [],
+        assigned_dev: devByProject[p.key] || [],
+        current_due_at: dueByProject[p.key]?.due_at || null,
+        current_state: dueByProject[p.key]?.state || null
+      }));
+    }
+
     res.json(rows);
   } catch (e) {
     sendSupabaseError(res, e, 'governance/projects');
