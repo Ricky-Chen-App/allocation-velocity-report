@@ -3521,9 +3521,24 @@ function renderBoardBody() {
     return;
   }
 
+  // A project that's never submitted anything in this window is noise, not
+  // a compliance signal — an all-✕ row doesn't tell you who's falling
+  // behind, it tells you who's never engaged. Only projects with at least
+  // one real submission (anywhere in the fetched weeks) get a row.
+  const submittedKeys = new Set((data.rows || []).filter(r => r.submission_id).map(r => r.project_key));
+  const projects = data.projects.filter(p => submittedKeys.has(p.key));
+
+  if (!projects.length) {
+    body.innerHTML = emptyState({
+      icon: '📭', title: 'No submissions yet',
+      description: 'Once a tracked project submits its first checklist or MoM, it will show up here.'
+    });
+    return;
+  }
+
   const periodStarts = data.period_starts;
   const currentWeek = periodStarts[periodStarts.length - 1];
-  const currentWeekRows = (data.rows || []).filter(r => r.period_start === currentWeek);
+  const currentWeekRows = (data.rows || []).filter(r => r.period_start === currentWeek && submittedKeys.has(r.project_key));
   const teamCounts = boardTeamSummary(currentWeekRows);
   const openBlockers = currentWeekRows.reduce((sum, r) => sum + (r.counts ? r.counts.blockers_open : 0), 0);
   const openDeps = currentWeekRows.reduce((sum, r) => sum + (r.counts ? r.counts.dependencies_open : 0), 0);
@@ -3557,7 +3572,7 @@ function renderBoardBody() {
     </div>
   </div>
 
-  ${boardGridHtml(data, periodStarts)}
+  ${boardGridHtml({ ...data, projects }, periodStarts)}
   ${boardDetailHtml(currentWeekRows, currentWeek)}`;
 
   body.innerHTML = html;
