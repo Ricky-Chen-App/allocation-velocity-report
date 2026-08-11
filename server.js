@@ -2856,6 +2856,21 @@ function currentPeriodStart(periodType, timezone) {
   return monday.toISOString().slice(0, 10);
 }
 
+// Same Monday/1st-of-month anchoring as currentPeriodStart(), but for an
+// arbitrary date rather than "now" — used to find which period a project's
+// tracked_from falls into, so weeks before that can be skipped entirely
+// instead of showing as false red/pending noise for a project that simply
+// wasn't being tracked yet.
+function periodStartFor(periodType, dateIso) {
+  const d = new Date(`${dateIso}T00:00:00Z`);
+  if (periodType === 'monthly') {
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString().slice(0, 10);
+  }
+  const dow = d.getUTCDay() || 7;
+  const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - (dow - 1)));
+  return monday.toISOString().slice(0, 10);
+}
+
 // The Compliance Board (§9.3) needs a fixed run of period_starts (oldest
 // first) ending at the current one, regardless of whether anyone has
 // visited/uploaded for those weeks yet — a project that missed 3 weeks
@@ -2956,7 +2971,7 @@ app.get('/api/compliance', requireSupabase, async (req, res) => {
     const projectKeyFilter = trimmed(req.query.project_key).toUpperCase();
     const teamIdFilter = trimmed(req.query.team_id);
 
-    let projects = await supabaseRequest('GET', 'projects?is_tracked=eq.true&is_active=eq.true&select=key,name,category,team_id&order=key.asc');
+    let projects = await supabaseRequest('GET', 'projects?is_tracked=eq.true&is_active=eq.true&select=key,name,category,team_id,tracked_from&order=key.asc');
     if (!req.user.is_admin) {
       const allowed = new Set(req.user.allowed_project_keys || []);
       projects = (projects || []).filter(p => allowed.has(p.key));
@@ -2965,12 +2980,25 @@ app.get('/api/compliance', requireSupabase, async (req, res) => {
     if (teamIdFilter) projects = projects.filter(p => p.team_id === teamIdFilter);
     if (!projects.length) return res.json({ period_type: periodType, period_starts: [], projects: [], rows: [] });
 
+    // A project's own tracked_from — not "N weeks back from today" — is what
+    // actually bounds how far back it can have anything to show. Weeks
+    // before that are skipped entirely rather than surfaced as false
+    // red/pending: the project simply wasn't being tracked yet, that's not
+    // a missed submission.
+    const floorByProject = {};
+    projects.forEach(p => { floorByProject[p.key] = p.tracked_from ? periodStartFor(periodType, p.tracked_from) : null; });
+    const earliestFloor = Object.values(floorByProject).filter(Boolean).sort()[0] || null;
+
     // All policies share DEFAULT_POLICY's timezone today (no per-project
     // timezone override exists yet), so the period-start run is the same
     // for every project — compute it once rather than per project.
-    const periodStarts = periodStartsBack(periodType, DEFAULT_POLICY.timezone, weeks);
+    let periodStarts = periodStartsBack(periodType, DEFAULT_POLICY.timezone, weeks);
+    if (earliestFloor) periodStarts = periodStarts.filter(ps => ps >= earliestFloor);
+    if (!periodStarts.length) periodStarts = [periodStartsBack(periodType, DEFAULT_POLICY.timezone, 1)[0]];
     for (const p of projects) {
+      const floor = floorByProject[p.key];
       for (const ps of periodStarts) {
+        if (floor && ps < floor) continue; // this project wasn't tracked yet in this week
         await ensurePeriod(p.key, periodType, ps); // idempotent; cheap once the row already exists
       }
     }
