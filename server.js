@@ -2848,9 +2848,10 @@ function sanitizeFilename(name) {
 // No admin UI for compliance_policies exists yet, so a project's first
 // upload provisions a sensible default policy rather than requiring one to
 // already exist — otherwise Phase 4 would be untestable end to end until a
-// policies-management phase is built. Friday 17:00 Asia/Jakarta, 1/3-day
-// warn/late thresholds.
-const DEFAULT_POLICY = { due_dow: 5, due_dom: 5, due_time: '17:00:00', timezone: 'Asia/Jakarta', warn_after_days: 1, late_after_days: 3 };
+// policies-management phase is built. Sunday 23:59 Asia/Jakarta (due_dow=7
+// per computeDueAt's Mon=1..Sun=7 convention — the end of the week's own
+// period, not the following week), 1/3-day warn/late thresholds.
+const DEFAULT_POLICY = { due_dow: 7, due_dom: 5, due_time: '23:59:00', timezone: 'Asia/Jakarta', warn_after_days: 1, late_after_days: 3 };
 // Asia/Jakarta has no DST, so a fixed offset is correct (not a general IANA
 // tz solution — fine while every policy uses this one zone).
 const TZ_OFFSET_HOURS = { 'Asia/Jakarta': 7 };

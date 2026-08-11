@@ -2655,7 +2655,8 @@ const GOV = {
   teamId: '',       // '' = all teams
   showInactive: false,
   busy: false,
-  team: null        // { key, name, members, error, busy, addError } while the team modal is open
+  memberProfiles: null, // account_id -> { jabatan, level }, cached for the BA/Dev-filtered team modal
+  team: null        // { key, name, members, error, busy, addError, roleFilter } while the team modal is open
 };
 
 function govEsc(v) { return apEsc(v); }
@@ -2691,9 +2692,14 @@ function govFmtWhen(iso) {
 
 // Empty when nobody with that jabatan is actively assigned via the
 // Members modal — not an error state, just "not assigned yet".
-function govPeopleCellHtml(names) {
-  if (!names || !names.length) return '<span style="color:var(--ink-300);font-size:12px">—</span>';
-  return `<span style="font-size:12px;color:var(--ink-700)">${names.map(govEsc).join(', ')}</span>`;
+function govPeopleCellHtml(names, projectKey, role) {
+  const namesHtml = names && names.length
+    ? `<span style="font-size:12px;color:var(--ink-700)">${names.map(govEsc).join(', ')}</span>`
+    : '<span style="color:var(--ink-300);font-size:12px">—</span>';
+  return `<div style="display:flex;align-items:center;gap:6px;justify-content:space-between">
+    ${namesHtml}
+    <button class="drill-close" style="flex-shrink:0" onclick="govOpenTeamModal('${govEsc(projectKey)}','${role}')">Edit</button>
+  </div>`;
 }
 
 // Deadline + compliance-state badge for the CURRENT period only — same
@@ -2715,8 +2721,8 @@ function govRowHtml(p) {
       <div class="um-sub">Synced ${govFmtWhen(p.last_synced_at)}</div>
     </td>
     <td>${govEsc(p.name)}</td>
-    <td>${govPeopleCellHtml(p.assigned_ba)}</td>
-    <td>${govPeopleCellHtml(p.assigned_dev)}</td>
+    <td>${govPeopleCellHtml(p.assigned_ba, p.key, 'BA')}</td>
+    <td>${govPeopleCellHtml(p.assigned_dev, p.key, 'Dev')}</td>
     <td>
       <label class="um-check">
         <input type="checkbox" ${p.is_tracked ? 'checked' : ''} ${GOV.busy ? 'disabled' : ''}
@@ -2881,17 +2887,24 @@ function govMemberById(accountId) {
   return (STATE.members || []).find(m => m.accountId === accountId) || null;
 }
 
-async function govOpenTeamModal(key) {
+// roleFilter ('BA' | 'Dev' | undefined) scopes the modal to just that
+// jabatan (set on Team Members) — same underlying roster/endpoints as the
+// general "Members" edit, just a pre-filtered entry point for the
+// Business Analyst / Team Developer columns.
+const GOV_ROLE_LABELS = { BA: 'Business Analyst', Dev: 'Team Developer' };
+
+async function govOpenTeamModal(key, roleFilter) {
   const p = govFindProject(key);
-  GOV.team = { key, members: null, error: null, busy: false, addError: null };
-  document.getElementById('gov-team-modal-title').textContent = `Team — ${key}`;
+  GOV.team = { key, members: null, error: null, busy: false, addError: null, roleFilter: roleFilter || null };
+  document.getElementById('gov-team-modal-title').textContent = `${roleFilter ? GOV_ROLE_LABELS[roleFilter] : 'Team'} — ${key}`;
   document.getElementById('gov-team-modal-sub').textContent = p ? p.name : '';
   document.getElementById('gov-team-modal').classList.add('show');
   renderGovTeamModal();
   try {
     const [members] = await Promise.all([
       api(`/api/governance/projects/${encodeURIComponent(key)}/team`),
-      STATE.members?.length ? Promise.resolve() : api('/api/members').then(m => { STATE.members = m; })
+      STATE.members?.length ? Promise.resolve() : api('/api/members').then(m => { STATE.members = m; }),
+      GOV.memberProfiles ? Promise.resolve() : api('/api/member-profiles').then(r => { GOV.memberProfiles = r.profiles || {}; })
     ]);
     if (!GOV.team || GOV.team.key !== key) return; // modal was closed/reopened while this was in flight
     GOV.team.members = members;
@@ -2904,6 +2917,7 @@ async function govOpenTeamModal(key) {
 function govCloseTeamModal() {
   document.getElementById('gov-team-modal').classList.remove('show');
   GOV.team = null;
+  govFetchProjects(); // pick up any assignment change in the table's BA/Dev/Members columns
 }
 
 function govTeamMemberRowHtml(m) {
@@ -2931,35 +2945,45 @@ function renderGovTeamModal() {
     body.innerHTML = emptyState({ icon: '⚠️', title: 'Could not load team', description: t.error });
     return;
   }
-  if (!t.members || !STATE.members) {
+  if (!t.members || !STATE.members || !GOV.memberProfiles) {
     body.innerHTML = emptyState({ icon: '👥', title: 'Loading team…', description: '' });
     return;
   }
 
-  const memberRows = t.members.length
-    ? t.members.map(govTeamMemberRowHtml).join('')
+  // Role-filtered (BA/Dev): jabatan lives on the person, not the project —
+  // it's set once on Team Members and applies everywhere. So "editing the
+  // Business Analyst" is really just narrowing the same roster to people
+  // already classified as BA there.
+  const roleLabel = t.roleFilter ? GOV_ROLE_LABELS[t.roleFilter] : null;
+  const hasRole = accountId => (GOV.memberProfiles[accountId] || {}).jabatan === t.roleFilter;
+  const visibleMembers = t.roleFilter ? t.members.filter(m => hasRole(m.member_account_id)) : t.members;
+
+  const memberRows = visibleMembers.length
+    ? visibleMembers.map(govTeamMemberRowHtml).join('')
     : `<div style="padding:14px 2px;color:var(--ink-400);font-size:12px">No one assigned yet — add someone below.</div>`;
 
   const assignedIds = new Set(t.members.map(m => m.member_account_id));
-  const candidates = STATE.members.filter(u => !assignedIds.has(u.accountId));
+  let candidates = STATE.members.filter(u => !assignedIds.has(u.accountId));
+  if (t.roleFilter) candidates = candidates.filter(u => hasRole(u.accountId));
   const pickerRows = candidates.length
     ? candidates.map(u => `
         <label class="um-check">
           <input type="checkbox" class="gov-team-add" value="${govEsc(u.accountId)}">
           <span>${govEsc(u.displayName)} <span style="color:var(--ink-400);font-size:10.5px">${govEsc((u.groups?.[0] || '').replace(' Developer', '').replace(' Team', ''))}</span></span>
         </label>`).join('')
-    : `<div style="color:var(--ink-400);font-size:12px;padding:2px">Everyone is already on this team.</div>`;
+    : `<div style="color:var(--ink-400);font-size:12px;padding:2px">${t.roleFilter ? `No one with position “${govEsc(roleLabel)}” to add — set that on Team Members first.` : 'Everyone is already on this team.'}</div>`;
 
   body.innerHTML = `
+    ${t.roleFilter ? `<div style="font-size:11.5px;color:var(--ink-400);margin-bottom:12px">Only people whose position on Team Members is “${govEsc(roleLabel)}” show up here.</div>` : ''}
     <div>
       <div style="font-size:10px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">
-        Current team (${t.members.length})
+        Current ${roleLabel ? govEsc(roleLabel) : 'team'} (${visibleMembers.length})
       </div>
       <div style="display:flex;flex-direction:column;gap:6px">${memberRows}</div>
     </div>
     <div style="margin-top:16px">
       <div style="font-size:10px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">
-        Add members
+        Add ${roleLabel ? govEsc(roleLabel).toLowerCase() : 'members'}
       </div>
       <div class="um-scroll" style="max-height:160px">
         <div class="um-perm-body" style="grid-template-columns:1fr">${pickerRows}</div>
