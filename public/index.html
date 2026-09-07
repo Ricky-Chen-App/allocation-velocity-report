@@ -9550,7 +9550,8 @@ function rgEnsureDialogs() {
           <label>Score Prio<input type="number" name="score" min="0" max="999" value="50"></label>
           <label>Capacity Gate<select name="gate"><option value="GREEN">GREEN</option><option value="YELLOW" selected>YELLOW</option><option value="RED">RED</option></select></label>
         </div>
-        <label>MVP %<input name="mvp" placeholder="e.g. 40% or New"></label>
+        <label>MVP %<input name="mvp" placeholder="e.g. 40% or New">
+          <p class="rg-hint" id="rgMvpHint">Pick a Jira project or epic above to suggest this from % of issues done.</p></label>
         <label>Blocker / Next milestone<textarea name="blocker" rows="2"></textarea></label>
         <label>Demo link — Portal<input name="demoPortal" placeholder="https:// (optional)"></label>
         <label>Demo link — CMS<input name="demoCms" placeholder="https:// (optional)"></label>
@@ -9671,8 +9672,15 @@ function rgEnsureDialogs() {
   document.getElementById('formRgText').addEventListener('submit', rgSubmitText);
 
   rgComboInit('rgProductProject', () => (REPGOV.jira?.projects || []).map(p => ({ value: p.key, label: `${p.key} — ${p.name}`, group: p.category })),
-    item => { const mode = document.querySelector('#formRgProduct input[name="source"]:checked')?.value; if (mode === 'epic') rgLoadEpicsForProductForm(item.value); });
-  rgComboInit('rgProductEpic', () => RG_FORM.productEpics, item => rgApplyEpicToProductForm(item));
+    item => {
+      const mode = document.querySelector('#formRgProduct input[name="source"]:checked')?.value;
+      if (mode === 'epic') rgLoadEpicsForProductForm(item.value);
+      else rgSuggestMvpForProduct(item.value, null);
+    });
+  rgComboInit('rgProductEpic', () => RG_FORM.productEpics, item => {
+    rgApplyEpicToProductForm(item);
+    rgSuggestMvpForProduct(rgComboValue('rgProductProject'), item.value);
+  });
   rgComboInit('rgProgressProject', () => (REPGOV.jira?.projects || []).map(p => ({ value: p.key, label: `${p.key} — ${p.name}`, group: p.category })),
     item => { const mode = document.querySelector('#formRgProgress input[name="progSource"]:checked')?.value; if (mode === 'epic') rgLoadEpicsForProgressForm(item.value); });
   rgComboInit('rgProgressEpic', () => RG_FORM.progressEpics,
@@ -9691,6 +9699,28 @@ function rgToggleProductSource() {
 function rgApplyEpicToProductForm(item) {
   if (!item) return;
   document.querySelector('#formRgProduct input[name="name"]').value = item.summary || item.label;
+}
+// Live "% done" suggestion (done issues / total issues) for whichever
+// project or epic was just picked — the user can still edit it afterward,
+// this just replaces having to type it from memory.
+async function rgSuggestMvpForProduct(projectKey, epicKey) {
+  const mvpInput = document.querySelector('#formRgProduct input[name="mvp"]');
+  if (!mvpInput || !projectKey) return;
+  const hint = document.getElementById('rgMvpHint');
+  if (hint) hint.textContent = 'Looking up % done from Jira…';
+  try {
+    const params = new URLSearchParams({ project_key: projectKey });
+    if (epicKey) params.set('epic_key', epicKey);
+    const data = await api('/api/report-governance/mvp-suggestion?' + params.toString());
+    if (data.percent != null) {
+      mvpInput.value = data.percent + '%';
+      if (hint) hint.textContent = `${data.done}/${data.total} issues done — edit if this isn't right.`;
+    } else if (hint) {
+      hint.textContent = 'No issues found to compute % done — enter manually.';
+    }
+  } catch (ex) {
+    if (hint) hint.textContent = 'Could not look up % done from Jira — enter manually.';
+  }
 }
 async function rgLoadEpicsForProductForm(projectKey) {
   rgComboClear('rgProductEpic');
@@ -9936,6 +9966,7 @@ function repgovOpenProductForm() {
   rgComboClear('rgProductProject');
   rgComboClear('rgProductEpic');
   document.getElementById('rgProductEpicWrap').hidden = true;
+  document.getElementById('rgMvpHint').textContent = 'Pick a Jira project or epic above to suggest this from % of issues done.';
   dlgRgProduct.showModal();
 }
 async function rgSubmitProduct(e) {

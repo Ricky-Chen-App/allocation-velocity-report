@@ -2727,10 +2727,32 @@ app.get('/api/report-governance/jira-epics', async (req, res) => {
   }
 });
 
+// GET /api/report-governance/mvp-suggestion?project_key=&epic_key= — the Add
+// Project form's live "% done" suggestion for MVP %. Scoped to the epic's
+// children (`parent = EPIC`, Jira's unified hierarchy field for both
+// classic and team-managed epics) when an epic is given, otherwise the
+// whole project. Reuses the exact "done" status classification
+// computeCapacity() already uses elsewhere in this file, for consistency.
+const REPGOV_DONE_RE = /done|closed|resolved|complete|production/i;
+app.get('/api/report-governance/mvp-suggestion', async (req, res) => {
+  const projectKey = String(req.query.project_key || '').toUpperCase();
+  const epicKey = req.query.epic_key ? String(req.query.epic_key).toUpperCase() : null;
+  if (!GOV_KEY_RE.test(projectKey)) return res.status(400).json({ error: 'project_key is required and must be a valid Jira project key' });
+  if (epicKey && !REPGOV_EPIC_RE.test(epicKey)) return res.status(400).json({ error: 'Invalid epic_key' });
+  if (!reportGovCanAccess(req.user, projectKey)) return res.status(403).json({ error: 'Not allowed for this project' });
+  try {
+    const jql = epicKey ? `parent = ${epicKey}` : `project = ${projectKey}`;
+    const issues = await jiraSearchAll(jql, 'status', 2000);
+    if (!issues.length) return res.json({ percent: null, total: 0, done: 0 });
+    const done = issues.filter(i => REPGOV_DONE_RE.test(i.fields?.status?.name || '')).length;
+    res.json({ percent: Math.round((done / issues.length) * 100), total: issues.length, done });
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
+});
+
 // GET /api/report-governance/team-members — Dev Daily Progress' "Add
-// person" roster picker and the source of "Dev Group" filter values
-// (member_profiles.jabatan — the same field already driving Governance
-// Settings' Business Analyst / Team Developer columns).
+// person" roster picker and the source of "Dev Group" filter values.
 // Same live Jira group roster the Developer Capacity page uses (cache.members,
 // TARGET_GROUPS), not the small manually-curated member_profiles table — a
 // bigger, always-current list, and "jabatan" here is really each member's
