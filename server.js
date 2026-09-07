@@ -16,7 +16,9 @@ const { readSubmissionMeta, diffStructure } = require('./lib/governance/readSubm
 const { parseChecklistWorkbook } = require('./lib/governance/parseChecklist');
 const { parseMomWorkbook } = require('./lib/governance/parseMom');
 const { mergeSubmission } = require('./lib/governance/mergeSubmissionRows');
+const { parseWeeklyUploadWorkbook, normDayStatus, normGate, normMove } = require('./lib/reportGovernance/parseWeeklyUpload');
 const multer = require('multer');
+const ExcelJS = require('exceljs');
 
 const app = express();
 app.use(express.json());
@@ -2686,7 +2688,7 @@ const REPGOV_EPIC_RE = /^[A-Z][A-Z0-9_]{1,15}-\d+$/;
 const REPGOV_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const REPGOV_STATUS_FIELDS = ['score_prio', 'capacity_gate', 'movement', 'mvp_percent',
   'mon_status', 'tue_status', 'wed_status', 'thu_status', 'fri_status',
-  'blocker_note', 'demo_link_portal', 'demo_link_cms', 'credentials_text'];
+  'blocker_note', 'demo_link_portal', 'demo_link_cms', 'link_repo', 'credentials_text'];
 const REPGOV_PROGRESS_FIELDS = ['yesterday_note', 'today_note', 'move_to_next_day', 'blocker_note'];
 
 function reportGovCanAccess(user, projectKey) {
@@ -2875,6 +2877,7 @@ app.get('/api/report-governance/status', requireSupabase, async (req, res) => {
         blocker_note: s.blocker_note ?? null,
         demo_link_portal: s.demo_link_portal ?? null,
         demo_link_cms: s.demo_link_cms ?? null,
+        link_repo: s.link_repo ?? null,
         credentials_text: s.credentials_text ?? null
       };
     });
@@ -2972,6 +2975,187 @@ app.put('/api/report-governance/progress/:productId/:memberAccountId', requireSu
     res.json(Array.isArray(updated) ? updated[0] : updated);
   } catch (e) {
     sendSupabaseError(res, e, 'report-governance/progress');
+  }
+});
+
+// ——— Bulk upload: the real "LINKIT360 PMO · WEEKLY DELIVERY TRACKER" sheet ———
+// Lets a PMO owner fill in the whole week in the spreadsheet they already
+// use and upload it in one shot, instead of one row at a time in the UI.
+// The sheet has no Jira-project column at all, so rows are matched to
+// existing report_products purely by Product name (confirmed approach) —
+// a name with no match is skipped and reported, not silently dropped or
+// guessed at.
+function repgovWeekdayDates(periodStart) {
+  return [0, 1, 2, 3, 4].map(o => {
+    const d = new Date(`${periodStart}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + o);
+    return d;
+  });
+}
+function repgovBuildTemplate(periodStart) {
+  const days = repgovWeekdayDates(periodStart);
+  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  const dayHeaders = days.map((d, i) => `${dayNames[i]} ${d.getUTCDate()} ${d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' })}`);
+  const weekLabel = `Week of ${dayHeaders[0].replace(/^\w+ /, '')} – ${dayHeaders[4].replace(/^\w+ /, '')}, ${days[0].getUTCFullYear()}`;
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Weekly Tracker');
+  const weeklyHeader = ['No', 'Score', 'Capacity Gate', 'Product', 'Movement', 'MVP %', ...dayHeaders, 'Blocker / Next Milestone', 'Demo Link', 'Credential Account', 'Link Repo'];
+
+  ws.addRow([`LINKIT360 PMO · WEEKLY DELIVERY TRACKER — ${weekLabel}`]);
+  ws.addRow([]);
+
+  function section(title, note, sampleRows) {
+    ws.addRow([`${title} (${sampleRows.length}) — ${note}`]);
+    ws.addRow(weeklyHeader);
+    sampleRows.forEach(r => ws.addRow(r));
+    ws.addRow([]);
+  }
+  section('MOVING', 'real technical progress or confirmed delivery — sorted by score', [
+    [1, 90, 'GREEN', 'SAMPLE — Digital ID Wallet', 'Moving', '60%', 'In Progress', 'In Progress', 'Done', 'Done', 'Done',
+      'Waiting on backend team for the auth API.', 'Portal : https://example.com', 'admin@example.com   SysAdmin', 'https://gitlab.com/example/repo']
+  ]);
+  section('DEMO DONE, PROJECT ON HOLD', 'built and working — paused on a business decision', [
+    [1, 55, '', 'SAMPLE — Paused Project', 'On Hold', '100%', 'Done', 'Done', 'Done', 'Done', 'Done', 'On hold pending a business decision.', '', '', '']
+  ]);
+  section('NOT YET A DEV ITEM', 'no build possible until scope is confirmed', [
+    [1, 20, '', 'SAMPLE — Future Project', 'Not Dev Item', 'n/a', 'Backlog', 'Backlog', 'Backlog', 'Backlog', 'Backlog', 'Requirements not documented yet.', '', '', '']
+  ]);
+
+  ws.addRow([]);
+  ws.addRow(['LINKIT360 · DEV TEAM — DAILY PROGRESS TRACKER (per Person)']);
+  ws.addRow(["Grouped per person. Each weekday has 3 columns: Yesterday, Today, Move to Next Day (Yes/No/Blocked). \"Blocker / Notes\" on the right is one note per row. Product names here must match a Product name above (or one already in Report Governance) to import."]);
+  ws.addRow([]);
+
+  function personBlock(name, sampleProductName, monYesterday, monToday, monMove, blocker) {
+    ws.addRow([`${name.toUpperCase()} — 1 task(s)`]);
+    const weekRow = ['No', 'Product']; dayHeaders.forEach(() => weekRow.push(weekLabel, weekLabel, weekLabel)); ws.addRow(weekRow);
+    const dayRow = ['No', 'Product']; dayHeaders.forEach(h => dayRow.push(h, h, h)); dayRow.push('Blocker / Notes'); ws.addRow(dayRow);
+    const subRow = ['No', 'Product']; dayNames.forEach(() => subRow.push('Yesterday', 'Today', 'Move to Next Day')); ws.addRow(subRow);
+    const dataRow = [1, sampleProductName];
+    for (let d = 0; d < 5; d++) dataRow.push(...(d === 0 ? [monYesterday, monToday, monMove] : ['', '', '']));
+    dataRow.push(blocker);
+    ws.addRow(dataRow);
+    ws.addRow([]);
+  }
+  personBlock('SAMPLE PERSON', 'SAMPLE — Digital ID Wallet', 'Set up local dev environment.', 'Started building the auth flow.', 'No', 'No major blockers.');
+
+  ws.columns.forEach(c => { c.width = 22; });
+  ws.getColumn(4).width = 34;
+  return wb;
+}
+
+app.get('/api/report-governance/upload-template', async (req, res) => {
+  try {
+    const periodStart = REPGOV_DATE_RE.test(req.query.period_start || '')
+      ? periodStartFor('weekly', req.query.period_start)
+      : currentPeriodStart('weekly', DEFAULT_POLICY.timezone);
+    const wb = repgovBuildTemplate(periodStart);
+    const buffer = await wb.xlsx.writeBuffer();
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="Weekly_Delivery_Tracker_${periodStart}.xlsx"`);
+    res.send(Buffer.from(buffer));
+  } catch (e) {
+    console.error('report-governance/upload-template error:', e.message);
+    res.status(502).json({ error: e.message });
+  }
+});
+
+app.post('/api/report-governance/upload', requireSupabase, (req, res, next) => {
+  upload.single('file')(req, res, err => {
+    if (err) return res.status(422).json({ error: 'file_too_large', message: 'File exceeds the 20MB limit.' });
+    next();
+  });
+}, async (req, res) => {
+  try {
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: 'file is required' });
+    const ext = fileExt(file.originalname);
+    if (!['xlsx', 'csv'].includes(ext)) {
+      return res.status(422).json({ error: 'invalid_extension', message: 'File must be .xlsx or .csv', found: ext });
+    }
+    if (ext === 'xlsx' && !magicBytesMatch(file.buffer, 'xlsx')) {
+      return res.status(422).json({ error: 'invalid_file_signature', message: `${file.originalname} does not look like a real .xlsx file.` });
+    }
+    if (ext === 'csv' && !looksLikeText(file.buffer)) {
+      return res.status(422).json({ error: 'invalid_file_signature', message: `${file.originalname} does not look like a text/CSV file.` });
+    }
+
+    const periodStart = REPGOV_DATE_RE.test(req.body.period_start || '')
+      ? periodStartFor('weekly', req.body.period_start)
+      : currentPeriodStart('weekly', DEFAULT_POLICY.timezone);
+
+    const wb = new ExcelJS.Workbook();
+    if (ext === 'xlsx') await wb.xlsx.load(file.buffer);
+    else await wb.csv.read(require('stream').Readable.from(file.buffer));
+    const worksheet = wb.worksheets[0];
+    if (!worksheet) return res.status(422).json({ error: 'empty_file', message: 'No sheet found in the uploaded file.' });
+
+    const parsed = parseWeeklyUploadWorkbook(worksheet);
+    const warnings = [...parsed.warnings];
+    const skipped = [];
+
+    const allProducts = await supabaseRequest('GET', 'report_products?is_active=eq.true&select=id,name,project_key');
+    const byName = new Map((allProducts || []).map(p => [p.name.toLowerCase().trim(), p]));
+
+    let weeklyUpdated = 0;
+    const dayFields = ['mon_status', 'tue_status', 'wed_status', 'thu_status', 'fri_status'];
+    for (const row of parsed.weeklyRows) {
+      const product = byName.get(row.name.toLowerCase().trim());
+      if (!product) { skipped.push({ name: row.name, reason: 'No existing project with this exact name — add it once via "+ Add project", then re-upload.' }); continue; }
+      if (!reportGovCanAccess(req.user, product.project_key)) { skipped.push({ name: row.name, reason: `Not allowed for project ${product.project_key}` }); continue; }
+
+      const body = { product_id: product.id, period_start: periodStart, updated_by: req.user.id, movement: row.movement };
+      if (row.score) { const n = parseInt(row.score, 10); if (!isNaN(n)) body.score_prio = n; }
+      const gate = normGate(row.gate); if (gate) body.capacity_gate = gate;
+      if (row.mvp) body.mvp_percent = row.mvp;
+      if (row.blocker) body.blocker_note = row.blocker;
+      if (row.demoPortal) body.demo_link_portal = row.demoPortal;
+      if (row.demoCms) body.demo_link_cms = row.demoCms;
+      if (row.linkRepo) body.link_repo = row.linkRepo;
+      if (row.credentials) body.credentials_text = row.credentials;
+      row.days.forEach((d, i) => {
+        const v = normDayStatus(d);
+        if (v != null) body[dayFields[i]] = v;
+        else if (d) warnings.push(`"${row.name}": unrecognized status "${d}" on ${dayFields[i].slice(0, 3)} — left as-is.`);
+      });
+
+      await supabaseRequest('POST', 'report_product_status?on_conflict=product_id,period_start&select=id', body, 'resolution=merge-duplicates,return=minimal');
+      weeklyUpdated++;
+    }
+
+    await ensureMembers();
+    const roster = cache.members || [];
+    const rosterByName = new Map(roster.map(m => [m.displayName.toLowerCase().trim(), m]));
+    const weekDates = repgovWeekdayDates(periodStart).map(d => d.toISOString().slice(0, 10));
+
+    let progressUpdated = 0;
+    for (const row of parsed.progressRows) {
+      const product = byName.get(row.product.toLowerCase().trim());
+      if (!product) { skipped.push({ name: `${row.person} — ${row.product}`, reason: 'No existing project with this exact name.' }); continue; }
+      let member = rosterByName.get(row.person.toLowerCase().trim());
+      if (!member) member = roster.find(m => m.displayName.toLowerCase().trim().startsWith(row.person.toLowerCase().trim()));
+      if (!member) { skipped.push({ name: `${row.person} — ${row.product}`, reason: `No team member matching "${row.person}"` }); continue; }
+      if (!reportGovCanAccess(req.user, product.project_key)) { skipped.push({ name: `${row.person} — ${row.product}`, reason: `Not allowed for project ${product.project_key}` }); continue; }
+
+      for (let i = 0; i < row.days.length; i++) {
+        const d = row.days[i];
+        if (!d.yesterday && !d.today && !d.move) continue;
+        const move = normMove(d.move);
+        if (move == null && d.move) warnings.push(`"${row.person} — ${row.product}": unrecognized Move to Next Day "${d.move}" — left blank.`);
+        const body = {
+          product_id: product.id, member_account_id: member.accountId, entry_date: weekDates[i], updated_by: req.user.id,
+          yesterday_note: d.yesterday || null, today_note: d.today || null,
+          move_to_next_day: move || '', blocker_note: row.blocker || null
+        };
+        await supabaseRequest('POST', 'report_progress_entries?on_conflict=product_id,member_account_id,entry_date&select=id', body, 'resolution=merge-duplicates,return=minimal');
+      }
+      progressUpdated++;
+    }
+
+    res.json({ period_start: periodStart, weekly_updated: weeklyUpdated, progress_updated: progressUpdated, skipped, warnings });
+  } catch (e) {
+    sendSupabaseError(res, e, 'report-governance/upload');
   }
 });
 

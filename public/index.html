@@ -1983,7 +1983,10 @@ dialog.rg-dialog::backdrop{background:rgba(10,13,18,.35)}
           <div class="page-title">Report Governance</div>
           <div class="page-sub">Weekly delivery status per project, filled in manually by the team that owns it</div>
         </div>
-        <button class="btn btn-primary" onclick="repgovOpenProductForm()">+ Add project</button>
+        <div style="display:flex;gap:10px">
+          <button class="rg-ghost-btn" onclick="repgovOpenUploadForm()">⬆ Upload report</button>
+          <button class="btn btn-primary" onclick="repgovOpenProductForm()">+ Add project</button>
+        </div>
       </div>
       <div id="repgov-body" style="padding:0 24px 24px"></div>
     </div>
@@ -9555,6 +9558,7 @@ function rgEnsureDialogs() {
         <label>Blocker / Next milestone<textarea name="blocker" rows="2"></textarea></label>
         <label>Demo link — Portal<input name="demoPortal" placeholder="https:// (optional)"></label>
         <label>Demo link — CMS<input name="demoCms" placeholder="https:// (optional)"></label>
+        <label>Link Repo<input name="linkRepo" placeholder="https:// (optional, e.g. GitLab/GitHub)"></label>
         <label>Credentials<textarea name="credentials" rows="2" placeholder="One login per line"></textarea></label>
         <div class="rg-form-actions">
           <button type="button" onclick="dlgRgProduct.close()" class="rg-ghost-btn">Cancel</button>
@@ -9627,6 +9631,7 @@ function rgEnsureDialogs() {
         <h3>Edit links &amp; credentials</h3>
         <label>Demo link — Portal<input name="demoPortal" placeholder="https://"></label>
         <label>Demo link — CMS<input name="demoCms" placeholder="https://"></label>
+        <label>Link Repo<input name="linkRepo" placeholder="https:// (optional, e.g. GitLab/GitHub)"></label>
         <label>Credentials<textarea name="credentials" rows="4" placeholder="One login per line"></textarea></label>
         <div class="rg-form-actions">
           <button type="button" onclick="dlgRgLinks.close()" class="rg-ghost-btn">Cancel</button>
@@ -9661,9 +9666,26 @@ function rgEnsureDialogs() {
         </div>
       </form>
     </dialog>
+
+    <dialog id="dlgRgUpload" class="rg-dialog rg-dialog-wide">
+      <form class="rg-form" id="formRgUpload">
+        <h3>Upload report</h3>
+        <p class="sub">Upload the Weekly Delivery Tracker spreadsheet for <b id="rgUploadWeekLabel">this week</b>. Projects are matched by name to what's already in Report Governance — a name that doesn't match yet is skipped and listed below, so add it once via "+ Add project" first.</p>
+        <p class="rg-form-error" id="rgUploadError" hidden></p>
+        <a id="rgUploadTemplateLink" class="rg-ghost-btn" style="text-align:center;text-decoration:none;display:block" href="#">⬇ Download template (.xlsx)</a>
+        <input type="hidden" name="period_start" id="rgUploadPeriodStart">
+        <label>File (.xlsx or .csv)<input type="file" name="file" accept=".xlsx,.csv" required></label>
+        <div id="rgUploadResult"></div>
+        <div class="rg-form-actions">
+          <button type="button" onclick="dlgRgUpload.close()" class="rg-ghost-btn">Close</button>
+          <button type="submit" class="btn btn-primary" id="rgUploadSubmitBtn">Upload</button>
+        </div>
+      </form>
+    </dialog>
   `);
 
   document.getElementById('formRgDateRange').addEventListener('submit', rgSubmitDateRange);
+  document.getElementById('formRgUpload').addEventListener('submit', rgSubmitUpload);
   document.getElementById('formRgProduct').addEventListener('submit', rgSubmitProduct);
   document.getElementById('formRgProgress').addEventListener('submit', rgSubmitProgress);
   document.getElementById('formRgPerson').addEventListener('submit', rgSubmitPerson);
@@ -9867,6 +9889,7 @@ function repgovLinksCellHtml(r) {
   const parts = [];
   if (r.demo_link_cms) parts.push(`<a href="${apEsc(r.demo_link_cms)}" target="_blank" rel="noopener">↗ Demo (CMS)</a>`);
   if (r.demo_link_portal) parts.push(`<a href="${apEsc(r.demo_link_portal)}" target="_blank" rel="noopener">↗ Demo (Portal)</a>`);
+  if (r.link_repo) parts.push(`<a href="${apEsc(r.link_repo)}" target="_blank" rel="noopener">↗ Repo</a>`);
   const credLines = (r.credentials_text || '').split('\n').map(l => l.trim()).filter(Boolean);
   const credHtml = credLines.length ? `<button class="rg-cred-toggle" onclick="repgovOpenCredentials('${r.product_id}')">🔑 Credentials (${credLines.length})</button>` : '';
   const body = parts.length || credHtml ? `${parts.join('')}${credHtml}` : `<span style="color:var(--ink-300);font-size:11px">— none yet —</span>`;
@@ -9935,6 +9958,52 @@ async function rgDrop(e, wrap) {
     showError(`Could not move project: ${ex.message}`);
   }
 }
+function repgovOpenUploadForm() {
+  rgEnsureDialogs();
+  document.getElementById('formRgUpload').reset();
+  document.getElementById('rgUploadError').hidden = true;
+  document.getElementById('rgUploadResult').innerHTML = '';
+  const periodStart = REPGOV.periodStart || new Date().toISOString().slice(0, 10);
+  document.getElementById('rgUploadPeriodStart').value = periodStart;
+  document.getElementById('rgUploadWeekLabel').textContent = `the week of ${periodStart}`;
+  document.getElementById('rgUploadTemplateLink').href = '/api/report-governance/upload-template?period_start=' + encodeURIComponent(periodStart);
+  dlgRgUpload.showModal();
+}
+async function rgSubmitUpload(e) {
+  e.preventDefault();
+  const form = e.target;
+  const err = document.getElementById('rgUploadError');
+  err.hidden = true;
+  const fileInput = form.querySelector('input[name="file"]');
+  if (!fileInput.files.length) { err.textContent = 'Please choose a file.'; err.hidden = false; return; }
+  const fd = new FormData(form);
+  const btn = document.getElementById('rgUploadSubmitBtn');
+  btn.disabled = true;
+  document.getElementById('rgUploadResult').innerHTML = '<p class="rg-hint">Uploading and parsing…</p>';
+  try {
+    const r = await fetch('/api/report-governance/upload', { method: 'POST', body: fd });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || data.message || `HTTP ${r.status}`);
+    const skippedHtml = data.skipped && data.skipped.length
+      ? `<p style="font-weight:600;margin:10px 0 4px">Skipped (${data.skipped.length}):</p><ul style="margin:0;padding-left:18px">${data.skipped.map(s => `<li>${apEsc(s.name)} — ${apEsc(s.reason)}</li>`).join('')}</ul>`
+      : '';
+    const warningsHtml = data.warnings && data.warnings.length
+      ? `<p style="font-weight:600;margin:10px 0 4px">Notes (${data.warnings.length}):</p><ul style="margin:0;padding-left:18px">${data.warnings.map(w => `<li>${apEsc(w)}</li>`).join('')}</ul>`
+      : '';
+    document.getElementById('rgUploadResult').innerHTML = `
+      <div class="rg-ai-card">
+        <div><b>${data.weekly_updated} project(s)</b> updated in the Weekly Tracker, <b>${data.progress_updated} progress row(s)</b> updated in Dev Daily Progress.</div>
+        ${skippedHtml}${warningsHtml}
+      </div>`;
+    if (REPGOV.periodStart === data.period_start) await repgovFetchStatus();
+  } catch (ex) {
+    err.textContent = ex.message;
+    err.hidden = false;
+    document.getElementById('rgUploadResult').innerHTML = '';
+  } finally {
+    btn.disabled = false;
+  }
+}
 function repgovOpenDateRangeForm() {
   rgEnsureDialogs();
   document.getElementById('rgDateRangeError').hidden = true;
@@ -9994,6 +10063,7 @@ async function rgSubmitProduct(e) {
       blocker_note: (fd.get('blocker') || '').trim() || null,
       demo_link_portal: (fd.get('demoPortal') || '').trim() || null,
       demo_link_cms: (fd.get('demoCms') || '').trim() || null,
+      link_repo: (fd.get('linkRepo') || '').trim() || null,
       credentials_text: (fd.get('credentials') || '').trim() || null
     });
     dlgRgProduct.close();
@@ -10028,6 +10098,7 @@ function repgovOpenLinksEditor(productId) {
   const form = document.getElementById('formRgLinks');
   form.elements['demoPortal'].value = r?.demo_link_portal || '';
   form.elements['demoCms'].value = r?.demo_link_cms || '';
+  form.elements['linkRepo'].value = r?.link_repo || '';
   form.elements['credentials'].value = r?.credentials_text || '';
   dlgRgLinks.showModal();
 }
@@ -10038,6 +10109,7 @@ async function rgSubmitLinks(e) {
     await putJson(`/api/report-governance/status/${RG_EDIT.linksProductId}?period_start=${REPGOV.periodStart}`, {
       demo_link_portal: (fd.get('demoPortal') || '').trim() || null,
       demo_link_cms: (fd.get('demoCms') || '').trim() || null,
+      link_repo: (fd.get('linkRepo') || '').trim() || null,
       credentials_text: (fd.get('credentials') || '').trim() || null
     });
     dlgRgLinks.close();
