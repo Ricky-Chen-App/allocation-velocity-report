@@ -2132,7 +2132,8 @@ const NAV_IDS = [
   'members', 'jirasync', 'usermgmt',
   'orgchart', 'projectteam',
   'airpay-summary', 'airpay-detail',
-  'gov-submit', 'gov-board', 'gov-settings'
+  'gov-submit', 'gov-board', 'gov-settings',
+  'report-governance', 'report-dev-progress'
 ];
 const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{2,31}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -2671,6 +2672,285 @@ app.put('/api/governance/projects/:key/team/:accountId', requireSupabase, requir
     res.json(updated[0]);
   } catch (e) {
     sendSupabaseError(res, e, 'governance/projects/team');
+  }
+});
+
+// ——— Report Governance: Weekly Delivery Tracker + Dev Daily Progress ———
+// Two menus built from an interactive mockup the user reviewed and approved
+// field-by-field. A "Product" here is a named initiative under a Jira
+// project (optionally tied to one specific Jira Epic) — distinct from
+// `projects`, since one Jira project can host many Products (e.g. BR alone
+// owns ~20: "ADCE Cambodia", "Bus Tracking", "Neary Smart Business", ...).
+const REPGOV_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const REPGOV_EPIC_RE = /^[A-Z][A-Z0-9_]{1,15}-\d+$/;
+const REPGOV_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const REPGOV_STATUS_FIELDS = ['score_prio', 'capacity_gate', 'movement', 'mvp_percent',
+  'mon_status', 'tue_status', 'wed_status', 'thu_status', 'fri_status',
+  'blocker_note', 'demo_link_portal', 'demo_link_cms', 'credentials_text'];
+const REPGOV_PROGRESS_FIELDS = ['yesterday_note', 'today_note', 'move_to_next_day', 'blocker_note'];
+
+function reportGovCanAccess(user, projectKey) {
+  return !!user?.is_admin || (user?.allowed_project_keys || []).includes(projectKey);
+}
+
+// GET /api/report-governance/jira-projects — the "Jira Project" combobox on
+// both pages. Reuses the same live-Jira cache every other dashboard menu
+// already fetches from, scoped to the caller the same way /api/projects is.
+app.get('/api/report-governance/jira-projects', async (req, res) => {
+  try {
+    res.json(scopeProjectsForUser(await ensureProjects(), req.user));
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
+});
+
+// GET /api/report-governance/jira-epics?project_key=BR — the "Jira Epic"
+// combobox, one project at a time (an org-wide epic search across ~90
+// projects would be too slow/large to be useful live). Cached briefly per
+// project since an epic list barely changes minute to minute — kept in its
+// own object rather than the shared `cache`, whose slots are a fixed shape.
+const repGovEpicCache = {};
+const REPGOV_EPIC_CACHE_TTL = 5 * 60 * 1000;
+app.get('/api/report-governance/jira-epics', async (req, res) => {
+  const projectKey = String(req.query.project_key || '').toUpperCase();
+  if (!GOV_KEY_RE.test(projectKey)) return res.status(400).json({ error: 'project_key is required and must be a valid Jira project key' });
+  if (!reportGovCanAccess(req.user, projectKey)) return res.status(403).json({ error: 'Not allowed for this project' });
+  try {
+    const cached = repGovEpicCache[projectKey];
+    if (cached && Date.now() - cached.ts < REPGOV_EPIC_CACHE_TTL) return res.json(cached.data);
+    const issues = await jiraSearchAll(`project = ${projectKey} AND issuetype = Epic ORDER BY key ASC`, 'summary', 500);
+    const epics = issues.map(i => ({ key: i.key, summary: i.fields?.summary || i.key }));
+    repGovEpicCache[projectKey] = { data: epics, ts: Date.now() };
+    res.json(epics);
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
+});
+
+// GET /api/report-governance/team-members — Dev Daily Progress' "Add
+// person" roster picker and the source of "Dev Group" filter values
+// (member_profiles.jabatan — the same field already driving Governance
+// Settings' Business Analyst / Team Developer columns).
+app.get('/api/report-governance/team-members', requireSupabase, async (req, res) => {
+  try {
+    const profiles = await supabaseRequest('GET', 'member_profiles?select=account_id,jabatan,display_name&order=display_name.asc');
+    await ensureMembers();
+    const memberByAccount = new Map((cache.members || []).map(m => [m.accountId, m]));
+    res.json((profiles || []).map(p => ({
+      account_id: p.account_id,
+      jabatan: p.jabatan,
+      name: p.display_name || memberByAccount.get(p.account_id)?.displayName || p.account_id
+    })));
+  } catch (e) {
+    sendSupabaseError(res, e, 'report-governance/team-members');
+  }
+});
+
+// ——— Products (the Weekly Tracker / Dev Progress row master list) ———
+app.get('/api/report-governance/products', requireSupabase, async (req, res) => {
+  try {
+    const params = ['is_active=eq.true', 'select=*', 'order=name.asc'];
+    if (req.query.project_key) params.push(`project_key=eq.${encodeURIComponent(req.query.project_key)}`);
+    let rows = await supabaseRequest('GET', `report_products?${params.join('&')}`);
+    if (!req.user.is_admin) {
+      const allowed = new Set(req.user.allowed_project_keys || []);
+      rows = (rows || []).filter(p => allowed.has(p.project_key));
+    }
+    res.json(rows);
+  } catch (e) {
+    sendSupabaseError(res, e, 'report-governance/products');
+  }
+});
+
+app.post('/api/report-governance/products', requireSupabase, async (req, res) => {
+  const projectKey = String(req.body?.project_key || '').toUpperCase();
+  const epicKey = req.body?.epic_key ? String(req.body.epic_key).toUpperCase() : null;
+  const name = String(req.body?.name || '').trim();
+  if (!GOV_KEY_RE.test(projectKey)) return res.status(400).json({ error: 'Invalid project_key' });
+  if (epicKey && !REPGOV_EPIC_RE.test(epicKey)) return res.status(400).json({ error: 'Invalid epic_key' });
+  if (!name) return res.status(400).json({ error: 'name is required' });
+  if (!reportGovCanAccess(req.user, projectKey)) return res.status(403).json({ error: 'Not allowed for this project' });
+  try {
+    const created = await supabaseRequest('POST', 'report_products?select=*',
+      { project_key: projectKey, epic_key: epicKey, name, created_by: req.user.id });
+    res.status(201).json(Array.isArray(created) ? created[0] : created);
+  } catch (e) {
+    if (e.status === 409 || /duplicate key/i.test(e.message || '')) {
+      return res.status(409).json({ error: `"${name}" already exists under ${projectKey}` });
+    }
+    sendSupabaseError(res, e, 'report-governance/products');
+  }
+});
+
+app.put('/api/report-governance/products/:id', requireSupabase, async (req, res) => {
+  const id = req.params.id;
+  if (!REPGOV_UUID_RE.test(id)) return res.status(400).json({ error: 'Invalid product id' });
+  try {
+    const existing = await supabaseRequest('GET', `report_products?id=eq.${id}&select=project_key`);
+    if (!existing || !existing.length) return res.status(404).json({ error: 'Product not found' });
+    if (!reportGovCanAccess(req.user, existing[0].project_key)) return res.status(403).json({ error: 'Not allowed for this project' });
+    const body = {};
+    if (typeof req.body?.name === 'string' && req.body.name.trim()) body.name = req.body.name.trim();
+    if (typeof req.body?.is_active === 'boolean') body.is_active = req.body.is_active;
+    const updated = await supabaseRequest('PATCH', `report_products?id=eq.${id}&select=*`, body);
+    res.json(updated[0]);
+  } catch (e) {
+    sendSupabaseError(res, e, 'report-governance/products');
+  }
+});
+
+// ——— Weekly Delivery Tracker status ———
+// A Product with no status row yet for the requested week defaults to
+// "Not Dev Item" here (never persisted until someone actually edits it) —
+// a newly-created Product doesn't need an eagerly-created row per week.
+app.get('/api/report-governance/status', requireSupabase, async (req, res) => {
+  try {
+    const periodStart = REPGOV_DATE_RE.test(req.query.period_start || '')
+      ? req.query.period_start
+      : currentPeriodStart('weekly', DEFAULT_POLICY.timezone);
+
+    const jira = scopeProjectsForUser(await ensureProjects(), req.user);
+    let jiraProjects = jira.projects || [];
+    if (req.query.category) jiraProjects = jiraProjects.filter(p => p.category === req.query.category);
+    if (req.query.project_key) jiraProjects = jiraProjects.filter(p => p.key === req.query.project_key);
+    const categoryByKey = new Map((jira.projects || []).map(p => [p.key, p.category]));
+    const visibleKeys = new Set(jiraProjects.map(p => p.key));
+    // period_start is always returned, even with zero rows, so the frontend
+    // can learn/display the resolved current week without a second call.
+    if (!visibleKeys.size) return res.json({ period_start: periodStart, rows: [] });
+
+    const keysParam = [...visibleKeys].map(encodeURIComponent).join(',');
+    const products = await supabaseRequest('GET', `report_products?project_key=in.(${keysParam})&is_active=eq.true&select=*`);
+    if (!products || !products.length) return res.json({ period_start: periodStart, rows: [] });
+
+    const productIds = products.map(p => p.id).join(',');
+    const statusRows = await supabaseRequest('GET',
+      `report_product_status?product_id=in.(${productIds})&period_start=eq.${periodStart}&select=*`);
+    const statusByProduct = new Map((statusRows || []).map(s => [s.product_id, s]));
+
+    const rows = products.map(p => {
+      const s = statusByProduct.get(p.id) || {};
+      return {
+        product_id: p.id,
+        project_key: p.project_key,
+        category: categoryByKey.get(p.project_key) || null,
+        epic_key: p.epic_key,
+        name: p.name,
+        period_start: periodStart,
+        score_prio: s.score_prio ?? null,
+        capacity_gate: s.capacity_gate ?? null,
+        movement: s.movement || 'Not Dev Item',
+        mvp_percent: s.mvp_percent ?? null,
+        mon_status: s.mon_status || '', tue_status: s.tue_status || '', wed_status: s.wed_status || '',
+        thu_status: s.thu_status || '', fri_status: s.fri_status || '',
+        blocker_note: s.blocker_note ?? null,
+        demo_link_portal: s.demo_link_portal ?? null,
+        demo_link_cms: s.demo_link_cms ?? null,
+        credentials_text: s.credentials_text ?? null
+      };
+    });
+    res.json({ period_start: periodStart, rows });
+  } catch (e) {
+    sendSupabaseError(res, e, 'report-governance/status');
+  }
+});
+
+app.put('/api/report-governance/status/:productId', requireSupabase, async (req, res) => {
+  const productId = req.params.productId;
+  if (!REPGOV_UUID_RE.test(productId)) return res.status(400).json({ error: 'Invalid product id' });
+  const periodStart = req.query.period_start;
+  if (!REPGOV_DATE_RE.test(periodStart || '')) return res.status(400).json({ error: 'period_start (YYYY-MM-DD) is required' });
+  try {
+    const existing = await supabaseRequest('GET', `report_products?id=eq.${productId}&select=project_key`);
+    if (!existing || !existing.length) return res.status(404).json({ error: 'Product not found' });
+    if (!reportGovCanAccess(req.user, existing[0].project_key)) return res.status(403).json({ error: 'Not allowed for this project' });
+
+    // `movement` is NOT NULL with no DB default, so every upsert must send
+    // something for it — but only the caller-supplied value when there is
+    // one; otherwise fall back to the row's own current value (fetched
+    // here) rather than a hardcoded default, or a plain field-only PUT
+    // (e.g. an inline Score Prio edit) would silently reset movement back
+    // to "Not Dev Item" on every save. This was a real bug caught in
+    // testing: editing Score Prio moved a "Moving" row back to "Not Dev
+    // Item" because the old code always defaulted movement when absent.
+    let movement = req.body?.movement;
+    if (!movement) {
+      const prevRows = await supabaseRequest('GET',
+        `report_product_status?product_id=eq.${productId}&period_start=eq.${periodStart}&select=movement`);
+      movement = (prevRows && prevRows[0] && prevRows[0].movement) || 'Not Dev Item';
+    }
+    const body = { product_id: productId, period_start: periodStart, updated_by: req.user.id, movement };
+    REPGOV_STATUS_FIELDS.forEach(f => { if (req.body && f in req.body) body[f] = req.body[f]; });
+
+    const updated = await supabaseRequest('POST',
+      'report_product_status?on_conflict=product_id,period_start&select=*',
+      body, 'resolution=merge-duplicates,return=representation');
+    res.json(Array.isArray(updated) ? updated[0] : updated);
+  } catch (e) {
+    sendSupabaseError(res, e, 'report-governance/status');
+  }
+});
+
+// ——— Dev Daily Progress ———
+app.get('/api/report-governance/progress', requireSupabase, async (req, res) => {
+  try {
+    const entryDate = REPGOV_DATE_RE.test(req.query.entry_date || '') ? req.query.entry_date : null;
+    const params = ['select=*,report_products(id,project_key,epic_key,name)'];
+    if (entryDate) params.push(`entry_date=eq.${entryDate}`);
+    if (req.query.member_account_id) params.push(`member_account_id=eq.${encodeURIComponent(req.query.member_account_id)}`);
+    let rows = await supabaseRequest('GET', `report_progress_entries?${params.join('&')}`);
+
+    if (!req.user.is_admin) {
+      const allowed = new Set(req.user.allowed_project_keys || []);
+      rows = (rows || []).filter(r => allowed.has(r.report_products?.project_key));
+    }
+
+    const accountIds = [...new Set((rows || []).map(r => r.member_account_id))];
+    const profiles = accountIds.length
+      ? await supabaseRequest('GET', `member_profiles?account_id=in.(${accountIds.map(encodeURIComponent).join(',')})&select=account_id,jabatan,display_name`)
+      : [];
+    const profileByAccount = new Map((profiles || []).map(p => [p.account_id, p]));
+
+    if (req.query.jabatan) {
+      rows = rows.filter(r => profileByAccount.get(r.member_account_id)?.jabatan === req.query.jabatan);
+    }
+
+    await ensureMembers();
+    const memberByAccount = new Map((cache.members || []).map(m => [m.accountId, m]));
+
+    res.json((rows || []).map(r => ({
+      ...r,
+      jabatan: profileByAccount.get(r.member_account_id)?.jabatan || null,
+      member_name: profileByAccount.get(r.member_account_id)?.display_name
+        || memberByAccount.get(r.member_account_id)?.displayName
+        || r.member_account_id
+    })));
+  } catch (e) {
+    sendSupabaseError(res, e, 'report-governance/progress');
+  }
+});
+
+app.put('/api/report-governance/progress/:productId/:memberAccountId', requireSupabase, async (req, res) => {
+  const productId = req.params.productId;
+  const memberAccountId = req.params.memberAccountId;
+  const entryDate = req.query.entry_date;
+  if (!REPGOV_UUID_RE.test(productId)) return res.status(400).json({ error: 'Invalid product id' });
+  if (!MEMBER_ACCOUNT_ID_RE.test(memberAccountId)) return res.status(400).json({ error: 'Invalid member account id' });
+  if (!REPGOV_DATE_RE.test(entryDate || '')) return res.status(400).json({ error: 'entry_date (YYYY-MM-DD) is required' });
+  try {
+    const existing = await supabaseRequest('GET', `report_products?id=eq.${productId}&select=project_key`);
+    if (!existing || !existing.length) return res.status(404).json({ error: 'Product not found' });
+    if (!reportGovCanAccess(req.user, existing[0].project_key)) return res.status(403).json({ error: 'Not allowed for this project' });
+
+    const body = { product_id: productId, member_account_id: memberAccountId, entry_date: entryDate, updated_by: req.user.id };
+    REPGOV_PROGRESS_FIELDS.forEach(f => { if (req.body && f in req.body) body[f] = req.body[f]; });
+
+    const updated = await supabaseRequest('POST',
+      'report_progress_entries?on_conflict=product_id,member_account_id,entry_date&select=*',
+      body, 'resolution=merge-duplicates,return=representation');
+    res.json(Array.isArray(updated) ? updated[0] : updated);
+  } catch (e) {
+    sendSupabaseError(res, e, 'report-governance/progress');
   }
 });
 

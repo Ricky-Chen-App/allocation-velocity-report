@@ -1134,6 +1134,119 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
   body{background:#fff}
 }
 </style>
+<style id="rg-styles">
+/* Report Governance + Dev Daily Progress — scoped with an rg- prefix so
+   nothing here collides with the rest of the app's CSS. */
+.rg-filter-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 16px}
+.rg-summary-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.rg-summary-card{flex:1 1 140px;min-width:140px;background:var(--ink-0);border:1px solid var(--ink-100);border-radius:12px;padding:12px 16px}
+.rg-summary-card .num{font-size:22px;font-weight:800;color:var(--ink-900);font-family:var(--font-mono);line-height:1.1}
+.rg-summary-card .lbl{font-size:10.5px;color:var(--ink-400);margin-top:3px}
+.rg-summary-card.green .num{color:#1a7f4e}
+.rg-summary-card.yellow .num{color:#b06a00}
+.rg-summary-card.red .num{color:#c0392b}
+
+.rg-ai{background:#f5f0ff;border:1px solid #e3d8fb;border-radius:14px;padding:16px 18px;margin-bottom:22px}
+.rg-ai-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;cursor:pointer}
+.rg-ai:not(.collapsed) .rg-ai-head{margin-bottom:10px}
+.rg-ai-badge{font-size:11px;font-weight:700;color:#7c3aed;background:#fff;border:1px solid #e3d8fb;border-radius:999px;padding:3px 10px}
+.rg-ai-note{font-size:11px;color:var(--ink-400)}
+.rg-ai-regen{margin-left:auto;font-size:11px;font-weight:600;color:var(--ink-600);background:#fff;border:1px solid var(--ink-100);border-radius:8px;padding:5px 10px;cursor:pointer}
+.rg-ai-chevron{font-size:11px;color:var(--ink-400);transition:transform .15s}
+.rg-ai:not(.collapsed) .rg-ai-chevron{transform:rotate(180deg)}
+.rg-ai.collapsed .rg-ai-body{display:none}
+.rg-ai-body{display:flex;flex-direction:column;gap:8px}
+.rg-ai-card{background:#fff;border:1px solid var(--ink-100);border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.5}
+.rg-ai-empty{font-size:12.5px;color:var(--ink-500);font-style:italic}
+
+.rg-card{background:var(--ink-0);border:1px solid var(--ink-100);border-radius:14px;overflow:hidden;margin-bottom:22px}
+.rg-card-head{padding:14px 20px;border-bottom:1px solid var(--ink-100)}
+.rg-card-head p{margin:2px 0 0;font-size:11.5px;color:var(--ink-400)}
+.rg-grp-head{display:flex;align-items:center;gap:9px;padding:11px 20px;background:var(--surface-2);border-top:1px solid var(--ink-100);font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--ink-600)}
+.rg-grp-head:first-child{border-top:none}
+.rg-grp-count{font-family:var(--font-mono);background:var(--ink-100);color:var(--ink-600);border-radius:999px;padding:1px 8px;font-size:10.5px;font-weight:600}
+.rg-grp-note{font-weight:400;text-transform:none;color:var(--ink-400);font-size:11px}
+
+.rg-table-wrap{overflow-x:auto}
+.rg-table-wrap.drop-target{outline:2px dashed #6b8afd;outline-offset:-2px;border-radius:8px}
+.rg-table{width:100%;border-collapse:collapse}
+.rg-table th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-400);font-weight:700;padding:9px 10px;white-space:nowrap;border-bottom:1px solid var(--ink-100)}
+.rg-table td{padding:10px;border-bottom:1px solid var(--ink-50);vertical-align:top;font-size:12.5px}
+.rg-table tbody tr:hover{background:var(--surface-2)}
+.rg-table tbody tr[draggable="true"]{cursor:grab}
+.rg-table tbody tr.dragging{opacity:.4}
+
+.rg-score-input{width:44px;font:inherit;font-family:var(--font-mono);font-weight:700;color:var(--ink-800);border:1px solid transparent;border-radius:6px;padding:4px 5px;background:transparent;text-align:center}
+.rg-score-input:hover,.rg-score-input:focus{background:var(--ink-50);border-color:var(--ink-100)}
+.rg-gate{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.rg-gate::before{content:"";width:6px;height:6px;border-radius:50%}
+.rg-gate.GREEN{background:#e9f9ef;color:#1a7f4e}.rg-gate.GREEN::before{background:#2fbf6c}
+.rg-gate.YELLOW{background:#fff6e5;color:#b06a00}.rg-gate.YELLOW::before{background:#f0a500}
+.rg-gate.RED{background:#fdecea;color:#c0392b}.rg-gate.RED::before{background:#e74c3c}
+.rg-product b{display:block;color:var(--ink-900);font-weight:600;font-size:12.5px}
+.rg-product .sub{font-size:10.5px;color:var(--ink-400);font-family:var(--font-mono)}
+.rg-mvp{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-600)}
+.rg-mvp-bar{width:46px;height:4px;border-radius:3px;background:var(--ink-100);margin-top:4px;overflow:hidden}
+.rg-mvp-bar i{display:block;height:100%;background:#5b8def}
+
+.rg-daysel{font:inherit;font-size:11px;font-weight:600;border:1px solid transparent;border-radius:6px;padding:4px 7px;cursor:pointer;width:100%;text-align:center}
+.rg-daysel.done{background:#e9f9ef;color:#1a7f4e}
+.rg-daysel.progress{background:#eaf1fe;color:#2f5fd6}
+.rg-daysel.blocked{background:#fdecea;color:#c0392b}
+.rg-daysel.todo{background:#fff6e5;color:#b06a00}
+.rg-daysel.backlog{background:var(--ink-100);color:var(--ink-500)}
+.rg-daysel.empty{background:var(--ink-50);color:var(--ink-300);border:1px dashed var(--ink-200)}
+
+.rg-blocker{max-width:230px;color:var(--ink-600);font-size:11.5px;line-height:1.4;cursor:pointer;position:relative}
+.rg-blocker:hover::after{content:"✎";position:absolute;top:8px;right:6px;font-size:10px;color:var(--ink-300)}
+.rg-links{display:flex;flex-direction:column;gap:4px;min-width:110px}
+.rg-links a{font-size:11px;color:#2f5fd6;text-decoration:none}
+.rg-cred-toggle,.rg-link-edit{font-size:11px;background:var(--ink-50);border:1px solid var(--ink-100);border-radius:6px;padding:3px 8px;cursor:pointer;text-align:left;color:var(--ink-500)}
+.rg-link-edit{background:transparent;border-style:dashed;color:var(--ink-400)}
+.rg-cred-box{font-family:var(--font-mono);font-size:11px;color:var(--ink-600);background:var(--ink-50);border:1px solid var(--ink-100);border-radius:8px;padding:10px;line-height:1.7;max-height:280px;overflow-y:auto}
+
+.rg-txtcell{max-width:190px;color:var(--ink-700);cursor:pointer;position:relative}
+.rg-txtcell:hover::after{content:"✎";position:absolute;top:8px;right:4px;font-size:10px;color:var(--ink-300)}
+.rg-txtcell.muted{color:var(--ink-300);font-style:italic}
+.rg-move-select{font:inherit;font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;border:1px solid transparent;cursor:pointer;background:var(--ink-50);color:var(--ink-400)}
+.rg-move-select.Yes{background:#fff6e5;color:#b06a00}
+.rg-move-select.No{background:#e9f9ef;color:#1a7f4e}
+.rg-move-select.Blocked{background:#fdecea;color:#c0392b}
+
+.rg-person-head{display:flex;align-items:center;gap:10px;padding:13px 20px;background:var(--surface-2);border-top:1px solid var(--ink-100)}
+.rg-person-avatar{width:24px;height:24px;border-radius:50%;background:#efe6fe;color:#7c3aed;display:grid;place-items:center;font-size:10px;font-weight:700;font-family:var(--font-mono)}
+.rg-person-head b{font-size:12px;color:var(--ink-800);text-transform:uppercase;letter-spacing:.03em}
+.rg-person-head .grp{font-size:9.5px;color:#7c3aed;background:#f5f0ff;border-radius:999px;padding:1px 8px;font-weight:700}
+.rg-person-head .cnt{font-size:11px;color:var(--ink-400)}
+.rg-foot-add{padding:12px 20px;border-top:1px solid var(--ink-100)}
+.rg-ghost-btn{font:inherit;font-size:11.5px;font-weight:600;color:#2f5fd6;background:#eaf1fe;border:1px solid #d8e5fc;border-radius:8px;padding:6px 12px;cursor:pointer}
+
+.rg-combo{position:relative;min-width:170px}
+.rg-combo-input{width:100%;font:inherit;font-size:12px;padding:7px 12px;border:1px solid var(--ink-100);border-radius:999px;background:var(--ink-0)}
+.rg-combo-list{position:absolute;top:100%;left:0;right:0;margin-top:4px;background:var(--ink-0);border:1px solid var(--ink-100);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.1);max-height:280px;overflow-y:auto;z-index:200}
+.rg-combo-group{font-size:10px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;color:var(--ink-400);padding:6px 10px 2px}
+.rg-combo-opt{padding:7px 10px;font-size:12.5px;cursor:pointer}
+.rg-combo-opt:hover{background:var(--surface-2)}
+.rg-combo-empty{padding:8px 10px;font-size:12px;color:var(--ink-400);font-style:italic}
+
+dialog.rg-dialog{border:none;border-radius:14px;padding:0;box-shadow:0 8px 28px rgba(0,0,0,.16);max-width:460px;width:92vw;font-family:inherit;color:var(--ink-800);margin:auto;max-height:85vh}
+dialog.rg-dialog.rg-dialog-wide{max-width:640px}
+dialog.rg-dialog::backdrop{background:rgba(10,13,18,.35)}
+.rg-form{padding:20px 22px 18px;display:flex;flex-direction:column;gap:12px;max-height:80vh;overflow-y:auto}
+.rg-form h3{margin:0 0 2px;font-size:15px;color:var(--ink-900)}
+.rg-form .sub{margin:0;font-size:11.5px;color:var(--ink-500)}
+.rg-form label{display:flex;flex-direction:column;gap:4px;font-size:11.5px;font-weight:600;color:var(--ink-600)}
+.rg-form [hidden]{display:none!important}
+.rg-form input,.rg-form select,.rg-form textarea{font:inherit;font-size:12.5px;font-weight:400;padding:7px 10px;border:1px solid var(--ink-100);border-radius:8px;background:var(--ink-0);color:var(--ink-800)}
+.rg-form textarea{resize:vertical;font-family:inherit}
+.rg-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rg-form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+.rg-form-error{color:#c0392b;background:#fdecea;border:1px solid #f6cfc9;border-radius:8px;padding:8px 10px;font-size:11.5px}
+.rg-hint{font-size:10.5px;color:var(--ink-400);font-weight:400;margin:-6px 0 0}
+.rg-radio-row{display:flex;gap:16px}
+.rg-radio-row label{flex-direction:row;align-items:center;gap:6px;font-weight:400;color:var(--ink-700)}
+.rg-radio-row input{width:auto}
+</style>
 </head>
 <body>
 
@@ -1242,6 +1355,14 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
     <button class="nav-item" data-navid="gov-settings" onclick="showPage('gov-settings',this)">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v1.8M8 12.7v1.8M14.5 8h-1.8M3.3 8H1.5M12.7 3.3l-1.3 1.3M4.6 11.1l-1.3 1.3M12.7 12.7l-1.3-1.3M4.6 4.9L3.3 3.3"/></svg>
       Settings
+    </button>
+    <button class="nav-item" data-navid="report-governance" onclick="showPage('report-governance',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="2" width="13" height="12" rx="1.5"/><path d="M4 6h8M4 9h5"/></svg>
+      Report Governance
+    </button>
+    <button class="nav-item" data-navid="report-dev-progress" onclick="showPage('report-dev-progress',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5.5" cy="4.5" r="2"/><circle cx="11" cy="9" r="2"/><path d="M2 14c0-2 1.5-3.5 3.5-3.5S9 12 9 14M8 14c0-1.6 1.2-2.8 3-2.8s3 1.2 3 2.8"/></svg>
+      Dev Daily Progress
     </button>
   </div>
 
@@ -1856,6 +1977,28 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
       <div id="gov-body" style="padding:0 24px 24px"></div>
     </div>
 
+    <div class="page" id="page-report-governance">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Report Governance</div>
+          <div class="page-sub">Weekly delivery status per project, filled in manually by the team that owns it</div>
+        </div>
+        <button class="btn btn-primary" onclick="repgovOpenProductForm()">+ Add project</button>
+      </div>
+      <div id="repgov-body" style="padding:0 24px 24px"></div>
+    </div>
+
+    <div class="page" id="page-report-dev-progress">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Dev Daily Progress</div>
+          <div class="page-sub">Grouped per person — Yesterday / Today / Move-to-next-day per project</div>
+        </div>
+        <button class="btn btn-primary" onclick="devprogOpenPersonForm()">+ Add person</button>
+      </div>
+      <div id="devprog-body" style="padding:0 24px 24px"></div>
+    </div>
+
   </div>
 </div>
 
@@ -2019,6 +2162,8 @@ function showPage(id, btn) {
   if (id === 'gov-settings') loadGovSettingsPage();
   if (id === 'gov-submit') loadGovSubmitPage();
   if (id === 'gov-board') loadGovBoardPage();
+  if (id === 'report-governance') loadReportGovernancePage();
+  if (id === 'report-dev-progress') loadDevProgressPage();
 
   toggleSidebar(false); // close mobile drawer after navigating
 }
@@ -2039,6 +2184,8 @@ const NAV_ITEMS = [
   { id: 'gov-submit',   label: 'Submit' },
   { id: 'gov-board',    label: 'Compliance Board' },
   { id: 'gov-settings', label: 'Governance Settings' },
+  { id: 'report-governance', label: 'Report Governance' },
+  { id: 'report-dev-progress', label: 'Dev Daily Progress' },
   { id: 'orgchart',    label: 'Structure Organization' },
   { id: 'projectteam', label: 'Structure Project Team' },
   { id: 'airpay-summary', label: 'Summary Report' },
@@ -9193,6 +9340,852 @@ function renderAirpayDetail() {
       ${recentlyDone.map(t => `<div class="ap-item-row"><div class="ap-item-name">${apEsc(t.name)} <span style="font-family:var(--font-mono);font-size:10px;color:var(--ink-400);font-weight:400">${apEsc(t.id)}</span></div><div class="ap-item-sub">Target ${apFmtDate(t.target)}${t.pic && t.pic !== '-' ? ' · ' + apEsc(t.pic) : ''}</div></div>`).join('')}
     </div>` : ''}
   `;
+}
+
+// ============================================================
+// REPORT GOVERNANCE + DEV DAILY PROGRESS
+// Built from an interactive mockup the user reviewed and approved
+// field-by-field before any backend existed — see the "Report Governance"
+// plan. A "Product" here is a named initiative under a Jira project
+// (optionally tied to one specific Jira Epic), distinct from `projects`:
+// one Jira project can host many Products.
+// ============================================================
+async function putJson(path, body) {
+  const r = await fetch(path, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body || {})
+  });
+  const json = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(json.error || `HTTP ${r.status}`);
+  return json;
+}
+
+// ---- Shared searchable combobox (Category/Project/Epic/Group/Name pickers) ----
+// A second, self-contained combo implementation alongside AP_COMBO/COMBOS —
+// this codebase already has more than one of these (see COMBOS/VCOMBOS), so
+// adding one more scoped to this feature is consistent rather than forcing
+// a reuse that would need to support very different item shapes.
+const RG_COMBO = {};
+function rgComboInit(id, itemsOrFn, onSelect) {
+  const prev = RG_COMBO[id];
+  RG_COMBO[id] = { itemsOrFn, onSelect, value: prev?.value || '', label: prev?.label || '' };
+}
+function rgComboItems(id) {
+  const s = RG_COMBO[id];
+  if (!s) return [];
+  return typeof s.itemsOrFn === 'function' ? s.itemsOrFn() : (s.itemsOrFn || []);
+}
+function rgComboHtml(id, placeholder) {
+  const s = RG_COMBO[id];
+  return `<div class="rg-combo" id="rgc-${id}">
+    <input type="text" class="rg-combo-input" placeholder="${apEsc(placeholder || 'Search…')}" autocomplete="off"
+      value="${apEsc(s?.label || '')}" oninput="rgComboOnInput('${id}')" onfocus="rgComboRender('${id}')">
+    <div class="rg-combo-list" id="rgc-${id}-list" hidden></div>
+  </div>`;
+}
+function rgComboRender(id) {
+  const root = document.getElementById(`rgc-${id}`);
+  const list = document.getElementById(`rgc-${id}-list`);
+  if (!root || !list) return;
+  const input = root.querySelector('.rg-combo-input');
+  const q = (input.value || '').trim().toLowerCase();
+  const items = rgComboItems(id);
+  const matches = q ? items.filter(it => it.label.toLowerCase().includes(q)) : items;
+  if (!matches.length) {
+    list.innerHTML = `<div class="rg-combo-empty">No matches</div>`;
+  } else {
+    const byGroup = {};
+    matches.forEach(it => { (byGroup[it.group || ''] = byGroup[it.group || ''] || []).push(it); });
+    list.innerHTML = Object.keys(byGroup).sort().map(g => `<div class="rg-combo-group">${apEsc(g)}</div>` +
+      byGroup[g].map(it => `<div class="rg-combo-opt" data-combo="${id}" data-value="${apEsc(it.value)}">${apEsc(it.label)}</div>`).join('')
+    ).join('');
+  }
+  list.hidden = false;
+}
+function rgComboOnInput(id) {
+  if (RG_COMBO[id]) RG_COMBO[id].value = '';
+  rgComboRender(id);
+}
+function rgComboPick(id, value) {
+  const item = rgComboItems(id).find(it => String(it.value) === String(value));
+  if (!item || !RG_COMBO[id]) return;
+  RG_COMBO[id].value = item.value;
+  RG_COMBO[id].label = item.label;
+  const root = document.getElementById(`rgc-${id}`);
+  if (root) { const input = root.querySelector('.rg-combo-input'); if (input) input.value = item.label; }
+  const list = document.getElementById(`rgc-${id}-list`);
+  if (list) list.hidden = true;
+  if (RG_COMBO[id].onSelect) RG_COMBO[id].onSelect(item);
+}
+function rgComboValue(id) { return RG_COMBO[id]?.value || ''; }
+function rgComboClear(id) {
+  if (!RG_COMBO[id]) return;
+  RG_COMBO[id].value = ''; RG_COMBO[id].label = '';
+  const root = document.getElementById(`rgc-${id}`);
+  if (root) { const input = root.querySelector('.rg-combo-input'); if (input) input.value = ''; }
+}
+document.addEventListener('mousedown', e => {
+  const opt = e.target.closest('.rg-combo-opt');
+  if (opt) { e.preventDefault(); rgComboPick(opt.dataset.combo, opt.dataset.value); return; }
+  document.querySelectorAll('.rg-combo-list').forEach(l => {
+    if (!l.hidden) {
+      const root = l.closest('.rg-combo');
+      if (!root || !root.contains(e.target)) l.hidden = true;
+    }
+  });
+});
+
+function rgWeekdayLabel(periodStart, offsetDays) {
+  const d = new Date(`${periodStart}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + offsetDays);
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+function rgMvpCellHtml(mvpText) {
+  const m = String(mvpText || '').match(/(\d{1,3})\s*%/);
+  if (!m) return apEsc(mvpText || '—');
+  const pct = Math.min(100, parseInt(m[1], 10));
+  return `${apEsc(mvpText)}<div class="rg-mvp-bar"><i style="width:${pct}%"></i></div>`;
+}
+function rgToggleAi(id) { document.getElementById(id).classList.toggle('collapsed'); }
+
+// ---- AI Summary: a risk shortlist, not a transcript of every blocker note ----
+// A blocker note like "Complete, preparing sign-off docs" is a status update,
+// not a risk — this scores each note on language that suggests it's actually
+// holding up delivery, and (for Report Governance) on Capacity Gate/Score
+// Prio, surfacing only the top ~5. Documented here as a deliberate, static
+// heuristic — not an LLM call — so it's inspectable and doesn't silently
+// change behavior if a real model call replaces it later.
+const RG_AI_THEMES = [
+  { test: /infra|pointing|server(?!s)|hosting/i, fix: 'Prioritize infra/DevOps capacity this week so pointing and environment setup stop blocking downstream work.' },
+  { test: /backend|api|integration/i, fix: 'Pull backend tasks forward or add a second backend engineer to unblock dependent frontend/demo work.' },
+  { test: /sign-?off|approval|kickoff|confirm/i, fix: 'Escalate to the business/PM owner for a same-week decision — this is a non-technical blocker.' },
+  { test: /no developer assigned|not started/i, fix: 'Assign an owner in the next planning session or de-prioritize if capacity is tight.' },
+  { test: /bug|error|defect|404/i, fix: 'Keep as top priority for the assigned developer until resolved and verified in staging.' },
+  { test: /reschedul|delay|TBD/i, fix: 'Set a firm revised date with the requester so the team can re-plan around it.' }
+];
+const RG_RISK_UP = [
+  { test: /waiting on/i, reason: 'actively waiting on another team/person before work can continue' },
+  { test: /no developer assigned|not started/i, reason: 'has no owner yet, so no work can start' },
+  { test: /reschedul|delay/i, reason: 'timeline has already slipped or is unconfirmed' },
+  { test: /bug|error|defect|404/i, reason: 'a live defect is blocking further progress' },
+  { test: /infra|pointing|server(?!s)|hosting/i, reason: 'gated on infrastructure/environment work' },
+  { test: /blocked/i, reason: 'explicitly called out as blocked' }
+];
+const RG_RISK_DOWN = [/sign-?off/i, /approval/i, /no task today/i, /^complete/i, /confirmed/i];
+function rgScoreBlockerRisk(text, meta) {
+  meta = meta || {};
+  let score = 0; const reasons = [];
+  RG_RISK_UP.forEach(p => { if (p.test.test(text)) { score += 2; reasons.push(p.reason); } });
+  RG_RISK_DOWN.forEach(p => { if (p.test(text)) score -= 2; });
+  if (meta.gate === 'RED') { score += 3; reasons.push('Capacity Gate is RED'); }
+  else if (meta.gate === 'YELLOW') { score += 1; }
+  if (typeof meta.priority === 'number') {
+    if (meta.priority >= 90) { score += 2; reasons.push('very high Score Prio'); }
+    else if (meta.priority >= 70) { score += 1; }
+  }
+  return { score, reasons };
+}
+function rgBuildAiSummary(entries) {
+  const scored = entries.map(e => ({ ...e, ...rgScoreBlockerRisk(e.text, e.meta) }))
+    .filter(e => e.score > 0).sort((a, b) => b.score - a.score).slice(0, 5);
+  if (!scored.length) return `<div class="rg-ai-empty">No blockers currently look likely to stall delivery — the rest are just status notes. 🎉</div>`;
+  return scored.map(e => {
+    const theme = RG_AI_THEMES.find(t => t.test.test(e.text));
+    const fix = theme ? theme.fix : 'Flag this in the next stand-up so an owner can commit to unblocking it.';
+    const why = e.reasons.length ? e.reasons.join('; ') : 'blocking language detected';
+    return `<div class="rg-ai-card"><div><b>At risk:</b> ${apEsc(e.name)} — "${apEsc(e.text)}"</div>
+      <div style="color:var(--ink-600);margin-top:3px"><b>Why it matters:</b> ${apEsc(why)}. <b>Suggested fix:</b> ${apEsc(fix)}</div></div>`;
+  }).join('');
+}
+
+// Creates a product if it doesn't exist yet; if one with this (project,
+// name) already exists, reuses it instead of erroring — logging progress
+// against an already-tracked product is normal, unlike the Weekly Tracker's
+// own "+ Add project" which treats a duplicate name as a mistake.
+async function rgResolveOrCreateProduct(projectKey, epicKey, name) {
+  try {
+    return await postJson('/api/report-governance/products', { project_key: projectKey, epic_key: epicKey, name });
+  } catch (ex) {
+    if (!/already exists/i.test(ex.message)) throw ex;
+    const existing = await api('/api/report-governance/products?project_key=' + encodeURIComponent(projectKey));
+    const match = (existing || []).find(p => p.name.toLowerCase() === name.toLowerCase());
+    if (!match) throw ex;
+    return match;
+  }
+}
+
+// ---- Shared modals (injected once, reused by both pages) ----
+let RG_DIALOGS_READY = false;
+const RG_EDIT = {};
+const RG_FORM = { productEpics: [], progressEpics: [] };
+function rgEnsureDialogs() {
+  if (RG_DIALOGS_READY) return;
+  RG_DIALOGS_READY = true;
+  document.body.insertAdjacentHTML('beforeend', `
+    <dialog id="dlgRgProduct" class="rg-dialog rg-dialog-wide">
+      <form class="rg-form" id="formRgProduct">
+        <h3>Add project</h3>
+        <p class="sub">Adds a row to the Weekly Delivery Tracker.</p>
+        <p class="rg-form-error" id="rgProductError" hidden></p>
+        <div>
+          <span style="font-size:11.5px;font-weight:600;color:var(--ink-600)">Source</span>
+          <div class="rg-radio-row" style="margin-top:4px">
+            <label><input type="radio" name="source" value="project" checked onchange="rgToggleProductSource()"> Jira Project</label>
+            <label><input type="radio" name="source" value="epic" onchange="rgToggleProductSource()"> Jira Epic</label>
+          </div>
+        </div>
+        <label>Project name<input required name="name" placeholder="e.g. Digital ID Wallet"></label>
+        <label>Jira project ${rgComboHtml('rgProductProject', 'Search Jira project…')}</label>
+        <label id="rgProductEpicWrap" hidden>Jira epic ${rgComboHtml('rgProductEpic', 'Search Jira epic…')}
+          <p class="rg-hint">Picking an epic fills in the project name for you.</p></label>
+        <label>Section
+          <select name="section">
+            <option value="Moving">Moving</option>
+            <option value="On Hold">Demo done, on hold</option>
+            <option value="Not Dev Item">Not yet a dev item</option>
+          </select>
+        </label>
+        <div class="rg-row2">
+          <label>Score Prio<input type="number" name="score" min="0" max="999" value="50"></label>
+          <label>Capacity Gate<select name="gate"><option value="GREEN">GREEN</option><option value="YELLOW" selected>YELLOW</option><option value="RED">RED</option></select></label>
+        </div>
+        <label>MVP %<input name="mvp" placeholder="e.g. 40% or New"></label>
+        <label>Blocker / Next milestone<textarea name="blocker" rows="2"></textarea></label>
+        <label>Demo link — Portal<input name="demoPortal" placeholder="https:// (optional)"></label>
+        <label>Demo link — CMS<input name="demoCms" placeholder="https:// (optional)"></label>
+        <label>Credentials<textarea name="credentials" rows="2" placeholder="One login per line"></textarea></label>
+        <div class="rg-form-actions">
+          <button type="button" onclick="dlgRgProduct.close()" class="rg-ghost-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add project</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="dlgRgProgress" class="rg-dialog rg-dialog-wide">
+      <form class="rg-form" id="formRgProgress">
+        <h3>Add progress row</h3>
+        <p class="sub">For <b id="rgProgressPersonLabel">—</b>.</p>
+        <p class="rg-form-error" id="rgProgressError" hidden></p>
+        <label>Date<input type="date" name="entryDate" required></label>
+        <div>
+          <span style="font-size:11.5px;font-weight:600;color:var(--ink-600)">Source</span>
+          <div class="rg-radio-row" style="margin-top:4px">
+            <label><input type="radio" name="progSource" value="project" checked onchange="rgToggleProgressSource()"> Jira Project</label>
+            <label><input type="radio" name="progSource" value="epic" onchange="rgToggleProgressSource()"> Jira Epic</label>
+          </div>
+        </div>
+        <label>Project name<input required name="product" placeholder="e.g. Waste Management Platform"></label>
+        <label>Jira project ${rgComboHtml('rgProgressProject', 'Search Jira project…')}</label>
+        <label id="rgProgressEpicWrap" hidden>Jira epic ${rgComboHtml('rgProgressEpic', 'Search Jira epic…')}</label>
+        <label>Yesterday<textarea name="yesterday" rows="2"></textarea></label>
+        <label>Today<textarea name="today" rows="2"></textarea></label>
+        <label>Move to next day<select name="move"><option value="">—</option><option>Yes</option><option>No</option><option>Blocked</option></select></label>
+        <label>Blocker / Notes<input name="blocker" placeholder="optional"></label>
+        <div class="rg-form-actions">
+          <button type="button" onclick="dlgRgProgress.close()" class="rg-ghost-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add row</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="dlgRgPerson" class="rg-dialog rg-dialog-wide">
+      <form class="rg-form" id="formRgPerson">
+        <h3>Add person</h3>
+        <p class="sub">Pulled from the app's Team Members roster, grouped by jabatan.</p>
+        <p class="rg-form-error" id="rgPersonError" hidden></p>
+        <label>Team member ${rgComboHtml('rgPersonPick', 'Search team member…')}</label>
+        <div class="rg-form-actions">
+          <button type="button" onclick="dlgRgPerson.close()" class="rg-ghost-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add person</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="dlgRgCredentials" class="rg-dialog">
+      <form class="rg-form" method="dialog">
+        <h3>Credentials</h3>
+        <div class="rg-cred-box" id="rgCredentialsBody"></div>
+        <div class="rg-form-actions"><button type="submit" class="rg-ghost-btn">Close</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="dlgRgBlocker" class="rg-dialog">
+      <form class="rg-form" id="formRgBlocker">
+        <h3>Edit blocker / next milestone</h3>
+        <label><textarea name="value" rows="4"></textarea></label>
+        <div class="rg-form-actions">
+          <button type="button" onclick="dlgRgBlocker.close()" class="rg-ghost-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="dlgRgLinks" class="rg-dialog">
+      <form class="rg-form" id="formRgLinks">
+        <h3>Edit links &amp; credentials</h3>
+        <label>Demo link — Portal<input name="demoPortal" placeholder="https://"></label>
+        <label>Demo link — CMS<input name="demoCms" placeholder="https://"></label>
+        <label>Credentials<textarea name="credentials" rows="4" placeholder="One login per line"></textarea></label>
+        <div class="rg-form-actions">
+          <button type="button" onclick="dlgRgLinks.close()" class="rg-ghost-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="dlgRgText" class="rg-dialog">
+      <form class="rg-form" id="formRgText">
+        <h3 id="rgTextTitle">Edit</h3>
+        <label><textarea name="value" rows="4"></textarea></label>
+        <div class="rg-form-actions">
+          <button type="button" onclick="dlgRgText.close()" class="rg-ghost-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </dialog>
+  `);
+
+  document.getElementById('formRgProduct').addEventListener('submit', rgSubmitProduct);
+  document.getElementById('formRgProgress').addEventListener('submit', rgSubmitProgress);
+  document.getElementById('formRgPerson').addEventListener('submit', rgSubmitPerson);
+  document.getElementById('formRgBlocker').addEventListener('submit', rgSubmitBlocker);
+  document.getElementById('formRgLinks').addEventListener('submit', rgSubmitLinks);
+  document.getElementById('formRgText').addEventListener('submit', rgSubmitText);
+
+  rgComboInit('rgProductProject', () => (REPGOV.jira?.projects || []).map(p => ({ value: p.key, label: `${p.key} — ${p.name}`, group: p.category })),
+    item => { const mode = document.querySelector('#formRgProduct input[name="source"]:checked')?.value; if (mode === 'epic') rgLoadEpicsForProductForm(item.value); });
+  rgComboInit('rgProductEpic', () => RG_FORM.productEpics, item => rgApplyEpicToProductForm(item));
+  rgComboInit('rgProgressProject', () => (REPGOV.jira?.projects || []).map(p => ({ value: p.key, label: `${p.key} — ${p.name}`, group: p.category })),
+    item => { const mode = document.querySelector('#formRgProgress input[name="progSource"]:checked')?.value; if (mode === 'epic') rgLoadEpicsForProgressForm(item.value); });
+  rgComboInit('rgProgressEpic', () => RG_FORM.progressEpics,
+    item => { document.querySelector('#formRgProgress input[name="product"]').value = item.summary || item.label; });
+  rgComboInit('rgPersonPick', () => (DEVPROG.roster || []).map(m => ({ value: m.account_id, label: m.name, group: m.jabatan || 'Other' })), () => {});
+}
+
+function rgToggleProductSource() {
+  const mode = document.querySelector('#formRgProduct input[name="source"]:checked').value;
+  document.getElementById('rgProductEpicWrap').hidden = mode !== 'epic';
+  if (mode === 'epic') {
+    const pk = rgComboValue('rgProductProject');
+    if (pk) rgLoadEpicsForProductForm(pk);
+  }
+}
+function rgApplyEpicToProductForm(item) {
+  if (!item) return;
+  document.querySelector('#formRgProduct input[name="name"]').value = item.summary || item.label;
+}
+async function rgLoadEpicsForProductForm(projectKey) {
+  rgComboClear('rgProductEpic');
+  try {
+    const epics = await api('/api/report-governance/jira-epics?project_key=' + encodeURIComponent(projectKey));
+    RG_FORM.productEpics = epics.map(e => ({ value: e.key, label: `${e.key} — ${e.summary}`, group: projectKey, summary: e.summary }));
+  } catch (ex) {
+    RG_FORM.productEpics = [];
+    showError(`Could not load epics for ${projectKey}: ${ex.message}`);
+  }
+}
+function rgToggleProgressSource() {
+  const mode = document.querySelector('#formRgProgress input[name="progSource"]:checked').value;
+  document.getElementById('rgProgressEpicWrap').hidden = mode !== 'epic';
+  if (mode === 'epic') {
+    const pk = rgComboValue('rgProgressProject');
+    if (pk) rgLoadEpicsForProgressForm(pk);
+  }
+}
+async function rgLoadEpicsForProgressForm(projectKey) {
+  rgComboClear('rgProgressEpic');
+  try {
+    const epics = await api('/api/report-governance/jira-epics?project_key=' + encodeURIComponent(projectKey));
+    RG_FORM.progressEpics = epics.map(e => ({ value: e.key, label: `${e.key} — ${e.summary}`, group: projectKey, summary: e.summary }));
+  } catch (ex) {
+    RG_FORM.progressEpics = [];
+    showError(`Could not load epics for ${projectKey}: ${ex.message}`);
+  }
+}
+
+// ============================================================
+// REPORT GOVERNANCE (Weekly Delivery Tracker)
+// ============================================================
+const REPGOV = { jira: null, rows: null, periodStart: null, category: 'all', projectKey: 'all' };
+const RG_DAY_STATUSES = ['', 'Backlog', 'To Do', 'In Progress', 'Blocked', 'Done'];
+const RG_DAY_CLASS = { '': 'empty', 'Backlog': 'backlog', 'To Do': 'todo', 'In Progress': 'progress', 'Blocked': 'blocked', 'Done': 'done' };
+const RG_DRAG = { productId: null };
+
+async function loadReportGovernancePage() {
+  const body = document.getElementById('repgov-body');
+  body.innerHTML = emptyState({ icon: '📋', title: 'Loading Report Governance…', description: '' });
+  try {
+    if (!REPGOV.jira) REPGOV.jira = await api('/api/report-governance/jira-projects');
+    await repgovFetchStatus();
+  } catch (e) {
+    body.innerHTML = emptyState({ icon: '⚠️', title: 'Could not load Report Governance', description: e.message });
+  }
+}
+async function repgovFetchStatus() {
+  const params = new URLSearchParams();
+  if (REPGOV.periodStart) params.set('period_start', REPGOV.periodStart);
+  if (REPGOV.category !== 'all') params.set('category', REPGOV.category);
+  if (REPGOV.projectKey !== 'all') params.set('project_key', REPGOV.projectKey);
+  const data = await api('/api/report-governance/status?' + params.toString());
+  REPGOV.periodStart = data.period_start;
+  REPGOV.rows = data.rows;
+  renderReportGovernance();
+}
+function repgovAiEntries() {
+  return (REPGOV.rows || [])
+    .filter(r => r.blocker_note && r.blocker_note.trim())
+    .map(r => ({ name: r.name, text: r.blocker_note.trim(), meta: { gate: r.capacity_gate, priority: r.score_prio } }));
+}
+function renderReportGovernance() {
+  const rows = REPGOV.rows || [];
+  const moving = rows.filter(r => r.movement === 'Moving').sort((a, b) => (b.score_prio || 0) - (a.score_prio || 0));
+  const onhold = rows.filter(r => r.movement === 'On Hold').sort((a, b) => (b.score_prio || 0) - (a.score_prio || 0));
+  const notdev = rows.filter(r => r.movement === 'Not Dev Item').sort((a, b) => (b.score_prio || 0) - (a.score_prio || 0));
+
+  const cats = [...new Set((REPGOV.jira?.projects || []).map(p => p.category))].sort();
+  rgComboInit('repgov-cat', [{ value: 'all', label: 'All categories', group: 'Filter' }, ...cats.map(c => ({ value: c, label: c, group: 'Category' }))],
+    item => { REPGOV.category = item.value; repgovFetchStatus(); });
+  rgComboInit('repgov-proj', [{ value: 'all', label: 'All my projects', group: 'Filter' }, ...(REPGOV.jira?.projects || []).map(p => ({ value: p.key, label: `${p.key} — ${p.name}`, group: p.category }))],
+    item => { REPGOV.projectKey = item.value; repgovFetchStatus(); });
+
+  const total = rows.length;
+  const pcts = rows.map(r => { const m = String(r.mvp_percent || '').match(/(\d{1,3})\s*%/); return m ? parseInt(m[1], 10) : null; }).filter(x => x != null);
+  const avgPct = pcts.length ? Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length) : null;
+  const blockerCount = rows.filter(r => r.blocker_note && r.blocker_note.trim()).length;
+  const weekLabel = REPGOV.periodStart
+    ? `Week of ${rgWeekdayLabel(REPGOV.periodStart, 0)} – ${rgWeekdayLabel(REPGOV.periodStart, 4)} · ${weekLabelFromStart(REPGOV.periodStart)}`
+    : '';
+
+  document.getElementById('repgov-body').innerHTML = `
+    <div class="rg-filter-bar">
+      <div style="font-size:12.5px;font-weight:700;color:var(--ink-800)">${apEsc(weekLabel)}</div>
+      ${rgComboHtml('repgov-cat', 'All categories')}
+      ${rgComboHtml('repgov-proj', 'All my projects')}
+    </div>
+    <div class="rg-summary-row">
+      <div class="rg-summary-card"><div class="num">${total}</div><div class="lbl">Total projects (filtered)</div></div>
+      <div class="rg-summary-card"><div class="num">${moving.length}</div><div class="lbl">Moving</div></div>
+      <div class="rg-summary-card"><div class="num">${onhold.length}</div><div class="lbl">On hold</div></div>
+      <div class="rg-summary-card"><div class="num">${notdev.length}</div><div class="lbl">Not yet a dev item</div></div>
+      <div class="rg-summary-card"><div class="num">${avgPct != null ? avgPct + '%' : '—'}</div><div class="lbl">Avg MVP progress</div></div>
+      <div class="rg-summary-card red"><div class="num">${blockerCount}</div><div class="lbl">Projects with a blocker</div></div>
+    </div>
+    <div class="rg-ai collapsed" id="repgov-ai">
+      <div class="rg-ai-head" onclick="rgToggleAi('repgov-ai')">
+        <span class="rg-ai-badge">✨ AI Summary — top risks to delivery</span>
+        <span class="rg-ai-note">Preview — static risk heuristic (keyword + priority/gate signals)</span>
+        <button class="rg-ai-regen" onclick="event.stopPropagation();renderReportGovernance()">🔄 Regenerate</button>
+        <span class="rg-ai-chevron">▾</span>
+      </div>
+      <div class="rg-ai-body">${rgBuildAiSummary(repgovAiEntries())}</div>
+    </div>
+    <div class="rg-card">
+      <div class="rg-card-head">
+        <div style="font-weight:700;color:var(--ink-900);font-size:15px">Weekly Delivery Tracker</div>
+        <p>One row per project. Capacity Gate, Score Prio and daily status are edited inline. Drag a row to move it between sections.</p>
+      </div>
+      ${repgovSectionHtml('Moving', moving, 'real technical progress or confirmed delivery — sorted by score')}
+      ${repgovSectionHtml('On Hold', onhold, 'built and working — paused on a business decision')}
+      ${repgovSectionHtml('Not Dev Item', notdev, 'no build possible until scope is confirmed')}
+      <div class="rg-foot-add"><button class="rg-ghost-btn" onclick="repgovOpenProductForm()">+ Add project</button></div>
+    </div>
+  `;
+}
+function repgovSectionHtml(movement, rows, note) {
+  const isMoving = movement === 'Moving';
+  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  const dayLabels = REPGOV.periodStart ? [0, 1, 2, 3, 4].map(o => rgWeekdayLabel(REPGOV.periodStart, o)) : ['', '', '', '', ''];
+  const dayHeaders = dayNames.map((d, i) => `<th>${d} ${apEsc(dayLabels[i])}</th>`).join('');
+  const headCols = isMoving
+    ? `<th>Score Prio</th><th>Capacity Gate</th><th>Project</th><th>MVP</th><th>Blocker / Next milestone</th><th>Links</th>${dayHeaders}`
+    : `<th>Score Prio</th><th>Project</th><th>MVP</th><th>Blocker / Next milestone</th>${dayHeaders}`;
+  return `
+    <div class="rg-grp-head">${apEsc(movement === 'Not Dev Item' ? 'Not yet a dev item' : movement === 'On Hold' ? 'Demo done, project on hold' : movement)}
+      <span class="rg-grp-count">${rows.length}</span><span class="rg-grp-note">${apEsc(note)}</span></div>
+    <div class="rg-table-wrap" data-movement="${apEsc(movement)}" ondragover="rgDragOver(event,this)" ondragleave="rgDragLeave(this)" ondrop="rgDrop(event,this)">
+      <table class="rg-table">
+        <thead><tr>${headCols}</tr></thead>
+        <tbody>${rows.map(r => repgovRowHtml(r, isMoving)).join('') || `<tr><td colspan="${isMoving ? 11 : 9}" style="text-align:center;color:var(--ink-400);padding:24px">No projects here.</td></tr>`}</tbody>
+      </table>
+    </div>`;
+}
+function repgovDaySelectHtml(productId, field, value) {
+  const v = value || '';
+  const opts = RG_DAY_STATUSES.map(s => `<option value="${apEsc(s)}" ${s === v ? 'selected' : ''}>${s || '—'}</option>`).join('');
+  return `<td><select class="rg-daysel ${RG_DAY_CLASS[v] || 'empty'}"
+    onchange="this.className='rg-daysel '+(RG_DAY_CLASS[this.value]||'empty');repgovSaveField('${productId}','${field}',this.value)">${opts}</select></td>`;
+}
+function repgovLinksCellHtml(r) {
+  const parts = [];
+  if (r.demo_link_cms) parts.push(`<a href="${apEsc(r.demo_link_cms)}" target="_blank" rel="noopener">↗ Demo (CMS)</a>`);
+  if (r.demo_link_portal) parts.push(`<a href="${apEsc(r.demo_link_portal)}" target="_blank" rel="noopener">↗ Demo (Portal)</a>`);
+  const credLines = (r.credentials_text || '').split('\n').map(l => l.trim()).filter(Boolean);
+  const credHtml = credLines.length ? `<button class="rg-cred-toggle" onclick="repgovOpenCredentials('${r.product_id}')">🔑 Credentials (${credLines.length})</button>` : '';
+  const body = parts.length || credHtml ? `${parts.join('')}${credHtml}` : `<span style="color:var(--ink-300);font-size:11px">— none yet —</span>`;
+  return `${body}<button class="rg-link-edit" onclick="repgovOpenLinksEditor('${r.product_id}')">✎ Edit links</button>`;
+}
+function repgovRowHtml(r, isMoving) {
+  const subParts = [r.project_key]; if (r.epic_key) subParts.push(r.epic_key);
+  const scoreCell = `<td><input type="number" class="rg-score-input" value="${r.score_prio ?? 0}" min="0" max="999"
+    onchange="repgovSaveField('${r.product_id}','score_prio',this.value?parseInt(this.value,10):null)"></td>`;
+  const dayCells = ['mon_status', 'tue_status', 'wed_status', 'thu_status', 'fri_status'].map(f => repgovDaySelectHtml(r.product_id, f, r[f])).join('');
+  const mvpHtml = rgMvpCellHtml(r.mvp_percent);
+  const blockerHtml = (r.blocker_note && r.blocker_note.trim())
+    ? `<td class="rg-blocker" onclick="repgovOpenBlockerEditor('${r.product_id}')">${apEsc(r.blocker_note)}</td>`
+    : `<td class="rg-blocker rg-txtcell muted" onclick="repgovOpenBlockerEditor('${r.product_id}')">— not filled in yet —</td>`;
+  const dragAttrs = `draggable="true" data-product-id="${r.product_id}" ondragstart="rgDragStart(event,this)" ondragend="rgDragEnd(this)"`;
+  if (!isMoving) {
+    return `<tr ${dragAttrs}>
+      ${scoreCell}
+      <td class="rg-product"><b>${apEsc(r.name)}</b><span class="sub">${apEsc(subParts.join(' · '))}</span></td>
+      <td class="rg-mvp">${mvpHtml}</td>
+      ${blockerHtml}
+      ${dayCells}
+    </tr>`;
+  }
+  const gate = r.capacity_gate || 'YELLOW';
+  return `<tr ${dragAttrs}>
+    ${scoreCell}
+    <td><select class="rg-gate ${gate}" style="border:none;appearance:none;cursor:pointer"
+      onchange="this.className='rg-gate '+this.value;repgovSaveField('${r.product_id}','capacity_gate',this.value)">
+      ${['GREEN', 'YELLOW', 'RED'].map(g => `<option value="${g}" ${g === gate ? 'selected' : ''}>${g}</option>`).join('')}
+    </select></td>
+    <td class="rg-product"><b>${apEsc(r.name)}</b><span class="sub">${apEsc(subParts.join(' · '))}</span></td>
+    <td class="rg-mvp">${mvpHtml}</td>
+    ${blockerHtml}
+    <td class="rg-links">${repgovLinksCellHtml(r)}</td>
+    ${dayCells}
+  </tr>`;
+}
+async function repgovSaveField(productId, field, value) {
+  try {
+    await putJson(`/api/report-governance/status/${productId}?period_start=${REPGOV.periodStart}`, { [field]: value });
+    const r = (REPGOV.rows || []).find(x => x.product_id === productId);
+    if (r) r[field] = value;
+  } catch (e) {
+    showError(`Could not save: ${e.message}`);
+    repgovFetchStatus();
+  }
+}
+function rgDragStart(e, row) { RG_DRAG.productId = row.dataset.productId; row.classList.add('dragging'); }
+function rgDragEnd(row) { row.classList.remove('dragging'); }
+function rgDragOver(e, wrap) { if (RG_DRAG.productId) { e.preventDefault(); wrap.classList.add('drop-target'); } }
+function rgDragLeave(wrap) { wrap.classList.remove('drop-target'); }
+async function rgDrop(e, wrap) {
+  e.preventDefault();
+  wrap.classList.remove('drop-target');
+  const productId = RG_DRAG.productId;
+  RG_DRAG.productId = null;
+  if (!productId) return;
+  const movement = wrap.dataset.movement;
+  try {
+    await putJson(`/api/report-governance/status/${productId}?period_start=${REPGOV.periodStart}`, { movement });
+    const r = (REPGOV.rows || []).find(x => x.product_id === productId);
+    if (r) r.movement = movement;
+    renderReportGovernance();
+  } catch (ex) {
+    showError(`Could not move project: ${ex.message}`);
+  }
+}
+function repgovOpenProductForm() {
+  rgEnsureDialogs();
+  document.getElementById('formRgProduct').reset();
+  document.getElementById('rgProductError').hidden = true;
+  rgComboClear('rgProductProject');
+  rgComboClear('rgProductEpic');
+  document.getElementById('rgProductEpicWrap').hidden = true;
+  dlgRgProduct.showModal();
+}
+async function rgSubmitProduct(e) {
+  e.preventDefault();
+  const form = e.target;
+  const fd = new FormData(form);
+  const err = document.getElementById('rgProductError');
+  err.hidden = true;
+  const source = fd.get('source');
+  const name = (fd.get('name') || '').trim();
+  const projectKey = rgComboValue('rgProductProject');
+  const epicKey = source === 'epic' ? rgComboValue('rgProductEpic') : null;
+  if (!name) { err.textContent = 'Project name is required.'; err.hidden = false; return; }
+  if (!projectKey) { err.textContent = 'Please search and pick a Jira project.'; err.hidden = false; return; }
+  if (source === 'epic' && !epicKey) { err.textContent = 'Please search and pick a Jira epic.'; err.hidden = false; return; }
+  const submitBtn = form.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  try {
+    const product = await postJson('/api/report-governance/products', { project_key: projectKey, epic_key: epicKey, name });
+    await putJson(`/api/report-governance/status/${product.id}?period_start=${REPGOV.periodStart}`, {
+      movement: fd.get('section'),
+      score_prio: fd.get('score') ? parseInt(fd.get('score'), 10) : null,
+      capacity_gate: fd.get('gate'),
+      mvp_percent: (fd.get('mvp') || '').trim() || null,
+      blocker_note: (fd.get('blocker') || '').trim() || null,
+      demo_link_portal: (fd.get('demoPortal') || '').trim() || null,
+      demo_link_cms: (fd.get('demoCms') || '').trim() || null,
+      credentials_text: (fd.get('credentials') || '').trim() || null
+    });
+    dlgRgProduct.close();
+    await repgovFetchStatus();
+  } catch (ex) {
+    err.textContent = ex.message;
+    err.hidden = false;
+  } finally {
+    submitBtn.disabled = false;
+  }
+}
+function repgovOpenBlockerEditor(productId) {
+  rgEnsureDialogs();
+  const r = (REPGOV.rows || []).find(x => x.product_id === productId);
+  RG_EDIT.blockerProductId = productId;
+  document.querySelector('#formRgBlocker textarea[name="value"]').value = r?.blocker_note || '';
+  dlgRgBlocker.showModal();
+}
+async function rgSubmitBlocker(e) {
+  e.preventDefault();
+  const text = (new FormData(e.target).get('value') || '').trim();
+  try {
+    await putJson(`/api/report-governance/status/${RG_EDIT.blockerProductId}?period_start=${REPGOV.periodStart}`, { blocker_note: text || null });
+    dlgRgBlocker.close();
+    await repgovFetchStatus();
+  } catch (ex) { showError(ex.message); }
+}
+function repgovOpenLinksEditor(productId) {
+  rgEnsureDialogs();
+  const r = (REPGOV.rows || []).find(x => x.product_id === productId);
+  RG_EDIT.linksProductId = productId;
+  const form = document.getElementById('formRgLinks');
+  form.elements['demoPortal'].value = r?.demo_link_portal || '';
+  form.elements['demoCms'].value = r?.demo_link_cms || '';
+  form.elements['credentials'].value = r?.credentials_text || '';
+  dlgRgLinks.showModal();
+}
+async function rgSubmitLinks(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  try {
+    await putJson(`/api/report-governance/status/${RG_EDIT.linksProductId}?period_start=${REPGOV.periodStart}`, {
+      demo_link_portal: (fd.get('demoPortal') || '').trim() || null,
+      demo_link_cms: (fd.get('demoCms') || '').trim() || null,
+      credentials_text: (fd.get('credentials') || '').trim() || null
+    });
+    dlgRgLinks.close();
+    await repgovFetchStatus();
+  } catch (ex) { showError(ex.message); }
+}
+function repgovOpenCredentials(productId) {
+  rgEnsureDialogs();
+  const r = (REPGOV.rows || []).find(x => x.product_id === productId);
+  const lines = (r?.credentials_text || '').split('\n').map(l => l.trim()).filter(Boolean);
+  document.getElementById('rgCredentialsBody').innerHTML = lines.length
+    ? lines.map(apEsc).join('<br>')
+    : '<span style="color:var(--ink-400);font-style:italic">No credentials on file.</span>';
+  dlgRgCredentials.showModal();
+}
+
+// ============================================================
+// DEV DAILY PROGRESS
+// ============================================================
+const DEVPROG = { roster: null, entries: null, group: 'all', name: 'all' };
+function devprogTodayIso() { return new Date().toISOString().slice(0, 10); }
+function devprogYesterdayIso() { return new Date(Date.now() - 86400000).toISOString().slice(0, 10); }
+
+async function loadDevProgressPage() {
+  const body = document.getElementById('devprog-body');
+  body.innerHTML = emptyState({ icon: '🧑‍💻', title: 'Loading Dev Daily Progress…', description: '' });
+  try {
+    if (!DEVPROG.roster) DEVPROG.roster = await api('/api/report-governance/team-members');
+    if (!REPGOV.jira) REPGOV.jira = await api('/api/report-governance/jira-projects');
+    await devprogFetchEntries();
+  } catch (e) {
+    body.innerHTML = emptyState({ icon: '⚠️', title: 'Could not load Dev Daily Progress', description: e.message });
+  }
+}
+async function devprogFetchEntries() {
+  DEVPROG.entries = await api('/api/report-governance/progress');
+  renderDevProgress();
+}
+function devprogAiEntries(todayEntries) {
+  return todayEntries.filter(e => e.blocker_note && e.blocker_note.trim())
+    .map(e => ({ name: `${e.member_name || e.member_account_id} — ${e.report_products?.name || ''}`, text: e.blocker_note.trim(), meta: {} }));
+}
+function renderDevProgress() {
+  const today = devprogTodayIso(), yesterday = devprogYesterdayIso();
+  let entries = DEVPROG.entries || [];
+  if (DEVPROG.group !== 'all') entries = entries.filter(e => e.jabatan === DEVPROG.group);
+  if (DEVPROG.name !== 'all') entries = entries.filter(e => e.member_account_id === DEVPROG.name);
+
+  const todayEntries = entries.filter(e => e.entry_date === today);
+  const yestEntries = entries.filter(e => e.entry_date === yesterday);
+
+  const byPerson = {};
+  todayEntries.forEach(e => { (byPerson[e.member_account_id] = byPerson[e.member_account_id] || []).push(e); });
+  const personIds = Object.keys(byPerson);
+  const rosterByAccount = new Map((DEVPROG.roster || []).map(m => [m.account_id, m]));
+
+  const groups = [...new Set((DEVPROG.roster || []).map(m => m.jabatan).filter(Boolean))].sort();
+  rgComboInit('devprog-group', [{ value: 'all', label: 'All groups', group: 'Filter' }, ...groups.map(g => ({ value: g, label: g, group: 'Group' }))],
+    item => { DEVPROG.group = item.value; renderDevProgress(); });
+  rgComboInit('devprog-name', [{ value: 'all', label: 'All developers', group: 'Filter' }, ...(DEVPROG.roster || []).map(m => ({ value: m.account_id, label: m.name, group: m.jabatan || 'Other' }))],
+    item => { DEVPROG.name = item.value; renderDevProgress(); });
+
+  let moveCount = 0, blockerCount = 0;
+  todayEntries.forEach(e => {
+    if (e.move_to_next_day === 'Yes') moveCount++;
+    if (e.blocker_note && e.blocker_note.trim()) blockerCount++;
+  });
+  const delta = todayEntries.length - yestEntries.length;
+  const deltaText = delta > 0 ? `+${delta}` : delta < 0 ? `${delta}` : '±0';
+  const deltaClass = delta > 0 ? 'green' : delta < 0 ? 'red' : '';
+
+  const personBlocks = personIds.map(accId => {
+    const rows = byPerson[accId];
+    const member = rosterByAccount.get(accId);
+    const name = member?.name || rows[0]?.member_name || accId;
+    const jabatan = member?.jabatan || rows[0]?.jabatan || '';
+    const initials = name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+    return `
+      <div class="rg-person-head"><span class="rg-person-avatar">${apEsc(initials)}</span><b>${apEsc(name)}</b>${jabatan ? `<span class="grp">${apEsc(jabatan)}</span>` : ''}<span class="cnt">${rows.length} project${rows.length === 1 ? '' : 's'} today</span></div>
+      <div class="rg-table-wrap"><table class="rg-table">
+        <thead><tr><th style="width:26%">Project</th><th>Yesterday</th><th>Today</th><th>Move to next day</th><th>Blocker / Notes</th></tr></thead>
+        <tbody>${rows.map(r => devprogRowHtml(r)).join('')}</tbody>
+      </table></div>
+      <div class="rg-foot-add"><button class="rg-ghost-btn" onclick="devprogOpenProgressForm('${apEsc(accId)}','${apEsc(name)}')">+ Add project for ${apEsc(name)}</button></div>
+    `;
+  }).join('') || emptyState({ icon: '🧑‍💻', title: 'No entries today', description: 'Add a person, then log a project update for them.' });
+
+  document.getElementById('devprog-body').innerHTML = `
+    <div class="rg-filter-bar">
+      ${rgComboHtml('devprog-group', 'All groups')}
+      ${rgComboHtml('devprog-name', 'All developers')}
+    </div>
+    <div class="rg-summary-row">
+      <div class="rg-summary-card"><div class="num">${personIds.length}</div><div class="lbl">Total developers (filtered)</div></div>
+      <div class="rg-summary-card"><div class="num">${todayEntries.length}</div><div class="lbl">Tasks logged today</div></div>
+      <div class="rg-summary-card"><div class="num">${yestEntries.length}</div><div class="lbl">Tasks logged yesterday</div></div>
+      <div class="rg-summary-card ${deltaClass}"><div class="num">${deltaText}</div><div class="lbl">Today vs yesterday</div></div>
+      <div class="rg-summary-card"><div class="num">${moveCount}</div><div class="lbl">Moved to next day</div></div>
+      <div class="rg-summary-card red"><div class="num">${blockerCount}</div><div class="lbl">Blockers reported</div></div>
+    </div>
+    <div class="rg-ai collapsed" id="devprog-ai">
+      <div class="rg-ai-head" onclick="rgToggleAi('devprog-ai')">
+        <span class="rg-ai-badge">✨ AI Summary — top risks to delivery</span>
+        <span class="rg-ai-note">Preview — static risk heuristic (keyword signals)</span>
+        <button class="rg-ai-regen" onclick="event.stopPropagation();renderDevProgress()">🔄 Regenerate</button>
+        <span class="rg-ai-chevron">▾</span>
+      </div>
+      <div class="rg-ai-body">${rgBuildAiSummary(devprogAiEntries(todayEntries))}</div>
+    </div>
+    <div class="rg-card">${personBlocks}</div>
+  `;
+}
+function devprogRowHtml(r) {
+  const p = r.report_products || {};
+  const subParts = [p.project_key, p.epic_key].filter(Boolean);
+  return `<tr>
+    <td class="rg-product"><b>${apEsc(p.name || '')}</b><span class="sub">${apEsc(subParts.join(' · '))}</span></td>
+    <td class="rg-txtcell${r.yesterday_note ? '' : ' muted'}" onclick="devprogOpenTextEditor(this,'${r.product_id}','${apEsc(r.member_account_id)}','${r.entry_date}','yesterday_note','Yesterday')">${r.yesterday_note ? apEsc(r.yesterday_note) : '— not filled in —'}</td>
+    <td class="rg-txtcell${r.today_note ? '' : ' muted'}" onclick="devprogOpenTextEditor(this,'${r.product_id}','${apEsc(r.member_account_id)}','${r.entry_date}','today_note','Today')">${r.today_note ? apEsc(r.today_note) : '— not filled in —'}</td>
+    <td><select class="rg-move-select ${r.move_to_next_day || ''}"
+      onchange="this.className='rg-move-select '+this.value;devprogSaveField('${r.product_id}','${apEsc(r.member_account_id)}','${r.entry_date}','move_to_next_day',this.value)">
+      ${['', 'Yes', 'No', 'Blocked'].map(v => `<option value="${v}" ${v === (r.move_to_next_day || '') ? 'selected' : ''}>${v || '—'}</option>`).join('')}
+    </select></td>
+    <td class="rg-txtcell${r.blocker_note ? '' : ' muted'}" onclick="devprogOpenTextEditor(this,'${r.product_id}','${apEsc(r.member_account_id)}','${r.entry_date}','blocker_note','Blocker / Notes')">${r.blocker_note ? apEsc(r.blocker_note) : '— none —'}</td>
+  </tr>`;
+}
+async function devprogSaveField(productId, memberAccountId, entryDate, field, value) {
+  try {
+    await putJson(`/api/report-governance/progress/${productId}/${encodeURIComponent(memberAccountId)}?entry_date=${entryDate}`, { [field]: value });
+    const r = (DEVPROG.entries || []).find(x => x.product_id === productId && x.member_account_id === memberAccountId && x.entry_date === entryDate);
+    if (r) r[field] = value;
+  } catch (e) {
+    showError(`Could not save: ${e.message}`);
+    devprogFetchEntries();
+  }
+}
+function devprogOpenTextEditor(cell, productId, memberAccountId, entryDate, field, label) {
+  rgEnsureDialogs();
+  RG_EDIT.text = { productId, memberAccountId, entryDate, field };
+  document.getElementById('rgTextTitle').textContent = 'Edit ' + label;
+  document.querySelector('#formRgText textarea[name="value"]').value = cell.classList.contains('muted') ? '' : cell.textContent.trim();
+  dlgRgText.showModal();
+}
+async function rgSubmitText(e) {
+  e.preventDefault();
+  const text = (new FormData(e.target).get('value') || '').trim();
+  const { productId, memberAccountId, entryDate, field } = RG_EDIT.text;
+  try {
+    await putJson(`/api/report-governance/progress/${productId}/${encodeURIComponent(memberAccountId)}?entry_date=${entryDate}`, { [field]: text || null });
+    dlgRgText.close();
+    await devprogFetchEntries();
+  } catch (ex) { showError(ex.message); }
+}
+function devprogOpenPersonForm() {
+  rgEnsureDialogs();
+  document.getElementById('formRgPerson').reset();
+  document.getElementById('rgPersonError').hidden = true;
+  rgComboClear('rgPersonPick');
+  dlgRgPerson.showModal();
+}
+async function rgSubmitPerson(e) {
+  e.preventDefault();
+  const err = document.getElementById('rgPersonError');
+  const accountId = rgComboValue('rgPersonPick');
+  const member = (DEVPROG.roster || []).find(m => m.account_id === accountId);
+  if (!member) { err.textContent = 'Please search and pick a team member.'; err.hidden = false; return; }
+  dlgRgPerson.close();
+  devprogOpenProgressForm(accountId, member.name);
+}
+function devprogOpenProgressForm(accountId, name) {
+  rgEnsureDialogs();
+  const form = document.getElementById('formRgProgress');
+  form.reset();
+  document.getElementById('rgProgressError').hidden = true;
+  document.getElementById('rgProgressPersonLabel').textContent = name;
+  form.dataset.accountId = accountId;
+  form.querySelector('[name="entryDate"]').value = devprogTodayIso();
+  rgComboClear('rgProgressProject');
+  rgComboClear('rgProgressEpic');
+  document.getElementById('rgProgressEpicWrap').hidden = true;
+  dlgRgProgress.showModal();
+}
+async function rgSubmitProgress(e) {
+  e.preventDefault();
+  const form = e.target;
+  const fd = new FormData(form);
+  const err = document.getElementById('rgProgressError');
+  err.hidden = true;
+  const accountId = form.dataset.accountId;
+  const source = fd.get('progSource');
+  const productName = (fd.get('product') || '').trim();
+  let resolvedProjectKey, epicKey = null;
+  if (source === 'epic') {
+    epicKey = rgComboValue('rgProgressEpic');
+    const epic = (RG_FORM.progressEpics || []).find(x => x.value === epicKey);
+    resolvedProjectKey = epic ? epic.group : null;
+  } else {
+    resolvedProjectKey = rgComboValue('rgProgressProject');
+  }
+  if (!productName) { err.textContent = 'Project name is required.'; err.hidden = false; return; }
+  if (!resolvedProjectKey) { err.textContent = source === 'epic' ? 'Please search and pick a Jira epic.' : 'Please search and pick a Jira project.'; err.hidden = false; return; }
+  const entryDate = fd.get('entryDate');
+  const submitBtn = form.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  try {
+    const product = await rgResolveOrCreateProduct(resolvedProjectKey, epicKey, productName);
+    await putJson(`/api/report-governance/progress/${product.id}/${encodeURIComponent(accountId)}?entry_date=${entryDate}`, {
+      yesterday_note: (fd.get('yesterday') || '').trim() || null,
+      today_note: (fd.get('today') || '').trim() || null,
+      move_to_next_day: fd.get('move') || '',
+      blocker_note: (fd.get('blocker') || '').trim() || null
+    });
+    dlgRgProgress.close();
+    await devprogFetchEntries();
+  } catch (ex) {
+    err.textContent = ex.message;
+    err.hidden = false;
+  } finally {
+    submitBtn.disabled = false;
+  }
 }
 
 // ——— START ———
