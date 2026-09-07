@@ -9644,8 +9644,25 @@ function rgEnsureDialogs() {
         </div>
       </form>
     </dialog>
+
+    <dialog id="dlgRgDateRange" class="rg-dialog">
+      <form class="rg-form" id="formRgDateRange">
+        <h3>Choose week</h3>
+        <p class="sub">Data is tracked one week at a time — pick any date in the week you want to view.</p>
+        <p class="rg-form-error" id="rgDateRangeError" hidden></p>
+        <div class="rg-row2">
+          <label>From<input type="date" name="from" required></label>
+          <label>To<input type="date" name="to"></label>
+        </div>
+        <div class="rg-form-actions">
+          <button type="button" onclick="dlgRgDateRange.close()" class="rg-ghost-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Apply</button>
+        </div>
+      </form>
+    </dialog>
   `);
 
+  document.getElementById('formRgDateRange').addEventListener('submit', rgSubmitDateRange);
   document.getElementById('formRgProduct').addEventListener('submit', rgSubmitProduct);
   document.getElementById('formRgProgress').addEventListener('submit', rgSubmitProgress);
   document.getElementById('formRgPerson').addEventListener('submit', rgSubmitPerson);
@@ -9759,7 +9776,7 @@ function renderReportGovernance() {
 
   document.getElementById('repgov-body').innerHTML = `
     <div class="rg-filter-bar">
-      <div style="font-size:12.5px;font-weight:700;color:var(--ink-800)">${apEsc(weekLabel)}</div>
+      <button class="rg-ghost-btn" style="font-size:12.5px" onclick="repgovOpenDateRangeForm()">📅 ${apEsc(weekLabel)} · Change</button>
       ${rgComboHtml('repgov-cat', 'All categories')}
       ${rgComboHtml('repgov-proj', 'All my projects')}
     </div>
@@ -9887,6 +9904,30 @@ async function rgDrop(e, wrap) {
   } catch (ex) {
     showError(`Could not move project: ${ex.message}`);
   }
+}
+function repgovOpenDateRangeForm() {
+  rgEnsureDialogs();
+  document.getElementById('rgDateRangeError').hidden = true;
+  const from = REPGOV.periodStart || new Date().toISOString().slice(0, 10);
+  const to = new Date(new Date(`${from}T00:00:00Z`).getTime() + 4 * 86400000).toISOString().slice(0, 10);
+  document.querySelector('#formRgDateRange input[name="from"]').value = from;
+  document.querySelector('#formRgDateRange input[name="to"]').value = to;
+  dlgRgDateRange.showModal();
+}
+async function rgSubmitDateRange(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const from = fd.get('from');
+  const to = fd.get('to');
+  const err = document.getElementById('rgDateRangeError');
+  if (to && to < from) {
+    err.textContent = '"To" date must be on or after "From" date.';
+    err.hidden = false;
+    return;
+  }
+  REPGOV.periodStart = from; // the server snaps this to that week's Monday
+  dlgRgDateRange.close();
+  await repgovFetchStatus();
 }
 function repgovOpenProductForm() {
   rgEnsureDialogs();

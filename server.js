@@ -2731,18 +2731,22 @@ app.get('/api/report-governance/jira-epics', async (req, res) => {
 // person" roster picker and the source of "Dev Group" filter values
 // (member_profiles.jabatan — the same field already driving Governance
 // Settings' Business Analyst / Team Developer columns).
-app.get('/api/report-governance/team-members', requireSupabase, async (req, res) => {
+// Same live Jira group roster the Developer Capacity page uses (cache.members,
+// TARGET_GROUPS), not the small manually-curated member_profiles table — a
+// bigger, always-current list, and "jabatan" here is really each member's
+// primary Jira group (Developer, Waki Developer, PMO Team, ...), matching
+// the exact `primaryGroup` computation computeCapacity() already does.
+function reportGovPrimaryGroup(member) {
+  return TARGET_GROUPS.find(g => member.groups.includes(g)) || member.groups[0] || 'Unknown';
+}
+app.get('/api/report-governance/team-members', async (req, res) => {
   try {
-    const profiles = await supabaseRequest('GET', 'member_profiles?select=account_id,jabatan,display_name&order=display_name.asc');
     await ensureMembers();
-    const memberByAccount = new Map((cache.members || []).map(m => [m.accountId, m]));
-    res.json((profiles || []).map(p => ({
-      account_id: p.account_id,
-      jabatan: p.jabatan,
-      name: p.display_name || memberByAccount.get(p.account_id)?.displayName || p.account_id
-    })));
+    res.json((cache.members || [])
+      .map(m => ({ account_id: m.accountId, jabatan: reportGovPrimaryGroup(m), name: m.displayName }))
+      .sort((a, b) => a.name.localeCompare(b.name)));
   } catch (e) {
-    sendSupabaseError(res, e, 'report-governance/team-members');
+    res.status(502).json({ error: e.message });
   }
 });
 
@@ -2805,8 +2809,11 @@ app.put('/api/report-governance/products/:id', requireSupabase, async (req, res)
 // a newly-created Product doesn't need an eagerly-created row per week.
 app.get('/api/report-governance/status', requireSupabase, async (req, res) => {
   try {
+    // Any date the caller passes (e.g. from the "choose week" date picker)
+    // snaps to that week's Monday — the client can send any day in the
+    // target week and always land on the right stored period_start.
     const periodStart = REPGOV_DATE_RE.test(req.query.period_start || '')
-      ? req.query.period_start
+      ? periodStartFor('weekly', req.query.period_start)
       : currentPeriodStart('weekly', DEFAULT_POLICY.timezone);
 
     const jira = scopeProjectsForUser(await ensureProjects(), req.user);
@@ -2858,8 +2865,8 @@ app.get('/api/report-governance/status', requireSupabase, async (req, res) => {
 app.put('/api/report-governance/status/:productId', requireSupabase, async (req, res) => {
   const productId = req.params.productId;
   if (!REPGOV_UUID_RE.test(productId)) return res.status(400).json({ error: 'Invalid product id' });
-  const periodStart = req.query.period_start;
-  if (!REPGOV_DATE_RE.test(periodStart || '')) return res.status(400).json({ error: 'period_start (YYYY-MM-DD) is required' });
+  if (!REPGOV_DATE_RE.test(req.query.period_start || '')) return res.status(400).json({ error: 'period_start (YYYY-MM-DD) is required' });
+  const periodStart = periodStartFor('weekly', req.query.period_start);
   try {
     const existing = await supabaseRequest('GET', `report_products?id=eq.${productId}&select=project_key`);
     if (!existing || !existing.length) return res.status(404).json({ error: 'Product not found' });
@@ -2905,26 +2912,18 @@ app.get('/api/report-governance/progress', requireSupabase, async (req, res) => 
       rows = (rows || []).filter(r => allowed.has(r.report_products?.project_key));
     }
 
-    const accountIds = [...new Set((rows || []).map(r => r.member_account_id))];
-    const profiles = accountIds.length
-      ? await supabaseRequest('GET', `member_profiles?account_id=in.(${accountIds.map(encodeURIComponent).join(',')})&select=account_id,jabatan,display_name`)
-      : [];
-    const profileByAccount = new Map((profiles || []).map(p => [p.account_id, p]));
-
-    if (req.query.jabatan) {
-      rows = rows.filter(r => profileByAccount.get(r.member_account_id)?.jabatan === req.query.jabatan);
-    }
-
     await ensureMembers();
     const memberByAccount = new Map((cache.members || []).map(m => [m.accountId, m]));
+    const groupFor = m => m ? reportGovPrimaryGroup(m) : null;
 
-    res.json((rows || []).map(r => ({
-      ...r,
-      jabatan: profileByAccount.get(r.member_account_id)?.jabatan || null,
-      member_name: profileByAccount.get(r.member_account_id)?.display_name
-        || memberByAccount.get(r.member_account_id)?.displayName
-        || r.member_account_id
-    })));
+    if (req.query.jabatan) {
+      rows = rows.filter(r => groupFor(memberByAccount.get(r.member_account_id)) === req.query.jabatan);
+    }
+
+    res.json((rows || []).map(r => {
+      const m = memberByAccount.get(r.member_account_id);
+      return { ...r, jabatan: groupFor(m), member_name: m?.displayName || r.member_account_id };
+    }));
   } catch (e) {
     sendSupabaseError(res, e, 'report-governance/progress');
   }
