@@ -3098,11 +3098,65 @@ app.post('/api/report-governance/upload', requireSupabase, (req, res, next) => {
     const allProducts = await supabaseRequest('GET', 'report_products?is_active=eq.true&select=id,name,project_key');
     const byName = new Map((allProducts || []).map(p => [p.name.toLowerCase().trim(), p]));
 
+    // Preview pass: no writes, just report which names in the file don't
+    // exist yet so the frontend can offer to assign each one to a Jira
+    // project inline (see `assignments` below) instead of the old
+    // silently-skip-and-tell-the-user-to-add-it-manually flow.
+    if (String(req.body.dry_run) === 'true') {
+      const unmatched = new Map();
+      parsed.weeklyRows.forEach(r => { const k = r.name.toLowerCase().trim(); if (!byName.has(k)) unmatched.set(k, r.name); });
+      parsed.progressRows.forEach(r => { const k = r.product.toLowerCase().trim(); if (!byName.has(k)) unmatched.set(k, r.product); });
+      return res.json({
+        period_start: periodStart,
+        weekly_total: parsed.weeklyRows.length,
+        progress_total: parsed.progressRows.length,
+        unmatched_names: [...unmatched.values()],
+        warnings
+      });
+    }
+
+    // Assignments picked by the user for names that didn't match any
+    // existing product: { "<name>": { project_key, epic_key? } }. Rows left
+    // unassigned are skipped exactly like an unmatched name always was.
+    let assignments = {};
+    if (req.body.assignments) {
+      try { assignments = JSON.parse(req.body.assignments) || {}; } catch { assignments = {}; }
+    }
+    const assignByName = new Map(Object.entries(assignments).map(([k, v]) => [k.toLowerCase().trim(), v]));
+
+    async function resolveProduct(name) {
+      const key = name.toLowerCase().trim();
+      const existing = byName.get(key);
+      if (existing) return { product: existing, reason: null };
+      const assign = assignByName.get(key);
+      if (!assign || !assign.project_key) {
+        return { product: null, reason: 'No existing project with this exact name — assign a Jira project in the upload popup, then re-upload.' };
+      }
+      const projectKey = String(assign.project_key).toUpperCase();
+      const epicKey = assign.epic_key ? String(assign.epic_key).toUpperCase() : null;
+      if (!GOV_KEY_RE.test(projectKey)) return { product: null, reason: 'Invalid project selected for this row.' };
+      if (epicKey && !REPGOV_EPIC_RE.test(epicKey)) return { product: null, reason: 'Invalid epic selected for this row.' };
+      if (!reportGovCanAccess(req.user, projectKey)) return { product: null, reason: `Not allowed for project ${projectKey}` };
+      try {
+        const created = await supabaseRequest('POST', 'report_products?select=*',
+          { project_key: projectKey, epic_key: epicKey, name, created_by: req.user.id });
+        const product = Array.isArray(created) ? created[0] : created;
+        byName.set(key, product);
+        return { product, reason: null };
+      } catch (e) {
+        if (e.status === 409 || /duplicate key/i.test(e.message || '')) {
+          const dupe = await supabaseRequest('GET', `report_products?project_key=eq.${projectKey}&name=eq.${encodeURIComponent(name)}&select=id,name,project_key`);
+          if (dupe && dupe[0]) { byName.set(key, dupe[0]); return { product: dupe[0], reason: null }; }
+        }
+        return { product: null, reason: `Couldn't create project for "${name}": ${e.message}` };
+      }
+    }
+
     let weeklyUpdated = 0;
     const dayFields = ['mon_status', 'tue_status', 'wed_status', 'thu_status', 'fri_status'];
     for (const row of parsed.weeklyRows) {
-      const product = byName.get(row.name.toLowerCase().trim());
-      if (!product) { skipped.push({ name: row.name, reason: 'No existing project with this exact name — add it once via "+ Add project", then re-upload.' }); continue; }
+      const { product, reason } = await resolveProduct(row.name);
+      if (!product) { skipped.push({ name: row.name, reason }); continue; }
       if (!reportGovCanAccess(req.user, product.project_key)) { skipped.push({ name: row.name, reason: `Not allowed for project ${product.project_key}` }); continue; }
 
       const body = { product_id: product.id, period_start: periodStart, updated_by: req.user.id, movement: row.movement };
@@ -3131,8 +3185,8 @@ app.post('/api/report-governance/upload', requireSupabase, (req, res, next) => {
 
     let progressUpdated = 0;
     for (const row of parsed.progressRows) {
-      const product = byName.get(row.product.toLowerCase().trim());
-      if (!product) { skipped.push({ name: `${row.person} — ${row.product}`, reason: 'No existing project with this exact name.' }); continue; }
+      const { product, reason: productReason } = await resolveProduct(row.product);
+      if (!product) { skipped.push({ name: `${row.person} — ${row.product}`, reason: productReason }); continue; }
       let member = rosterByName.get(row.person.toLowerCase().trim());
       if (!member) member = roster.find(m => m.displayName.toLowerCase().trim().startsWith(row.person.toLowerCase().trim()));
       if (!member) { skipped.push({ name: `${row.person} — ${row.product}`, reason: `No team member matching "${row.person}"` }); continue; }

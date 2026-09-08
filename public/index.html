@@ -9521,7 +9521,7 @@ async function rgResolveOrCreateProduct(projectKey, epicKey, name) {
 // ---- Shared modals (injected once, reused by both pages) ----
 let RG_DIALOGS_READY = false;
 const RG_EDIT = {};
-const RG_FORM = { productEpics: [], progressEpics: [] };
+const RG_FORM = { productEpics: [], progressEpics: [], uploadRowEpics: {} };
 function rgEnsureDialogs() {
   if (RG_DIALOGS_READY) return;
   RG_DIALOGS_READY = true;
@@ -9670,11 +9670,12 @@ function rgEnsureDialogs() {
     <dialog id="dlgRgUpload" class="rg-dialog rg-dialog-wide">
       <form class="rg-form" id="formRgUpload">
         <h3>Upload report</h3>
-        <p class="sub">Upload the Weekly Delivery Tracker spreadsheet for <b id="rgUploadWeekLabel">this week</b>. Projects are matched by name to what's already in Report Governance — a name that doesn't match yet is skipped and listed below, so add it once via "+ Add project" first.</p>
+        <p class="sub">Upload the Weekly Delivery Tracker spreadsheet for <b id="rgUploadWeekLabel">this week</b>. Projects are matched by name to what's already in Report Governance — a name that doesn't match yet can be assigned to a Jira project right here before importing.</p>
         <p class="rg-form-error" id="rgUploadError" hidden></p>
         <a id="rgUploadTemplateLink" class="rg-ghost-btn" style="text-align:center;text-decoration:none;display:block" href="#">⬇ Download template (.xlsx)</a>
         <input type="hidden" name="period_start" id="rgUploadPeriodStart">
         <label>File (.xlsx or .csv)<input type="file" name="file" accept=".xlsx,.csv" required></label>
+        <div id="rgUploadAssign"></div>
         <div id="rgUploadResult"></div>
         <div class="rg-form-actions">
           <button type="button" onclick="dlgRgUpload.close()" class="rg-ghost-btn">Close</button>
@@ -9958,11 +9959,18 @@ async function rgDrop(e, wrap) {
     showError(`Could not move project: ${ex.message}`);
   }
 }
+let RG_UPLOAD_PHASE = 'idle';
+let RG_UPLOAD_UNMATCHED = [];
 function repgovOpenUploadForm() {
   rgEnsureDialogs();
   document.getElementById('formRgUpload').reset();
   document.getElementById('rgUploadError').hidden = true;
   document.getElementById('rgUploadResult').innerHTML = '';
+  document.getElementById('rgUploadAssign').innerHTML = '';
+  RG_UPLOAD_PHASE = 'idle';
+  RG_UPLOAD_UNMATCHED = [];
+  RG_FORM.uploadRowEpics = {};
+  document.getElementById('rgUploadSubmitBtn').textContent = 'Upload';
   const periodStart = REPGOV.periodStart || new Date().toISOString().slice(0, 10);
   document.getElementById('rgUploadPeriodStart').value = periodStart;
   document.getElementById('rgUploadWeekLabel').textContent = `the week of ${periodStart}`;
@@ -9976,32 +9984,92 @@ async function rgSubmitUpload(e) {
   err.hidden = true;
   const fileInput = form.querySelector('input[name="file"]');
   if (!fileInput.files.length) { err.textContent = 'Please choose a file.'; err.hidden = false; return; }
-  const fd = new FormData(form);
   const btn = document.getElementById('rgUploadSubmitBtn');
   btn.disabled = true;
-  document.getElementById('rgUploadResult').innerHTML = '<p class="rg-hint">Uploading and parsing…</p>';
   try {
-    const r = await fetch('/api/report-governance/upload', { method: 'POST', body: fd });
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(data.error || data.message || `HTTP ${r.status}`);
-    const skippedHtml = data.skipped && data.skipped.length
-      ? `<p style="font-weight:600;margin:10px 0 4px">Skipped (${data.skipped.length}):</p><ul style="margin:0;padding-left:18px">${data.skipped.map(s => `<li>${apEsc(s.name)} — ${apEsc(s.reason)}</li>`).join('')}</ul>`
-      : '';
-    const warningsHtml = data.warnings && data.warnings.length
-      ? `<p style="font-weight:600;margin:10px 0 4px">Notes (${data.warnings.length}):</p><ul style="margin:0;padding-left:18px">${data.warnings.map(w => `<li>${apEsc(w)}</li>`).join('')}</ul>`
-      : '';
-    document.getElementById('rgUploadResult').innerHTML = `
-      <div class="rg-ai-card">
-        <div><b>${data.weekly_updated} project(s)</b> updated in the Weekly Tracker, <b>${data.progress_updated} progress row(s)</b> updated in Dev Daily Progress.</div>
-        ${skippedHtml}${warningsHtml}
-      </div>`;
-    if (REPGOV.periodStart === data.period_start) await repgovFetchStatus();
+    if (RG_UPLOAD_PHASE === 'idle') {
+      document.getElementById('rgUploadResult').innerHTML = '<p class="rg-hint">Reading file…</p>';
+      const fd = new FormData(form);
+      fd.set('dry_run', 'true');
+      const r = await fetch('/api/report-governance/upload', { method: 'POST', body: fd });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || data.message || `HTTP ${r.status}`);
+      document.getElementById('rgUploadResult').innerHTML = '';
+      if (!data.unmatched_names || !data.unmatched_names.length) {
+        await rgRunUploadImport(form, {});
+      } else {
+        RG_UPLOAD_UNMATCHED = data.unmatched_names;
+        RG_UPLOAD_PHASE = 'assign';
+        rgRenderUploadAssign(data.unmatched_names);
+        btn.textContent = 'Import';
+      }
+    } else {
+      const assignments = {};
+      RG_UPLOAD_UNMATCHED.forEach((name, i) => {
+        const pk = rgComboValue(`rgUA_proj_${i}`);
+        if (!pk) return;
+        const ek = rgComboValue(`rgUA_epic_${i}`);
+        assignments[name] = { project_key: pk, epic_key: ek || null };
+      });
+      await rgRunUploadImport(form, assignments);
+    }
   } catch (ex) {
     err.textContent = ex.message;
     err.hidden = false;
     document.getElementById('rgUploadResult').innerHTML = '';
   } finally {
     btn.disabled = false;
+  }
+}
+async function rgRunUploadImport(form, assignments) {
+  document.getElementById('rgUploadResult').innerHTML = '<p class="rg-hint">Importing…</p>';
+  const fd = new FormData(form);
+  fd.set('dry_run', 'false');
+  fd.set('assignments', JSON.stringify(assignments));
+  const r = await fetch('/api/report-governance/upload', { method: 'POST', body: fd });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || data.message || `HTTP ${r.status}`);
+  const skippedHtml = data.skipped && data.skipped.length
+    ? `<p style="font-weight:600;margin:10px 0 4px">Skipped (${data.skipped.length}):</p><ul style="margin:0;padding-left:18px">${data.skipped.map(s => `<li>${apEsc(s.name)} — ${apEsc(s.reason)}</li>`).join('')}</ul>`
+    : '';
+  const warningsHtml = data.warnings && data.warnings.length
+    ? `<p style="font-weight:600;margin:10px 0 4px">Notes (${data.warnings.length}):</p><ul style="margin:0;padding-left:18px">${data.warnings.map(w => `<li>${apEsc(w)}</li>`).join('')}</ul>`
+    : '';
+  document.getElementById('rgUploadResult').innerHTML = `
+    <div class="rg-ai-card">
+      <div><b>${data.weekly_updated} project(s)</b> updated in the Weekly Tracker, <b>${data.progress_updated} progress row(s)</b> updated in Dev Daily Progress.</div>
+      ${skippedHtml}${warningsHtml}
+    </div>`;
+  document.getElementById('rgUploadAssign').innerHTML = '';
+  RG_UPLOAD_PHASE = 'idle';
+  RG_UPLOAD_UNMATCHED = [];
+  document.getElementById('rgUploadSubmitBtn').textContent = 'Upload';
+  if (REPGOV.periodStart === data.period_start) await repgovFetchStatus();
+}
+function rgRenderUploadAssign(names) {
+  document.getElementById('rgUploadAssign').innerHTML = `
+    <div class="rg-ai-card" style="margin-top:10px">
+      <div style="font-weight:600;margin-bottom:6px">${names.length} product name(s) not found — assign a Jira project to import them, or leave blank to skip:</div>
+      ${names.map((name, i) => `
+        <div class="rg-row2" style="align-items:end;margin-bottom:8px">
+          <label style="grid-column:1 / -1;font-weight:600;font-size:13px">${apEsc(name)}</label>
+          <label style="font-weight:400">Jira project${rgComboHtml(`rgUA_proj_${i}`, 'Search Jira project…')}</label>
+          <label style="font-weight:400">Jira epic (optional)${rgComboHtml(`rgUA_epic_${i}`, 'Search Jira epic…')}</label>
+        </div>`).join('')}
+    </div>`;
+  names.forEach((name, i) => {
+    rgComboInit(`rgUA_proj_${i}`, () => (REPGOV.jira?.projects || []).map(p => ({ value: p.key, label: `${p.key} — ${p.name}`, group: p.category })),
+      item => rgLoadEpicsForUploadRow(i, item.value));
+    rgComboInit(`rgUA_epic_${i}`, () => RG_FORM.uploadRowEpics[i] || [], () => {});
+  });
+}
+async function rgLoadEpicsForUploadRow(i, projectKey) {
+  rgComboClear(`rgUA_epic_${i}`);
+  try {
+    const epics = await api('/api/report-governance/jira-epics?project_key=' + encodeURIComponent(projectKey));
+    RG_FORM.uploadRowEpics[i] = epics.map(e => ({ value: e.key, label: `${e.key} — ${e.summary}`, group: projectKey }));
+  } catch (ex) {
+    RG_FORM.uploadRowEpics[i] = [];
   }
 }
 function repgovOpenDateRangeForm() {
