@@ -10054,23 +10054,28 @@ function rgRenderUploadAssign(names) {
         <div class="rg-row2" style="align-items:end;margin-bottom:8px">
           <label style="grid-column:1 / -1;font-weight:600;font-size:13px">${apEsc(name)}</label>
           <label style="font-weight:400">Jira project${rgComboHtml(`rgUA_proj_${i}`, 'Search Jira project…')}</label>
-          <label style="font-weight:400">Jira epic (optional)${rgComboHtml(`rgUA_epic_${i}`, 'Search Jira epic…')}</label>
+          <label style="font-weight:400">Jira epic (optional)${rgComboHtml(`rgUA_epic_${i}`, 'Pick a project first')}</label>
         </div>`).join('')}
     </div>`;
   names.forEach((name, i) => {
     rgComboInit(`rgUA_proj_${i}`, () => (REPGOV.jira?.projects || []).map(p => ({ value: p.key, label: `${p.key} — ${p.name}`, group: p.category })),
       item => rgLoadEpicsForUploadRow(i, item.value));
     rgComboInit(`rgUA_epic_${i}`, () => RG_FORM.uploadRowEpics[i] || [], () => {});
+    const epicInput = document.querySelector(`#rgc-rgUA_epic_${i} .rg-combo-input`);
+    if (epicInput) epicInput.disabled = true;
   });
 }
 async function rgLoadEpicsForUploadRow(i, projectKey) {
   rgComboClear(`rgUA_epic_${i}`);
+  const epicInput = document.querySelector(`#rgc-rgUA_epic_${i} .rg-combo-input`);
+  if (epicInput) { epicInput.disabled = true; epicInput.placeholder = 'Loading epics…'; }
   try {
     const epics = await api('/api/report-governance/jira-epics?project_key=' + encodeURIComponent(projectKey));
     RG_FORM.uploadRowEpics[i] = epics.map(e => ({ value: e.key, label: `${e.key} — ${e.summary}`, group: projectKey }));
   } catch (ex) {
     RG_FORM.uploadRowEpics[i] = [];
   }
+  if (epicInput) { epicInput.disabled = false; epicInput.placeholder = 'Search Jira epic…'; }
 }
 function repgovOpenDateRangeForm() {
   rgEnsureDialogs();
