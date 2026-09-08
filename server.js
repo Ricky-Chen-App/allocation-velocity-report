@@ -2729,6 +2729,36 @@ app.get('/api/report-governance/jira-epics', async (req, res) => {
   }
 });
 
+// GET /api/report-governance/jira-epic-search?q=... — org-wide epic search
+// by key or summary text (scoped to the caller's allowed projects, unless
+// admin). Unlike /jira-epics above, this lets the upload popup's per-row
+// epic picker search directly without first choosing a project — picking a
+// result then fills in that row's project automatically.
+const repGovEpicSearchCache = {};
+const REPGOV_EPIC_SEARCH_CACHE_TTL = 60 * 1000;
+app.get('/api/report-governance/jira-epic-search', async (req, res) => {
+  const q = String(req.query.q || '').trim();
+  if (q.length < 2) return res.json([]);
+  const allowed = req.user.is_admin ? null : (req.user.allowed_project_keys || []);
+  if (allowed && !allowed.length) return res.json([]);
+  try {
+    const cacheKey = `${req.user.is_admin ? 'admin' : allowed.join(',')}::${q.toLowerCase()}`;
+    const cached = repGovEpicSearchCache[cacheKey];
+    if (cached && Date.now() - cached.ts < REPGOV_EPIC_SEARCH_CACHE_TTL) return res.json(cached.data);
+    const scopeJql = allowed ? `project in (${allowed.map(k => `"${k}"`).join(',')}) AND ` : '';
+    const upperQ = q.toUpperCase();
+    const jql = REPGOV_EPIC_RE.test(upperQ)
+      ? `${scopeJql}issuetype = Epic AND key = "${upperQ}"`
+      : `${scopeJql}issuetype = Epic AND summary ~ "${q.replace(/"/g, '\\"')}*" ORDER BY key ASC`;
+    const issues = await jiraSearchAll(jql, 'summary,project', 30);
+    const epics = issues.map(i => ({ key: i.key, summary: i.fields?.summary || i.key, project_key: i.fields?.project?.key || i.key.split('-')[0] }));
+    repGovEpicSearchCache[cacheKey] = { data: epics, ts: Date.now() };
+    res.json(epics);
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
+});
+
 // GET /api/report-governance/mvp-suggestion?project_key=&epic_key= — the Add
 // Project form's live "% done" suggestion for MVP %. Scoped to the epic's
 // children (`parent = EPIC`, Jira's unified hierarchy field for both
