@@ -9792,6 +9792,31 @@ async function loadReportGovernancePage() {
     body.innerHTML = emptyState({ icon: '⚠️', title: 'Could not load Report Governance', description: e.message });
   }
 }
+// Project/epic keys ("BR", "BR-58") are the stable identifiers we store and
+// match on, but they mean nothing to a reader — the Project column should
+// show the actual Jira project/epic name instead. Project names are already
+// in REPGOV.jira.projects; epic names aren't preloaded anywhere (there's no
+// org-wide epic list), so this resolves and session-caches them per project
+// key on demand, reusing the already-cached /jira-epics endpoint.
+const RG_EPIC_NAMES = {};
+async function rgEnsureEpicNames(pairs) {
+  const projectKeys = new Set();
+  pairs.forEach(({ project_key, epic_key }) => {
+    if (epic_key && project_key && !(epic_key in RG_EPIC_NAMES)) projectKeys.add(project_key);
+  });
+  if (!projectKeys.size) return;
+  await Promise.all([...projectKeys].map(async pk => {
+    try {
+      const epics = await api('/api/report-governance/jira-epics?project_key=' + encodeURIComponent(pk));
+      epics.forEach(e => { RG_EPIC_NAMES[e.key] = e.summary; });
+    } catch (ex) { /* leave unresolved — falls back to showing the epic key */ }
+  }));
+}
+function rgProjectDisplayName(projectKey) {
+  const p = (REPGOV.jira?.projects || []).find(x => x.key === projectKey);
+  return p ? p.name : projectKey;
+}
+function rgEpicDisplayName(epicKey) { return RG_EPIC_NAMES[epicKey] || epicKey; }
 async function repgovFetchStatus() {
   const params = new URLSearchParams();
   if (REPGOV.periodStart) params.set('period_start', REPGOV.periodStart);
@@ -9800,6 +9825,7 @@ async function repgovFetchStatus() {
   const data = await api('/api/report-governance/status?' + params.toString());
   REPGOV.periodStart = data.period_start;
   REPGOV.rows = data.rows;
+  await rgEnsureEpicNames(data.rows.map(r => ({ project_key: r.project_key, epic_key: r.epic_key })));
   renderReportGovernance();
 }
 function repgovAiEntries() {
@@ -9897,7 +9923,7 @@ function repgovLinksCellHtml(r) {
   return `${body}<button class="rg-link-edit" onclick="repgovOpenLinksEditor('${r.product_id}')">✎ Edit links</button>`;
 }
 function repgovRowHtml(r, isMoving) {
-  const subParts = [r.project_key]; if (r.epic_key) subParts.push(r.epic_key);
+  const subParts = [rgProjectDisplayName(r.project_key)]; if (r.epic_key) subParts.push(rgEpicDisplayName(r.epic_key));
   const scoreCell = `<td><input type="number" class="rg-score-input" value="${r.score_prio ?? 0}" min="0" max="999"
     onchange="repgovSaveField('${r.product_id}','score_prio',this.value?parseInt(this.value,10):null)"></td>`;
   const dayCells = ['mon_status', 'tue_status', 'wed_status', 'thu_status', 'fri_status'].map(f => repgovDaySelectHtml(r.product_id, f, r[f])).join('');
@@ -10236,6 +10262,7 @@ async function loadDevProgressPage() {
 }
 async function devprogFetchEntries() {
   DEVPROG.entries = await api('/api/report-governance/progress');
+  await rgEnsureEpicNames(DEVPROG.entries.map(e => ({ project_key: e.report_products?.project_key, epic_key: e.report_products?.epic_key })));
   renderDevProgress();
 }
 function devprogAiEntries(todayEntries) {
@@ -10314,7 +10341,7 @@ function renderDevProgress() {
 }
 function devprogRowHtml(r) {
   const p = r.report_products || {};
-  const subParts = [p.project_key, p.epic_key].filter(Boolean);
+  const subParts = [p.project_key ? rgProjectDisplayName(p.project_key) : null, p.epic_key ? rgEpicDisplayName(p.epic_key) : null].filter(Boolean);
   return `<tr>
     <td class="rg-product"><b>${apEsc(p.name || '')}</b><span class="sub">${apEsc(subParts.join(' · '))}</span></td>
     <td class="rg-txtcell${r.yesterday_note ? '' : ' muted'}" onclick="devprogOpenTextEditor(this,'${r.product_id}','${apEsc(r.member_account_id)}','${r.entry_date}','yesterday_note','Yesterday')">${r.yesterday_note ? apEsc(r.yesterday_note) : '— not filled in —'}</td>
