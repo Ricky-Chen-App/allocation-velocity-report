@@ -9667,6 +9667,18 @@ function rgEnsureDialogs() {
       </form>
     </dialog>
 
+    <dialog id="dlgDevprogDate" class="rg-dialog">
+      <form class="rg-form" id="formDevprogDate">
+        <h3>Choose date</h3>
+        <p class="sub">"Today" and "Yesterday" below are relative to this date — pick a day to see entries logged (or uploaded) for it, e.g. a past week's tracker.</p>
+        <label>Date<input type="date" name="date" required></label>
+        <div class="rg-form-actions">
+          <button type="button" onclick="dlgDevprogDate.close()" class="rg-ghost-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Apply</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="dlgRgUpload" class="rg-dialog rg-dialog-wide">
       <form class="rg-form" id="formRgUpload">
         <h3>Upload report</h3>
@@ -9686,6 +9698,7 @@ function rgEnsureDialogs() {
   `);
 
   document.getElementById('formRgDateRange').addEventListener('submit', rgSubmitDateRange);
+  document.getElementById('formDevprogDate').addEventListener('submit', devprogSubmitDate);
   document.getElementById('formRgUpload').addEventListener('submit', rgSubmitUpload);
   document.getElementById('formRgProduct').addEventListener('submit', rgSubmitProduct);
   document.getElementById('formRgProgress').addEventListener('submit', rgSubmitProgress);
@@ -10245,9 +10258,22 @@ function repgovOpenCredentials(productId) {
 // ============================================================
 // DEV DAILY PROGRESS
 // ============================================================
-const DEVPROG = { roster: null, entries: null, group: 'all', name: 'all' };
+const DEVPROG = { roster: null, entries: null, group: 'all', name: 'all', viewDate: null };
 function devprogTodayIso() { return new Date().toISOString().slice(0, 10); }
-function devprogYesterdayIso() { return new Date(Date.now() - 86400000).toISOString().slice(0, 10); }
+function devprogAddDaysIso(iso, days) { return new Date(new Date(iso + 'T00:00:00Z').getTime() + days * 86400000).toISOString().slice(0, 10); }
+function devprogYesterdayIso() { return devprogAddDaysIso(devprogTodayIso(), -1); }
+function devprogOpenDateForm() {
+  rgEnsureDialogs();
+  document.querySelector('#formDevprogDate input[name="date"]').value = DEVPROG.viewDate || devprogTodayIso();
+  dlgDevprogDate.showModal();
+}
+function devprogSubmitDate(e) {
+  e.preventDefault();
+  const date = new FormData(e.target).get('date');
+  DEVPROG.viewDate = date || null;
+  dlgDevprogDate.close();
+  renderDevProgress();
+}
 
 async function loadDevProgressPage() {
   const body = document.getElementById('devprog-body');
@@ -10270,7 +10296,9 @@ function devprogAiEntries(todayEntries) {
     .map(e => ({ name: `${e.member_name || e.member_account_id} — ${e.report_products?.name || ''}`, text: e.blocker_note.trim(), meta: {} }));
 }
 function renderDevProgress() {
-  const today = devprogTodayIso(), yesterday = devprogYesterdayIso();
+  const today = DEVPROG.viewDate || devprogTodayIso();
+  const yesterday = devprogAddDaysIso(today, -1);
+  const isRealToday = today === devprogTodayIso();
   let entries = DEVPROG.entries || [];
   if (DEVPROG.group !== 'all') entries = entries.filter(e => e.jabatan === DEVPROG.group);
   if (DEVPROG.name !== 'all') entries = entries.filter(e => e.member_account_id === DEVPROG.name);
@@ -10305,17 +10333,18 @@ function renderDevProgress() {
     const jabatan = member?.jabatan || rows[0]?.jabatan || '';
     const initials = name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
     return `
-      <div class="rg-person-head"><span class="rg-person-avatar">${apEsc(initials)}</span><b>${apEsc(name)}</b>${jabatan ? `<span class="grp">${apEsc(jabatan)}</span>` : ''}<span class="cnt">${rows.length} project${rows.length === 1 ? '' : 's'} today</span></div>
+      <div class="rg-person-head"><span class="rg-person-avatar">${apEsc(initials)}</span><b>${apEsc(name)}</b>${jabatan ? `<span class="grp">${apEsc(jabatan)}</span>` : ''}<span class="cnt">${rows.length} project${rows.length === 1 ? '' : 's'} on ${apEsc(today)}</span></div>
       <div class="rg-table-wrap"><table class="rg-table">
         <thead><tr><th style="width:26%">Project</th><th>Yesterday</th><th>Today</th><th>Move to next day</th><th>Blocker / Notes</th></tr></thead>
         <tbody>${rows.map(r => devprogRowHtml(r)).join('')}</tbody>
       </table></div>
       <div class="rg-foot-add"><button class="rg-ghost-btn" onclick="devprogOpenProgressForm('${apEsc(accId)}','${apEsc(name)}')">+ Add project for ${apEsc(name)}</button></div>
     `;
-  }).join('') || emptyState({ icon: '🧑‍💻', title: 'No entries today', description: 'Add a person, then log a project update for them.' });
+  }).join('') || emptyState({ icon: '🧑‍💻', title: `No entries on ${today}`, description: isRealToday ? 'Add a person, then log a project update for them.' : 'Nothing logged or uploaded for this date yet.' });
 
   document.getElementById('devprog-body').innerHTML = `
     <div class="rg-filter-bar">
+      <button class="rg-ghost-btn" style="font-size:12.5px" onclick="devprogOpenDateForm()">📅 ${isRealToday ? 'Today' : apEsc(today)} · Change</button>
       ${rgComboHtml('devprog-group', 'All groups')}
       ${rgComboHtml('devprog-name', 'All developers')}
     </div>
@@ -10403,7 +10432,7 @@ function devprogOpenProgressForm(accountId, name) {
   document.getElementById('rgProgressError').hidden = true;
   document.getElementById('rgProgressPersonLabel').textContent = name;
   form.dataset.accountId = accountId;
-  form.querySelector('[name="entryDate"]').value = devprogTodayIso();
+  form.querySelector('[name="entryDate"]').value = DEVPROG.viewDate || devprogTodayIso();
   rgComboClear('rgProgressProject');
   rgComboClear('rgProgressEpic');
   document.getElementById('rgProgressEpicWrap').hidden = true;
