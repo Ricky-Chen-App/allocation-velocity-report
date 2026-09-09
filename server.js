@@ -3213,9 +3213,27 @@ app.post('/api/report-governance/upload', requireSupabase, (req, res, next) => {
     const rosterByName = new Map(roster.map(m => [m.displayName.toLowerCase().trim(), m]));
     const weekDates = repgovWeekdayDates(periodStart).map(d => d.toISOString().slice(0, 10));
 
+    // The Dev Progress table often names the same product more loosely than
+    // the Weekly Tracker section above it — e.g. "Mami Care" here vs
+    // "Mami Care [NEW]" there, or a full official name shortened. Try an
+    // exact match first; only fall back to a prefix match (in either
+    // direction) against products already known this request, so the two
+    // sections' rows for the same product resolve to one another instead of
+    // every shortened name getting reported as unmatched.
+    function fuzzyFindProduct(name) {
+      const key = name.toLowerCase().trim();
+      if (byName.has(key)) return byName.get(key);
+      for (const [k, p] of byName) {
+        if (k.startsWith(key) || key.startsWith(k)) return p;
+      }
+      return null;
+    }
+
     let progressUpdated = 0;
     for (const row of parsed.progressRows) {
-      const { product, reason: productReason } = await resolveProduct(row.product);
+      let product = fuzzyFindProduct(row.product);
+      let productReason = null;
+      if (!product) { ({ product, reason: productReason } = await resolveProduct(row.product)); }
       if (!product) { skipped.push({ name: `${row.person} — ${row.product}`, reason: productReason }); continue; }
       let member = rosterByName.get(row.person.toLowerCase().trim());
       if (!member) member = roster.find(m => m.displayName.toLowerCase().trim().startsWith(row.person.toLowerCase().trim()));
