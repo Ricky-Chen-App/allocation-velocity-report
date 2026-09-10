@@ -1228,6 +1228,12 @@ tbody td{padding:12px 16px;font-size:12.5px;color:var(--ink-700);vertical-align:
 .rg-combo-opt{padding:7px 10px;font-size:12.5px;cursor:pointer}
 .rg-combo-opt:hover{background:var(--surface-2)}
 .rg-combo-empty{padding:8px 10px;font-size:12px;color:var(--ink-400);font-style:italic}
+.rg-multi-trigger{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;text-align:left;color:var(--ink-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rg-multi-caret{font-size:10px;color:var(--ink-400);flex:none}
+.rg-multi-opt{display:flex;align-items:center;gap:7px;padding:7px 10px;font-size:12.5px;cursor:pointer}
+.rg-multi-opt:hover{background:var(--surface-2)}
+.rg-multi-opt input{margin:0}
+.rg-multi-all{border-bottom:1px solid var(--ink-100);font-weight:600}
 
 dialog.rg-dialog{border:none;border-radius:14px;padding:0;box-shadow:0 8px 28px rgba(0,0,0,.16);max-width:460px;width:92vw;font-family:inherit;color:var(--ink-800);margin:auto;max-height:85vh}
 dialog.rg-dialog.rg-dialog-wide{max-width:640px}
@@ -9431,13 +9437,121 @@ function rgComboClear(id) {
 document.addEventListener('mousedown', e => {
   const opt = e.target.closest('.rg-combo-opt');
   if (opt) { e.preventDefault(); rgComboPick(opt.dataset.combo, opt.dataset.value); return; }
+  document.querySelectorAll('.rg-multi').forEach(root => {
+    if (root.contains(e.target)) return;
+    const id = root.id.slice(4); // "rgm-" prefix
+    const list = document.getElementById(`rgm-${id}-list`);
+    if (list && !list.hidden) rgMultiClose(id);
+  });
   document.querySelectorAll('.rg-combo-list').forEach(l => {
+    if (l.closest('.rg-multi')) return; // handled above — needs commit-on-close
     if (!l.hidden) {
       const root = l.closest('.rg-combo');
       if (!root || !root.contains(e.target)) l.hidden = true;
     }
   });
 });
+
+// A click-to-open, checkbox-based multi-select dropdown ("all categories",
+// "all my projects") — distinct from RG_COMBO (single-value, type-to-search)
+// above. Committed state is NOT held here: `getSelected`/`onChange` read and
+// write the caller's own array (e.g. REPGOV.categories), the one source of
+// truth. While open, checkbox clicks only mutate a local `pending` Set and
+// repaint the list in place — calling `onChange` immediately would re-render
+// the whole filter bar (it triggers a data refetch) and close the dropdown
+// after every single click. `onChange` fires once, on close, only if the
+// selection actually changed.
+const RG_MULTI = {};
+function rgMultiInit(id, itemsOrFn, getSelected, onChange, allLabel) {
+  const prevPending = RG_MULTI[id]?.pending;
+  RG_MULTI[id] = { itemsOrFn, getSelected, onChange, allLabel, pending: prevPending };
+}
+function rgMultiItems(id) {
+  const s = RG_MULTI[id];
+  return s ? (typeof s.itemsOrFn === 'function' ? s.itemsOrFn() : (s.itemsOrFn || [])) : [];
+}
+function rgMultiCommitted(id) {
+  const s = RG_MULTI[id];
+  const sel = s ? s.getSelected() : ['all'];
+  return new Set(sel && sel.length ? sel : ['all']);
+}
+function rgMultiSummary(id) {
+  const s = RG_MULTI[id];
+  if (!s) return '';
+  const sel = s.pending || rgMultiCommitted(id);
+  if (sel.has('all')) return s.allLabel;
+  const items = rgMultiItems(id);
+  const labels = [...sel].map(v => items.find(i => i.value === v)?.label || v);
+  return labels.length <= 2 ? labels.join(', ') : `${labels.length} selected`;
+}
+function rgMultiHtml(id) {
+  return `<div class="rg-combo rg-multi" id="rgm-${id}">
+    <button type="button" class="rg-combo-input rg-multi-trigger" onclick="rgMultiToggleOpen('${id}')"><span>${apEsc(rgMultiSummary(id))}</span><span class="rg-multi-caret">▾</span></button>
+    <div class="rg-combo-list" id="rgm-${id}-list" hidden></div>
+  </div>`;
+}
+function rgMultiToggleOpen(id) {
+  const list = document.getElementById(`rgm-${id}-list`);
+  if (!list) return;
+  if (!list.hidden) { rgMultiClose(id); return; }
+  document.querySelectorAll('.rg-multi').forEach(root => {
+    const otherId = root.id.slice(4);
+    if (otherId !== id) rgMultiClose(otherId);
+  });
+  document.querySelectorAll('.rg-combo-list').forEach(l => { if (l.id !== `rgm-${id}-list`) l.hidden = true; });
+  const s = RG_MULTI[id];
+  s.pending = rgMultiCommitted(id);
+  rgMultiRenderList(id);
+  list.hidden = false;
+}
+function rgMultiClose(id) {
+  const s = RG_MULTI[id];
+  const list = document.getElementById(`rgm-${id}-list`);
+  if (list) list.hidden = true;
+  if (!s || !s.pending) return;
+  const pending = [...s.pending];
+  s.pending = null;
+  const before = rgMultiCommitted(id);
+  const changed = before.size !== pending.length || pending.some(v => !before.has(v));
+  if (changed) s.onChange(pending.length ? pending : ['all']);
+  else rgMultiRefreshTrigger(id); // selection reverted to what it already was — just repaint
+}
+function rgMultiRenderList(id) {
+  const s = RG_MULTI[id];
+  const list = document.getElementById(`rgm-${id}-list`);
+  if (!s || !list) return;
+  const items = rgMultiItems(id);
+  const sel = s.pending || rgMultiCommitted(id);
+  const byGroup = {};
+  items.forEach(it => { (byGroup[it.group || ''] = byGroup[it.group || ''] || []).push(it); });
+  const optHtml = it => `<label class="rg-multi-opt"><input type="checkbox" onchange="rgMultiToggleValue('${id}','${apEsc(it.value)}')" ${!sel.has('all') && sel.has(it.value) ? 'checked' : ''}> ${apEsc(it.label)}</label>`;
+  list.innerHTML = `
+    <label class="rg-multi-opt rg-multi-all"><input type="checkbox" onchange="rgMultiSelectAll('${id}')" ${sel.has('all') ? 'checked' : ''}> ${apEsc(s.allLabel)}</label>
+    ${items.length ? Object.keys(byGroup).sort().map(g => `${g ? `<div class="rg-combo-group">${apEsc(g)}</div>` : ''}${byGroup[g].map(optHtml).join('')}`).join('')
+      : `<div class="rg-combo-empty">No options</div>`}
+  `;
+}
+function rgMultiSelectAll(id) {
+  const s = RG_MULTI[id];
+  if (!s || !s.pending) return;
+  s.pending = new Set(['all']);
+  rgMultiRenderList(id);
+  rgMultiRefreshTrigger(id);
+}
+function rgMultiToggleValue(id, value) {
+  const s = RG_MULTI[id];
+  if (!s || !s.pending) return;
+  if (s.pending.has('all')) s.pending = new Set();
+  if (s.pending.has(value)) s.pending.delete(value); else s.pending.add(value);
+  if (!s.pending.size) s.pending = new Set(['all']);
+  rgMultiRenderList(id);
+  rgMultiRefreshTrigger(id);
+}
+function rgMultiRefreshTrigger(id) {
+  const root = document.getElementById(`rgm-${id}`);
+  const span = root?.querySelector('.rg-multi-trigger span');
+  if (span) span.textContent = rgMultiSummary(id);
+}
 
 function rgWeekdayLabel(periodStart, offsetDays) {
   const d = new Date(`${periodStart}T00:00:00Z`);
@@ -9794,7 +9908,7 @@ async function rgLoadEpicsForProgressForm(projectKey) {
 // ============================================================
 // REPORT GOVERNANCE (Weekly Delivery Tracker)
 // ============================================================
-const REPGOV = { jira: null, rows: null, periodStart: null, category: 'all', projectKey: 'all' };
+const REPGOV = { jira: null, rows: null, periodStart: null, categories: ['all'], projectKeys: ['all'] };
 const RG_DAY_STATUSES = ['', 'Backlog', 'To Do', 'In Progress', 'Blocked', 'Done'];
 const RG_DAY_CLASS = { '': 'empty', 'Backlog': 'backlog', 'To Do': 'todo', 'In Progress': 'progress', 'Blocked': 'blocked', 'Done': 'done' };
 const RG_DRAG = { productId: null };
@@ -9837,8 +9951,8 @@ function rgEpicDisplayName(epicKey) { return RG_EPIC_NAMES[epicKey] || epicKey; 
 async function repgovFetchStatus() {
   const params = new URLSearchParams();
   if (REPGOV.periodStart) params.set('period_start', REPGOV.periodStart);
-  if (REPGOV.category !== 'all') params.set('category', REPGOV.category);
-  if (REPGOV.projectKey !== 'all') params.set('project_key', REPGOV.projectKey);
+  if (!REPGOV.categories.includes('all')) params.set('category', REPGOV.categories.join(','));
+  if (!REPGOV.projectKeys.includes('all')) params.set('project_key', REPGOV.projectKeys.join(','));
   const data = await api('/api/report-governance/status?' + params.toString());
   REPGOV.periodStart = data.period_start;
   REPGOV.rows = data.rows;
@@ -9857,10 +9971,27 @@ function renderReportGovernance() {
   const notdev = rows.filter(r => r.movement === 'Not Dev Item').sort((a, b) => (b.score_prio || 0) - (a.score_prio || 0));
 
   const cats = [...new Set((REPGOV.jira?.projects || []).map(p => p.category))].sort();
-  rgComboInit('repgov-cat', [{ value: 'all', label: 'All categories', group: 'Filter' }, ...cats.map(c => ({ value: c, label: c, group: 'Category' }))],
-    item => { REPGOV.category = item.value; repgovFetchStatus(); });
-  rgComboInit('repgov-proj', [{ value: 'all', label: 'All my projects', group: 'Filter' }, ...(REPGOV.jira?.projects || []).map(p => ({ value: p.key, label: `${p.key} — ${p.name}`, group: p.category }))],
-    item => { REPGOV.projectKey = item.value; repgovFetchStatus(); });
+  // The project list narrows to whichever categories are selected — and if
+  // a category is deselected out from under an already-picked project, that
+  // project drops out of the selection too rather than silently filtering
+  // on a project the picker no longer shows as chosen.
+  const projectItems = (REPGOV.jira?.projects || [])
+    .filter(p => REPGOV.categories.includes('all') || REPGOV.categories.includes(p.category))
+    .map(p => ({ value: p.key, label: `${p.key} — ${p.name}`, group: p.category }));
+  if (!REPGOV.projectKeys.includes('all')) {
+    const validKeys = new Set(projectItems.map(p => p.value));
+    const pruned = REPGOV.projectKeys.filter(k => validKeys.has(k));
+    REPGOV.projectKeys = pruned.length ? pruned : ['all'];
+  }
+
+  rgMultiInit('repgov-cat', () => cats.map(c => ({ value: c, label: c, group: '' })),
+    () => REPGOV.categories,
+    vals => { REPGOV.categories = vals; repgovFetchStatus(); },
+    'All categories');
+  rgMultiInit('repgov-proj', () => projectItems,
+    () => REPGOV.projectKeys,
+    vals => { REPGOV.projectKeys = vals; repgovFetchStatus(); },
+    'All my projects');
 
   const total = rows.length;
   const pcts = rows.map(r => { const m = String(r.mvp_percent || '').match(/(\d{1,3})\s*%/); return m ? parseInt(m[1], 10) : null; }).filter(x => x != null);
@@ -9873,8 +10004,8 @@ function renderReportGovernance() {
   document.getElementById('repgov-body').innerHTML = `
     <div class="rg-filter-bar">
       <button class="rg-ghost-btn" style="font-size:12.5px" onclick="repgovOpenDateRangeForm()">📅 ${apEsc(weekLabel)} · Change</button>
-      ${rgComboHtml('repgov-cat', 'All categories')}
-      ${rgComboHtml('repgov-proj', 'All my projects')}
+      ${rgMultiHtml('repgov-cat')}
+      ${rgMultiHtml('repgov-proj')}
     </div>
     <div class="rg-summary-row">
       <div class="rg-summary-card"><div class="num">${total}</div><div class="lbl">Total projects (filtered)</div></div>

@@ -2872,8 +2872,17 @@ app.get('/api/report-governance/status', requireSupabase, async (req, res) => {
 
     const jira = scopeProjectsForUser(await ensureProjects(), req.user);
     let jiraProjects = jira.projects || [];
-    if (req.query.category) jiraProjects = jiraProjects.filter(p => p.category === req.query.category);
-    if (req.query.project_key) jiraProjects = jiraProjects.filter(p => p.key === req.query.project_key);
+    // Both filters accept a comma-separated list (the frontend's category
+    // and project pickers are multi-select) — a single value still works
+    // the same as before.
+    if (req.query.category) {
+      const cats = new Set(String(req.query.category).split(',').filter(Boolean));
+      if (cats.size) jiraProjects = jiraProjects.filter(p => cats.has(p.category));
+    }
+    if (req.query.project_key) {
+      const keys = new Set(String(req.query.project_key).split(',').filter(Boolean));
+      if (keys.size) jiraProjects = jiraProjects.filter(p => keys.has(p.key));
+    }
     const categoryByKey = new Map((jira.projects || []).map(p => [p.key, p.category]));
     const visibleKeys = new Set(jiraProjects.map(p => p.key));
     // period_start is always returned, even with zero rows, so the frontend
