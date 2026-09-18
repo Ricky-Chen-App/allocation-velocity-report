@@ -1691,6 +1691,12 @@ dialog.rg-dialog::backdrop{background:rgba(10,13,18,.35)}
           <button class="pill active" onclick="setTlViewMode('project',this)">Per Project</button>
           <button class="pill" onclick="setTlViewMode('epic',this)">Per Epic</button>
         </div>
+        <!-- 4b. Gantt time-scale toggle -->
+        <div class="pill-group" id="tl-scale-toggle">
+          <button class="pill" onclick="setTlScale('day',this)">Day</button>
+          <button class="pill" onclick="setTlScale('week',this)">Week</button>
+          <button class="pill active" onclick="setTlScale('month',this)">Month</button>
+        </div>
       </div>
       <!-- 4c. Summary cards -->
       <div id="tl-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:16px 32px 0"></div>
@@ -6110,7 +6116,7 @@ function comboKey(field, ev) {
 document.addEventListener('click', e => { if (!e.target.closest('.combo')) { comboCloseAll(); apCloseAll(); vfComboCloseAll(); } });
 
 // ======== TIMELINE ========
-let TL = { data: null, statusFilter: 'all', viewMode: 'project', expanded: new Set(), expandedEpics: new Set(), expandedTasks: new Set(), subBars: {} };
+let TL = { data: null, statusFilter: 'all', viewMode: 'project', scale: 'month', expanded: new Set(), expandedEpics: new Set(), expandedTasks: new Set(), subBars: {} };
 
 // Toggle a project/developer group (collapse/expand); default = collapsed
 function toggleTlGroup(id) {
@@ -6225,6 +6231,12 @@ function setTlViewMode(mode, btn) {
   TL.viewMode = mode;
   TL.expanded = new Set(); // default collapsed in the new mode
   document.querySelectorAll('#tl-view-toggle .pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  if (TL.data) renderTimeline(TL.data);
+}
+function setTlScale(scale, btn) {
+  TL.scale = scale;
+  document.querySelectorAll('#tl-scale-toggle .pill').forEach(p => p.classList.remove('active'));
   btn.classList.add('active');
   if (TL.data) renderTimeline(TL.data);
 }
@@ -6463,21 +6475,35 @@ function renderTimeline(data) {
   const sevenAgo = new Date(today); sevenAgo.setDate(today.getDate() - 7);
 
   const PERSON_W = 340;
-  // Fill the available chart area exactly so the months span the full width with
-  // no empty space after the last month and no spurious horizontal scroll. The
-  // axis is always ≤ 1 year (clamped to the display window). A minimum day width
-  // only kicks in on very narrow viewports, where the chart then scrolls.
+  // "Month" (the default) fills the available chart area exactly so the
+  // months span the full width with no empty space and no spurious
+  // horizontal scroll — the axis is always ≤ 1 year, so this stays readable.
+  // "Week"/"Day" instead use a fixed, comfortable column width and let the
+  // chart scroll horizontally (via .timeline-wrap's own overflow:auto) once
+  // that's wider than the viewport — auto-fitting a full year into day- or
+  // week-sized columns would otherwise shrink them to unreadable slivers.
   const availForChart = Math.max(360, (wrap.clientWidth || 1200) - PERSON_W);
   const MIN_DAY_W = 2.0;
-  const fillW = availForChart / totalDays;
-  const DAY_W = Math.max(MIN_DAY_W, fillW);
-  const chartW = (fillW >= MIN_DAY_W) ? availForChart : Math.round(totalDays * DAY_W);
+  let DAY_W, chartW;
+  if (TL.scale === 'day') {
+    DAY_W = 30;
+    chartW = Math.round(totalDays * DAY_W);
+  } else if (TL.scale === 'week') {
+    DAY_W = 10;
+    chartW = Math.round(totalDays * DAY_W);
+  } else {
+    const fillW = availForChart / totalDays;
+    DAY_W = Math.max(MIN_DAY_W, fillW);
+    chartW = (fillW >= MIN_DAY_W) ? availForChart : Math.round(totalDays * DAY_W);
+  }
   const px  = iso => Math.max(0, Math.round((new Date(iso) - startD) / 86400000)) * DAY_W;
   const wOf = (a, b) => Math.max(8, (Math.round((new Date(b) - new Date(a)) / 86400000) + 1) * DAY_W);
   const esc = v => (v||'').replace(/'/g,'`').replace(/"/g,'&quot;');
   const fmt = iso => iso ? new Date(iso).toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : '';
 
   // Monthly column headers (last column absorbs rounding so they sum to chartW exactly)
+  // — used as-is for the "month" scale, and as the top tier of "day"'s
+  // two-row header (month grouping above, day numbers below).
   const monthStarts = [];
   let mc = new Date(startD.getFullYear(), startD.getMonth(), 1);
   while (mc <= endD) { monthStarts.push(new Date(mc)); mc = new Date(mc.getFullYear(), mc.getMonth()+1, 1); }
@@ -6488,7 +6514,37 @@ function renderTimeline(data) {
     accW += w;
     return { label: m.toLocaleDateString('en-GB', { month: 'short' }), w };
   });
-  const headerCols = months.map(mo => `<div class="tl-week-label" style="width:${mo.w}px;min-width:${mo.w}px;text-align:center;padding:10px 0">${mo.label}</div>`).join('');
+  const monthHeaderRow = months.map(mo => `<div class="tl-week-label" style="width:${mo.w}px;min-width:${mo.w}px;text-align:center;padding:10px 0">${mo.label}</div>`).join('');
+
+  let headerCols;
+  if (TL.scale === 'week') {
+    // Weeks anchor to the axis start (not necessarily Monday) — this is a
+    // coarse overview label, not a business-week boundary, so the simpler
+    // anchoring avoids an off-by-one at the range edges.
+    const weekStarts = [];
+    let wc = new Date(startD);
+    while (wc <= endD) { weekStarts.push(new Date(wc)); wc = new Date(wc.getFullYear(), wc.getMonth(), wc.getDate() + 7); }
+    let waccW = 0;
+    const weeks = weekStarts.map((w, i) => {
+      const width = (i === weekStarts.length - 1) ? Math.max(0, chartW - waccW) : Math.round(7 * DAY_W);
+      waccW += width;
+      return { label: w.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }), w: width };
+    });
+    headerCols = weeks.map(wk => `<div class="tl-week-label" style="width:${wk.w}px;min-width:${wk.w}px;text-align:center;padding:10px 0">${wk.label}</div>`).join('');
+  } else if (TL.scale === 'day') {
+    const dayRow = Array.from({ length: totalDays }, (_, i) => {
+      const d = new Date(startD.getFullYear(), startD.getMonth(), startD.getDate() + i);
+      const isToday = d.toDateString() === today.toDateString();
+      const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+      return `<div style="width:${DAY_W}px;min-width:${DAY_W}px;text-align:center;font-size:10px;padding:6px 0;color:${isToday ? 'var(--accent)' : 'var(--ink-500)'};font-weight:${isToday ? '700' : '400'};background:${isWeekend ? 'var(--ink-50)' : 'transparent'}">${d.getDate()}</div>`;
+    }).join('');
+    headerCols = `<div style="display:flex;flex-direction:column;flex:1">
+      <div style="display:flex">${monthHeaderRow}</div>
+      <div style="display:flex;border-top:1px solid var(--ink-100)">${dayRow}</div>
+    </div>`;
+  } else {
+    headerCols = monthHeaderRow;
+  }
 
   const todayOffset = Math.round((today - startD) / 86400000);
   const todayPx = todayOffset * DAY_W;
