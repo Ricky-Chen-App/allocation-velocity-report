@@ -265,14 +265,32 @@ async function jiraGet(path) {
   return res.json();
 }
 
+async function jiraPost(path, body) {
+  const res = await fetch(`${JIRA_BASE}${path}`, {
+    method: 'POST',
+    headers: { ...HEADERS, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Jira API ${res.status}: ${text.slice(0, 200)}`);
+  }
+  return res.json();
+}
+
 // Paginate /rest/api/3/search/jql via TOKEN-based pagination (nextPageToken).
 // The new endpoint ignores startAt and has no `total`, so we must follow tokens.
+// POSTed (JQL + fields in the body, not the URL) rather than GET — now that
+// the app's project scope covers all of Jira (2026-09-18) instead of a
+// curated ~40-project subset, a `project in (...)` clause listing every key
+// is long enough to blow past Jira's URL length limit (HTTP 414) as a GET.
 async function jiraSearchAll(jql, fields, cap = 5000) {
+  const fieldsArr = Array.isArray(fields) ? fields : String(fields).split(',').map(f => f.trim()).filter(Boolean);
   let all = [], token = null, guard = 0;
   while (all.length < cap && guard++ < 100) {
-    const params = new URLSearchParams({ jql, maxResults: '1000', fields });
-    if (token) params.set('nextPageToken', token);
-    const data = await jiraGet(`/rest/api/3/search/jql?${params.toString()}`);
+    const body = { jql, maxResults: 1000, fields: fieldsArr };
+    if (token) body.nextPageToken = token;
+    const data = await jiraPost('/rest/api/3/search/jql', body);
     const issues = data.issues || [];
     all = all.concat(issues);
     if (data.isLast || !data.nextPageToken || !issues.length) break;
@@ -287,14 +305,18 @@ async function jiraSearchAll(jql, fields, cap = 5000) {
 async function ensureProjects() {
   if (isFresh('projects') && cache.projects) return cache.projects;
   const cats = await jiraGet('/rest/api/3/projectCategory');
-  const targetCatIds = cats
-    .filter(c => TARGET_CATEGORIES.some(t => c.name.toLowerCase().trim() === t.toLowerCase().trim()))
-    .map(c => ({ id: c.id, name: c.name }));
+  // Every Jira project and category is included here (not just
+  // TARGET_CATEGORIES) — a deliberate app-wide widening (2026-09-18) so
+  // Report Governance and the other menus can reach any project in Jira,
+  // not only the original curated capacity-planning categories. Governance
+  // Settings' own "categories=dashboard" list mode still narrows to
+  // TARGET_CATEGORIES separately below — that 2026-08-05 decision is
+  // unrelated and unchanged.
+  const allCatIds = cats.map(c => ({ id: c.id, name: c.name }));
   const allProjects = await jiraGet('/rest/api/3/project?expand=projectKeys,description&maxResults=500');
-  const filtered = allProjects.filter(p => p.projectCategory && targetCatIds.some(c => c.id === p.projectCategory.id));
   cache.projects = {
-    categories: targetCatIds,
-    projects: filtered.map(p => ({
+    categories: allCatIds,
+    projects: allProjects.map(p => ({
       id: p.id, key: p.key, name: p.name,
       category: p.projectCategory?.name || 'Uncategorized',
       avatarUrl: p.avatarUrls?.['24x24']
